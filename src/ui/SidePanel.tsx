@@ -1,0 +1,168 @@
+import { useEffect, useRef } from 'preact/hooks';
+import * as S from './state';
+import { fmtAmount } from './InvoiceCard';
+import { SORT_LABELS, type SortMode } from '../core/sort';
+import type { FilterMode } from '../core/types';
+import { useState } from 'preact/hooks';
+
+export function SidePanel() {
+  const inv = S.current.value;
+  const listRef = useRef<HTMLDivElement>(null);
+  const idx = S.currentIndex.value;
+
+  useEffect(() => {
+    const el = listRef.current?.querySelector<HTMLElement>('.row.current');
+    el?.scrollIntoView({ block: 'nearest' });
+  }, [idx]);
+
+  const m = S.match.value;
+  const code = inv ? S.assignments.value.get(inv.no) : undefined;
+  const pref = inv ? S.refFor(inv.no) : null;
+
+  return (
+    <aside class="side">
+      {inv && (
+        <div class="detail">
+          <div class="detail-name">{inv.supplierName}</div>
+          <div class="detail-row"><span>Fatura No</span><b>{inv.no}</b></div>
+          <div class="detail-row"><span>Tarih</span><b>{inv.date}</b></div>
+          <div class="detail-row"><span>VKN</span><b>{inv.supplierVkn}</b></div>
+          <div class="detail-row"><span>Tip</span><b>{inv.invoiceType} · {inv.profile}</b></div>
+          <div class="detail-row"><span>Tutar</span><b>{fmtAmount(inv.amount, inv.currency)}</b></div>
+          {pref && (
+            <div class="detail-row"><span>PDF</span><b title={pref.fileName}>{pref.fileName} · s.{pref.pageStart}{pref.pageEnd > pref.pageStart ? `–${pref.pageEnd}` : ''}{S.manualLinkFor(inv.no) && <button class="ghost tiny" title="Elle kurulan bağlantıyı kaldır" onClick={() => S.unlink(inv.no)}>elle · kaldır</button>}</b></div>
+          )}
+          <div class={`detail-code slot-${S.slotIndexOf(code)}`}>
+            <span>Atanan</span>
+            <b>{code ?? '—'}</b>
+          </div>
+          {S.hint.value && S.hint.value.code !== code && (
+            <button class="hint" onClick={() => S.assign(S.hint.value!.code)} title="Bu satıcıya daha önce verilen kodu ata (Boşluk)">
+              Bu satıcıya önce: <b>{S.hint.value.code}</b> <span class="muted">×{S.hint.value.count}</span> <kbd>Boşluk</kbd>
+            </button>
+          )}
+          {code && S.accounts.value.length > 0 && S.accountMap.value.has(code) && (
+            <div class="detail-row"><span>Hesap adı</span><b>{S.accountMap.value.get(code)}</b></div>
+          )}
+          {S.issuesFor(inv).filter((k) => k !== 'no-code').map((k) => (
+            <div class="issue">{S.ISSUE_LABEL[k]}</div>
+          ))}
+        </div>
+      )}
+      <div class="list-controls">
+        <select class="sort-select" value={S.settings.value.sortMode} title="Liste sırası (çıktıyı etkilemez)" onChange={(e) => S.setSortMode((e.currentTarget as HTMLSelectElement).value as SortMode)}>
+          {(Object.keys(SORT_LABELS) as SortMode[]).map((m) => <option value={m}>Sıra: {SORT_LABELS[m]}</option>)}
+        </select>
+        <select class="filter-select" value={S.filterMode.value} title="Hangi faturalar listelensin ve gezilsin" onChange={(e) => S.setFilter((e.currentTarget as HTMLSelectElement).value as FilterMode)}>
+          {(Object.keys(S.FILTER_LABELS) as FilterMode[]).map((m) => <option value={m}>Göster: {S.FILTER_LABELS[m]}</option>)}
+        </select>
+        <button class={`tiny bulk-toggle ${S.bulkMode.value || S.selected.value.size ? 'on' : ''}`} title="Toplu seçim yardımcılarını aç/kapat" onClick={() => (S.bulkMode.value = !S.bulkMode.value)}>☑ Seç</button>
+      </div>
+      <input
+        id="search"
+        class="search"
+        placeholder="Ara: no, satıcı, tutar  (Ctrl+F)"
+        value={S.searchText.value}
+        onInput={(e) => (S.searchText.value = (e.currentTarget as HTMLInputElement).value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') {
+            S.searchText.value = '';
+            (e.currentTarget as HTMLInputElement).blur();
+          }
+          if (e.key === 'Enter') {
+            const first = S.invoices.value.findIndex((i) => S.passesFilter(i));
+            if (first >= 0) S.goTo(first);
+            (e.currentTarget as HTMLInputElement).blur();
+          }
+        }}
+      />
+      <BulkBar />
+      <div class="list" ref={listRef}>
+        {S.invoices.value.map((i, k) => {
+          if (!S.passesFilter(i) && k !== idx) return null;
+          const c = S.assignments.value.get(i.no);
+          const iss = S.attentionIssues(i);
+          const sel = S.selected.value.has(i.no);
+          const bulk = S.bulkNos.value.has(i.no);
+          const si = S.slotIndexOf(c);
+          return (
+            <div
+              class={`row ${k === idx ? 'current' : ''} ${c ? `done slot-row-${si}` : ''} ${sel ? 'selected' : ''} ${bulk ? 'bulk' : ''}`}
+              onClick={(e) => {
+                if (e.shiftKey && S.lastClicked.value >= 0) { S.selectRange(S.lastClicked.value, k); S.lastClicked.value = k; return; }
+                if (e.ctrlKey || e.metaKey) { S.toggleSelect(i.no); S.lastClicked.value = k; return; }
+                S.lastClicked.value = k;
+                S.goTo(k);
+              }}
+            >
+              <input type="checkbox" class="row-check" checked={sel} title="Seç (Shift: aralık, Ctrl: tekil)" onClick={(e) => { e.stopPropagation(); const ev = e as MouseEvent; if (ev.shiftKey && S.lastClicked.value >= 0) S.selectRange(S.lastClicked.value, k); else S.toggleSelect(i.no); S.lastClicked.value = k; }} />
+              <span class={`dot slot-${si}`} />
+              <span class="row-main">
+                <span class="row-name">{i.supplierName}</span>
+                <span class="row-sub">{i.no} · {i.date}</span>
+              </span>
+              <span class="row-code">{bulk && <span class="bulk-tag" title="Toplu atandı (doğal gezintide atlanır, Ctrl+ok ile görülür)">toplu</span>}{c ?? ''}{iss.length > 0 && <span class="warn-dot" title={iss.map((x) => S.ISSUE_LABEL[x]).join('\n')}>!</span>}</span>
+            </div>
+          );
+        })}
+      </div>
+      {S.files.value.length > 0 && (
+        <div class="files">
+          <div>PDF: {S.files.value.length} dosya · {m.refs.size} fatura eşleşti</div>
+          {m.unmatched.length > 0 && (
+            <details open>
+              <summary class="warn">{m.unmatched.length} eşleşmeyen dosya/sayfa</summary>
+              {m.unmatched.map((u) => (
+                <div class="unmatched">
+                  <span title={u.fileName}>{u.fileName} s.{u.pageStart}–{u.pageEnd}</span>
+                  <span class="muted">{u.reason === 'no-text' ? 'metin yok' : 'fatura no yok'}</span>
+                  <button class="tiny" onClick={() => (S.linkTarget.value = u)}>bağla</button>
+                  <button class="ghost tiny" onClick={() => S.removeFile(u.fileId)}>kaldır</button>
+                </div>
+              ))}
+            </details>
+          )}
+        </div>
+      )}
+    </aside>
+  );
+}
+
+function BulkBar() {
+  const n = S.selected.value.size;
+  if (!S.bulkMode.value && n === 0) return null;
+  const [code, setCode] = useState('');
+  const inv = S.current.value;
+  const visible = S.invoices.value.filter(S.passesFilter).length;
+  const sameSupplier = inv ? S.invoices.value.filter((i) => i.supplierVkn === inv.supplierVkn && S.passesFilter(i)).length : 0;
+  return (
+    <div class={`bulk-bar ${n ? 'active' : ''}`}>
+      <div class="bulk-row">
+        <button class="ghost tiny" onClick={() => S.selectVisible()} title="Listede görünen tüm faturaları seç">Görünenleri seç ({visible})</button>
+        {inv && <button class="ghost tiny" onClick={() => S.selectSupplier(inv.supplierVkn)} title={`${inv.supplierName} faturalarını seç`}>Bu satıcıyı seç ({sameSupplier})</button>}
+        {n > 0 && <button class="ghost tiny" onClick={() => S.clearSelection()} title="Seçimi temizle (Esc)">✕ {n} seçili</button>}
+      </div>
+      {n > 0 && (
+        <div class="bulk-row">
+          <input
+            class="bulk-input"
+            placeholder={`${n} faturaya kod: yazıp Enter`}
+            value={code}
+            onInput={(e) => setCode((e.currentTarget as HTMLInputElement).value)}
+            onKeyDown={(e) => {
+              e.stopPropagation();
+              if (e.key === 'Enter') { e.preventDefault(); S.assignBulk(code).then(() => setCode('')); }
+              else if (e.key === 'Escape') { e.preventDefault(); (e.currentTarget as HTMLInputElement).blur(); }
+            }}
+          />
+          <button class="primary tiny" onClick={() => S.assignBulk(code).then(() => setCode(''))} disabled={!code.trim()}>Toplu ata</button>
+        </div>
+      )}
+      {n > 0 && S.slots.value.some(Boolean) && (
+        <div class="bulk-row bulk-slots">
+          {S.slots.value.map((c, i) => c && <button class={`tiny slot-${i}`} onClick={() => S.assignBulk(c)} title={`${n} faturaya ${c} ata`}>{c}</button>)}
+        </div>
+      )}
+    </div>
+  );
+}
