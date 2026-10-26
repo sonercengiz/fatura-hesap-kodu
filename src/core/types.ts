@@ -27,6 +27,7 @@ export interface Invoice {
   hasView: boolean;
   /** Kalem adları (normalize), kurallar için */
   itemText: string;
+  lineCount: number | null;
 }
 
 export interface ShortcutSlot {
@@ -38,7 +39,33 @@ export type ViewMode = 'top' | 'last' | 'margin';
 export type SortMode = 'date-supplier' | 'added';
 export type FilterMode = 'all' | 'unassigned' | 'manual' | 'bulk' | 'rule';
 
+export type Layout = 'hybrid' | 'list';
+/** Liste görünümü sütunları (kimlik, başlık). Hesap Kodu her zaman gösterilir. */
+export const LIST_COLUMNS = [
+  { id: 'no', label: 'Fatura No' },
+  { id: 'date', label: 'Tarih' },
+  { id: 'supplier', label: 'Satıcı' },
+  { id: 'vkn', label: 'VKN / TCKN' },
+  { id: 'type', label: 'Tip' },
+  { id: 'profile', label: 'Tür' },
+  { id: 'amount', label: 'Tutar' },
+  { id: 'taxExclusive', label: 'Matrah' },
+  { id: 'tax', label: 'Vergi' },
+  { id: 'currency', label: 'Döviz' },
+  { id: 'lines', label: 'Kalem' },
+  { id: 'source', label: 'Kaynak' },
+  { id: 'code', label: 'Hesap Kodu' },
+  { id: 'account', label: 'Hesap adı' },
+  { id: 'issues', label: 'Dikkat' },
+] as const;
+export type ListColumnId = (typeof LIST_COLUMNS)[number]['id'];
+export const DEFAULT_LIST_COLUMNS: ListColumnId[] = ['no', 'date', 'supplier', 'vkn', 'type', 'amount', 'code', 'account', 'issues'];
+
 export interface Settings {
+  /** Ana ekran: hibrit (görsel + panel) ya da yalın liste */
+  layout: Layout;
+  /** Liste görünümünde gösterilen sütunlar */
+  listColumns: ListColumnId[];
   codeColumnIndex: number; // 1 tabanlı; varsayılan 3
   codeHeader: string; // varsayılan "Hesap Kodu"
   viewMode: ViewMode;
@@ -50,6 +77,8 @@ export interface Settings {
 export const DEFAULT_SHORTCUT_KEYS = ['q', 'w', 'e', 'a', 's', 'd'] as const;
 
 export const DEFAULT_SETTINGS: Settings = {
+  layout: 'hybrid',
+  listColumns: DEFAULT_LIST_COLUMNS,
   codeColumnIndex: 3,
   codeHeader: 'Hesap Kodu',
   viewMode: 'top',

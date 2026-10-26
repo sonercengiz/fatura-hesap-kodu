@@ -1,7 +1,7 @@
 import { useRef, useState } from 'preact/hooks';
 import { parseAccountSheet, parseAccountText } from '../core/chart';
 import * as S from './state';
-import type { ViewMode } from '../core/types';
+import type { ViewMode, Layout } from '../core/types';
 import { EDM_HEADERS } from '../core/excel/writeOutput';
 
 export function SettingsModal() {
@@ -79,6 +79,17 @@ export function SettingsModal() {
                 {v === 'margin' && <span class="muted">px</span>}
               </label>
             ))}
+          </fieldset>
+
+          <fieldset>
+            <legend>Ana ekran</legend>
+            {([['hybrid', 'Hibrit: fatura görseli + sağda liste'], ['list', 'Liste: yalnızca tablo (sütunlar tablo üstünden seçilir)']] as [Layout, string][]).map(([v, label]) => (
+              <label class="radio">
+                <input type="radio" name="layout" checked={s.layout === v} onChange={() => S.setLayout(v)} />
+                <span>{label}</span>
+              </label>
+            ))}
+            <div class="muted small">Üst çubuktaki ☰ Liste / ▣ Hibrit düğmesiyle de değişir. Liste görünümünde satıra çift tıklamak o faturayı hibrit görünümde açar.</div>
           </fieldset>
 
           <label class="radio">

@@ -58,6 +58,7 @@ export function Toolbar() {
           {S.dirty.value ? <span class="dirty"> · kaydedilmedi</span> : b.savedAt ? <span class="saved"> · kayıtlı</span> : null}
         </div>
       )}
+      <button class={`ghost layout-btn ${S.settings.value.layout === 'list' ? 'on' : ''}`} onClick={() => S.setLayout(S.settings.value.layout === 'list' ? 'hybrid' : 'list')} disabled={!b} title={S.settings.value.layout === 'list' ? 'Hibrit görünüme geç (fatura görseli + panel)' : 'Liste görünümüne geç (yalnızca tablo)'}>{S.settings.value.layout === 'list' ? '▣ Hibrit' : '☰ Liste'}</button>
       <button class="ghost" onClick={() => S.undo()} disabled={!S.undoStack.value.length} title={S.undoStack.value.length ? `Geri al: ${S.undoStack.value[S.undoStack.value.length - 1].label} (Ctrl+Z)` : 'Geri alınacak işlem yok'}>↶</button>
       <button onClick={() => S.save()} disabled={!b} title="F2">Kaydet <kbd>F2</kbd></button>
       <button onClick={() => (S.previewOpen.value = true)} disabled={!b} title="F5">Önizle <kbd>F5</kbd></button>

@@ -130,7 +130,7 @@ export function SidePanel() {
   );
 }
 
-function BulkBar() {
+export function BulkBar() {
   const n = S.selected.value.size;
   if (!S.bulkMode.value && n === 0) return null;
   const [code, setCode] = useState('');

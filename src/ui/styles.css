@@ -288,3 +288,38 @@ tr.iss-chart td.code-col { color: var(--warn); text-decoration: underline wavy v
 .scope-tag { margin-right: 6px; }
 .override-note { color: var(--warn); font-weight: 400; font-size: 12px; }
 .rule-note { margin-top: 4px; }
+
+/* ---- Liste görünümü ---- */
+.listview { display: flex; flex-direction: column; min-height: 0; background: var(--panel); }
+.lv-head { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.lv-head .lv-search { margin: 0; width: 280px; }
+.lv-head select { font-size: 12px; padding: 4px 6px; }
+.lv-hint { width: auto !important; margin: 0 !important; padding: 4px 10px !important; font-size: 13px; }
+.lv-bulk .bulk-bar { margin: 6px 12px 0; } .lv-bulk .bulk-bar:empty { display: none; }
+.lv-table { flex: 1; position: relative; }
+.lv-table table { width: 100%; font-size: 13px; }
+.lv-table th { font-weight: 600; color: var(--muted); font-size: 12px; }
+.lv-table td, .lv-table th { padding: 5px 10px; }
+.lv-table tr.row { display: table-row; border-left: none; cursor: default; }
+.lv-table tr.row td:first-child { box-shadow: inset 3px 0 0 transparent; }
+.lv-table tr.row.current td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+.lv-table tr.row.current td { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.lv-table tr.row.selected td { outline: none; } .lv-table tr.row.selected td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+.lv-table tr.row.selected { outline: none; } .lv-table tr.row.selected td { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+.lv-table tr.row:hover td { background: color-mix(in srgb, var(--ink) 5%, transparent); }
+.lv-table td.mono { font-family: ui-monospace, Menlo, monospace; font-size: 12px; white-space: nowrap; }
+.lv-table td.r { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.lv-table td.lv-supplier { max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lv-table td.lv-account { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lv-table td.lv-code { cursor: text; font-family: ui-monospace, Menlo, monospace; font-weight: 700; min-width: 110px; }
+.lv-table td.lv-code.slot--1 { background: var(--assigned); color: var(--ink); }
+.lv-table tr.row:not(.done) td.lv-code { background: transparent; color: var(--muted); font-weight: 400; }
+.lv-table .lv-check { width: 28px; } .lv-table .lv-check .row-check { opacity: .45; }
+.lv-table tr.row:hover .row-check, .lv-table .row-check:checked { opacity: 1; }
+.lv-table td.lv-issues .warn { font-size: 12px; white-space: nowrap; }
+.lv-table tr.row.bulk td.lv-supplier { opacity: .7; }
+.cols-wrap { position: relative; }
+.cols-pop { position: absolute; top: calc(100% + 6px); left: 0; z-index: 15; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.18); padding: 8px 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 2px 14px; min-width: 300px; }
+.cols-item { display: flex; align-items: center; gap: 6px; font-size: 13px; padding: 3px 2px; white-space: nowrap; }
+.cols-pop .muted.small { grid-column: 1 / -1; padding-top: 6px; }
+.layout-btn.on { background: var(--neutral); }

@@ -10,6 +10,7 @@ import { SettingsModal } from './SettingsModal';
 import { GuideModal } from './GuideModal';
 import { ChartModal } from './ChartModal';
 import { RulesModal } from './RulesModal';
+import { ListView } from './ListView';
 
 export function App() {
   const [drag, setDrag] = useState(false);
@@ -219,6 +220,8 @@ export function App() {
           <p class="muted">Veriler yalnızca bu tarayıcıda saklanır. Çıktı, EDM fatura listesi düzeninde (Hesap Kodu sütunu eklenmiş) bir Excel dosyasıdır.</p>
           <p><button class="primary" onClick={() => (S.guideOpen.value = true)}>Kullanım rehberini aç</button></p>
         </main>
+      ) : S.settings.value.layout === 'list' ? (
+        <ListView />
       ) : (
         <main class="work">
           <section class={`viewer slot-bg-${slotIdx}`}>

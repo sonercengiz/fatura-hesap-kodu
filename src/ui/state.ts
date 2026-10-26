@@ -1,5 +1,5 @@
 import { signal, computed, batch as sbatch } from '@preact/signals';
-import { DEFAULT_SETTINGS, DEFAULT_SHORTCUT_KEYS, typeLabel, profileLabel, toDisplayDate, type Settings, type Invoice, type FilterMode } from '../core/types';
+import { DEFAULT_SETTINGS, DEFAULT_SHORTCUT_KEYS, LIST_COLUMNS, typeLabel, profileLabel, toDisplayDate, type Settings, type Invoice, type FilterMode, type ListColumnId } from '../core/types';
 import { buildOutputWorkbook, buildFileName, buildOutputRows } from '../core/excel/writeOutput';
 import { parseUbl, decodeBytes, dominantMonth, UblParseError } from '../core/xml/parseUbl';
 import { sha256 } from '../core/hash';
@@ -103,6 +103,7 @@ export function toInvoice(r: InvoiceRecord): Invoice {
     profile: profileLabel(r.profileId),
     hasView: !!r.xml,
     itemText: r.itemText ?? '',
+    lineCount: r.lineCount,
   };
 }
 
@@ -239,6 +240,7 @@ export async function getInvoiceView(no: string): Promise<InvoiceView | null> {
 export async function init() {
   settings.value = await loadSettings(DEFAULT_SETTINGS);
   if (!(settings.value.sortMode in SORT_LABELS)) settings.value = { ...settings.value, sortMode: 'date-supplier' };
+  if (!Array.isArray(settings.value.listColumns) || !settings.value.listColumns.includes('code')) settings.value = { ...settings.value, listColumns: DEFAULT_SETTINGS.listColumns };
   lastExportAt.value = ((await db.settings.get('lastExportAt'))?.value as number | undefined) ?? null;
   try { backupDismissedAt.value = Number(localStorage.getItem('backupDismissedAt') ?? 0) || 0; } catch { /* yok say */ }
   await ensureFirms();
@@ -759,6 +761,21 @@ export async function exportExcel() {
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
   showToast(`İndirildi: ${name}`, 4000);
+}
+
+/** Hibrit ↔ liste görünümü; isteğe bağlı olarak belirli bir faturaya gider */
+export async function setLayout(layout: Settings['layout'], no?: string) {
+  await updateSettings({ layout });
+  if (no) {
+    const idx = invoices.value.findIndex((i) => i.no === no);
+    if (idx >= 0) currentIndex.value = idx;
+  }
+}
+export async function toggleColumn(id: ListColumnId) {
+  if (id === 'code') return;
+  const cur = settings.value.listColumns;
+  const next = cur.includes(id) ? cur.filter((c) => c !== id) : LIST_COLUMNS.map((c) => c.id).filter((c) => c === id || cur.includes(c));
+  await updateSettings({ listColumns: next });
 }
 
 export async function updateSettings(patch: Partial<Settings>) {
