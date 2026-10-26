@@ -2,8 +2,8 @@ import 'fake-indexeddb/auto';
 import { describe, it, expect, beforeAll } from 'vitest';
 import Dexie from 'dexie';
 
-/** Sürüm 3 (firmasız, Excel tabanlı) veritabanı oluşturup uygulamanın sürüm 6 şemasına yükseltilmesini doğrular. */
-describe('veritabanı geçişi v3 → v6', () => {
+/** Sürüm 3 (firmasız, Excel tabanlı) veritabanı oluşturup uygulamanın sürüm 7 şemasına yükseltilmesini doğrular. */
+describe('veritabanı geçişi v3 → v7', () => {
   beforeAll(async () => {
     const old = new Dexie('fatura-hesap-kodu');
     old.version(3).stores({
@@ -29,7 +29,7 @@ describe('veritabanı geçişi v3 → v6', () => {
   it('eski veriler varsayılan firmaya taşınır', async () => {
     const { db, DEFAULT_FIRM_ID } = await import('../src/storage/db');
     await db.open();
-    expect(db.verno).toBe(6);
+    expect(db.verno).toBe(7);
     const firms = await db.firms.toArray();
     expect(firms.length).toBe(1);
     expect(firms[0]).toMatchObject({ id: DEFAULT_FIRM_ID, name: 'Eski Firma', chartName: 'Liste X' });
@@ -47,6 +47,7 @@ describe('veritabanı geçişi v3 → v6', () => {
     expect(db.tables.map((t) => t.name)).not.toContain('files');
     expect(db.tables.map((t) => t.name)).not.toContain('links');
     expect(db.tables.map((t) => t.name)).toContain('xslts');
+    expect(db.tables.map((t) => t.name)).toContain('rules');
     expect(await db.firmHistory.get([DEFAULT_FIRM_ID, '111', '770.01'])).toMatchObject({ count: 4 });
     expect(await db.firmAccounts.get([DEFAULT_FIRM_ID, '770.01'])).toMatchObject({ name: 'Kırtasiye' });
     expect((await db.settings.get('currentFirmId'))?.value).toBe(DEFAULT_FIRM_ID);

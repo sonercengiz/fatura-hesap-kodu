@@ -62,6 +62,7 @@ export function Toolbar() {
       <button onClick={() => S.save()} disabled={!b} title="F2">Kaydet <kbd>F2</kbd></button>
       <button onClick={() => (S.previewOpen.value = true)} disabled={!b} title="F5">Önizle <kbd>F5</kbd></button>
       <button class="primary" onClick={() => S.exportExcel()} disabled={!b || n === 0} title="F1">Excel üret <kbd>F1</kbd></button>
+      <button class="ghost" onClick={() => S.openRules()} title="Otomatik atama kuralları (satıcı → hesap kodu)">Kurallar{S.rules.value.length ? ` ${S.rules.value.length}` : ''}</button>
       <button class="ghost" onClick={() => (S.guideOpen.value = true)} title="Kullanım rehberi">Rehber</button>
       <button class="ghost theme-btn" onClick={() => S.updateSettings({ theme: S.settings.value.theme === 'dark' ? 'light' : 'dark' })} title={S.settings.value.theme === 'dark' ? 'Açık temaya geç' : 'Koyu temaya geç'}>
         {S.settings.value.theme === 'dark' ? '☀' : '☾'}

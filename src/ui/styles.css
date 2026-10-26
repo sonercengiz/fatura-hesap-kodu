@@ -247,3 +247,17 @@ tr.iss-chart td.code-col { color: var(--warn); text-decoration: underline wavy v
 .g-fig.narrow .g-notes, .g-fig.mid .g-notes { grid-template-columns: 1fr; }
 .g-keys { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 8px 0; } .g-keys > div { display: flex; align-items: center; gap: 4px; font-size: 13px; } .g-keys span { margin-left: 4px; color: var(--muted); }
 .guide-text p { margin: 6px 0 4px; }
+
+/* ---- Kurallar ---- */
+.modal.rules { width: min(860px, 96vw); }
+.rule-form { display: grid; grid-template-columns: 170px 1fr 130px auto; gap: 8px; align-items: center; }
+.rule-pattern, .rule-code { min-width: 0; } .rule-code { font-family: ui-monospace, Menlo, monospace; }
+.rule-list { max-height: 40vh; }
+.rule-row { gap: 10px; } .rule-row.off { opacity: .5; }
+.rule-kind { font-size: 11px; color: var(--muted); white-space: nowrap; min-width: 130px; }
+.rule-pat { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+.rule-hits { white-space: nowrap; min-width: 64px; text-align: right; }
+.rule-code-edit { flex: none; width: 110px; font-family: ui-monospace, Menlo, monospace; }
+.rule-make { margin-top: 6px; width: 100%; text-align: left; border-style: dashed; }
+.detail-code .bulk-tag { margin-left: 6px; margin-right: 0; }
+@media (max-width: 700px) { .rule-form { grid-template-columns: 1fr 1fr; } }

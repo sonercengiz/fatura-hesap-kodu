@@ -132,9 +132,17 @@ export function SettingsModal() {
           </fieldset>
 
           <fieldset>
+            <legend>Otomatik atama kuralları — {S.firm.value.name}</legend>
+            <div class="row-inline">
+              <span class="muted">{S.rules.value.length} kural. Satıcı VKN/TCKN'si, unvanı ya da kalem adı uyan faturalar yüklenir yüklenmez sabit kodu alır. Yedeğe girer; dosya olarak paylaşılır.</span>
+              <button onClick={() => { S.settingsOpen.value = false; S.openRules(); }}>Kuralları aç</button>
+            </div>
+          </fieldset>
+
+          <fieldset>
             <legend>Yedekleme ve bilgisayarlar arası paylaşım</legend>
             <div class="row-inline">
-              <span class="muted">Tüm firmalar, partiler, fatura listeleri, atamalar, hesap kodu listeleri ve öneri geçmişi tek bir .json dosyasına yazılır; başka bilgisayarda içe aktarılınca mevcut veriyle <b>birleştirilir</b>, hiçbir şey silinmez. Fatura XML'leri (görseller) dosyaya dahil edilmez; gerekirse XML'ler yeniden yüklenir, atamalar korunur.</span>
+              <span class="muted">Tüm firmalar, partiler, fatura listeleri, atamalar, hesap kodu listeleri, kurallar ve öneri geçmişi tek bir .json dosyasına yazılır; başka bilgisayarda içe aktarılınca mevcut veriyle <b>birleştirilir</b>, hiçbir şey silinmez. Fatura XML'leri (görseller) dosyaya dahil edilmez; gerekirse XML'ler yeniden yüklenir, atamalar korunur.</span>
             </div>
             <div class="row-inline" style="justify-content:flex-start; margin-top:8px">
               <button onClick={() => S.exportWorkspace()}>Dışa aktar (.json)</button>

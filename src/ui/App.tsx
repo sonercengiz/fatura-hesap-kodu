@@ -9,6 +9,7 @@ import { PreviewModal } from './PreviewModal';
 import { SettingsModal } from './SettingsModal';
 import { GuideModal } from './GuideModal';
 import { ChartModal } from './ChartModal';
+import { RulesModal } from './RulesModal';
 
 export function App() {
   const [drag, setDrag] = useState(false);
@@ -76,11 +77,12 @@ export function App() {
         }
         return;
       }
-      if (S.previewOpen.value || S.settingsOpen.value || S.guideOpen.value) {
+      if (S.previewOpen.value || S.settingsOpen.value || S.guideOpen.value || S.rulesOpen.value) {
         if (e.key === 'Escape') {
           S.previewOpen.value = false;
           S.settingsOpen.value = false;
           S.guideOpen.value = false;
+          S.closeRules();
         }
         return;
       }
@@ -240,6 +242,7 @@ export function App() {
       {S.settingsOpen.value && <SettingsModal />}
       {S.guideOpen.value && <GuideModal />}
       {S.chartOpen.value && <ChartModal />}
+      {S.rulesOpen.value && <RulesModal />}
       {S.busy.value && <div class="busy">{S.busy.value}</div>}
       {S.toast.value && <div class="toast">{S.toast.value}</div>}
       {drag && <div class="drop-hint">Bırakın: e-Fatura XML dosyaları</div>}

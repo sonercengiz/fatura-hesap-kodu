@@ -10,6 +10,7 @@ import { db, DEFAULT_FIRM_ID, loadSettings, saveSettings, newId, type BatchRecor
 import { searchAccounts, type Account } from '../core/chart';
 import { ensureXslt, transformToHtml, decorateHtml, cachedHtml, rememberHtml, forgetHtml } from '../render/xslt';
 import { fallbackHtml } from '../render/fallback';
+import { matchRules, validateRule, normPattern, parseRulesFile, type Rule, type RuleKind, type RulesFile } from '../core/rules';
 
 export const settings = signal<Settings>(DEFAULT_SETTINGS);
 export const firms = signal<FirmRecord[]>([]);
@@ -39,6 +40,13 @@ export const busy = signal<string | null>(null);
 export const searchText = signal('');
 /** Toplu atama ile kod alan faturalar (doğal gezinti bunları atlar) */
 export const bulkNos = signal<Set<string>>(new Set());
+/** Kuralla kod alan faturalar (toplu gibi doğal gezintide atlanır) */
+export const ruleNos = signal<Set<string>>(new Set());
+/** Firmanın otomatik atama kuralları */
+export const rules = signal<Rule[]>([]);
+export const rulesOpen = signal(false);
+/** Kurallar penceresi açılırken forma önceden doldurulacak değerler */
+export const ruleDraft = signal<{ kind: RuleKind; pattern: string; code: string } | null>(null);
 /** Listede seçili faturalar (toplu atama için) */
 export const selected = signal<Set<string>>(new Set());
 export const lastClicked = signal<number>(-1);
@@ -74,7 +82,7 @@ export function dismissBackup() {
   backupDismissedAt.value = Date.now();
   try { localStorage.setItem('backupDismissedAt', String(backupDismissedAt.value)); } catch { /* yok say */ }
 }
-export const FILTER_LABELS: Record<FilterMode, string> = { all: 'Tümü', unassigned: 'Atanmamış', manual: 'Elle atanmış', bulk: 'Toplu atanmış' };
+export const FILTER_LABELS: Record<FilterMode, string> = { all: 'Tümü', unassigned: 'Atanmamış', manual: 'Elle atanmış', bulk: 'Toplu atanmış', rule: 'Kuralla atanmış' };
 
 export function toInvoice(r: InvoiceRecord): Invoice {
   return {
@@ -92,6 +100,7 @@ export function toInvoice(r: InvoiceRecord): Invoice {
     invoiceType: typeLabel(r.typeCode),
     profile: profileLabel(r.profileId),
     hasView: !!r.xml,
+    itemText: r.itemText ?? '',
   };
 }
 
@@ -122,6 +131,19 @@ export const knownCodes = computed(() => {
 });
 export const assignedCount = computed(() => invoices.value.filter((i) => assignments.value.has(i.no)).length);
 export const viewCount = computed(() => invoices.value.filter((i) => i.hasView).length);
+/** Her fatura için uyan kural (varsa); sıralı listeyle aynı anda hesaplanır */
+export const ruleFor = computed(() => {
+  const m = new Map<string, Rule>();
+  const rs = rules.value;
+  if (rs.length === 0) return m;
+  for (const i of rawInvoices.value) {
+    const r = matchRules(i, rs);
+    if (r) m.set(i.no, r);
+  }
+  return m;
+});
+/** Partide kurala uyan ama henüz kod almamış faturalar */
+export const rulePending = computed(() => invoices.value.filter((i) => !assignments.value.has(i.no) && ruleFor.value.has(i.no)));
 
 export type IssueKind = 'no-code' | 'not-in-chart' | 'type' | 'no-view';
 export function issuesFor(inv: Invoice): IssueKind[] {
@@ -226,6 +248,7 @@ async function loadFirmData() {
   const id = currentFirmId.value;
   history.value = await db.firmHistory.where('firmId').equals(id).toArray();
   accounts.value = (await db.firmAccounts.where('firmId').equals(id).toArray()).sort((a, b) => a.code.localeCompare(b.code));
+  rules.value = (await db.rules.where('firmId').equals(id).toArray()).sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
 /** Firma değiştir: kısayollar, hesap listesi, geçmiş ve parti listesi birlikte değişir */
@@ -239,6 +262,7 @@ export async function switchFirm(id: string) {
     invoiceRecs.value = [];
     assignments.value = new Map();
     bulkNos.value = new Set();
+    ruleNos.value = new Set();
     selected.value = new Set();
     undoStack.value = [];
     redoStack.value = [];
@@ -296,6 +320,7 @@ export async function openBatch(id: string) {
     invoiceRecs.value = recs;
     assignments.value = new Map(asg.map((a) => [a.no, a.code]));
     bulkNos.value = new Set(asg.filter((a) => a.source === 'bulk').map((a) => a.no));
+    ruleNos.value = new Set(asg.filter((a) => a.source === 'rule').map((a) => a.no));
     selected.value = new Set();
     lastClicked.value = -1;
     filterMode.value = 'all';
@@ -342,6 +367,8 @@ export async function renameBatch(name: string) {
 export interface ImportReport {
   added: number;
   skipped: number;
+  /** Kuralla kendiliğinden atanan */
+  ruled: number;
   failed: { file: string; reason: string }[];
 }
 
@@ -350,7 +377,7 @@ export interface ImportReport {
  * XSLT'ler özetleriyle tekilleştirilir; daha önce başka partide atanmış faturaların kodu taşınır.
  */
 export async function importXml(list: File[]): Promise<ImportReport> {
-  const report: ImportReport = { added: 0, skipped: 0, failed: [] };
+  const report: ImportReport = { added: 0, skipped: 0, ruled: 0, failed: [] };
   const xmls = list.filter((f) => /\.xml$/i.test(f.name) || f.type === 'text/xml' || f.type === 'application/xml');
   if (xmls.length === 0) {
     showToast('XML dosyası seçilmedi. e-Fatura XML dosyalarını (.xml) yükleyin.', 4000);
@@ -395,6 +422,7 @@ export async function importXml(list: File[]): Promise<ImportReport> {
           taxExclusive: u.taxExclusive,
           taxAmount: u.taxAmount,
           lineCount: u.lineCount,
+          itemText: u.itemText,
           xml: u.xml,
           xsltId,
           fileName: f.name,
@@ -439,8 +467,12 @@ export async function importXml(list: File[]): Promise<ImportReport> {
         const idx = invoices.value.findIndex((i) => i.no === keepNo);
         if (idx >= 0) currentIndex.value = idx;
       }
+      // Kurallar: yeni gelen ve kod almamış faturalara kendiliğinden uygula
+      const newNos = new Set(recs.map((r) => r.no));
+      report.ruled = await applyRules((i) => newNos.has(i.no), true);
     }
     const parts = [`${report.added} fatura eklendi`];
+    if (report.ruled) parts.push(`${report.ruled} kuralla atandı`);
     if (report.skipped) parts.push(`${report.skipped} zaten vardı`);
     if (report.failed.length) parts.push(`${report.failed.length} dosya okunamadı`);
     showToast(parts.join(' · '), report.failed.length ? 6000 : 3500);
@@ -509,8 +541,9 @@ export function passesFilter(inv: Invoice): boolean {
   const bulk = bulkNos.value.has(inv.no);
   switch (filterMode.value) {
     case 'unassigned': if (code) return false; break;
-    case 'manual': if (!code || bulk) return false; break;
+    case 'manual': if (!code || bulk || ruleNos.value.has(inv.no)) return false; break;
     case 'bulk': if (!bulk) return false; break;
+    case 'rule': if (!ruleNos.value.has(inv.no)) return false; break;
   }
   const q = searchText.value.trim().toLocaleLowerCase('tr');
   return !q || matchesSearch(inv, q);
@@ -528,6 +561,7 @@ export function matchesSearch(i: Invoice, q: string): boolean {
 function navigable(inv: Invoice, all: boolean): boolean {
   if (!passesFilter(inv)) return false;
   if (!all && bulkNos.value.has(inv.no) && filterMode.value !== 'bulk') return false;
+  if (!all && ruleNos.value.has(inv.no) && filterMode.value !== 'rule') return false;
   return true;
 }
 function firstNavigable(): number {
@@ -573,6 +607,7 @@ async function applyChanges(changes: Change[]): Promise<Change[]> {
   const byNo = new Map(invoices.value.map((i) => [i.no, i]));
   const m = new Map(assignments.value);
   const bn = new Set(bulkNos.value);
+  const rn = new Set(ruleNos.value);
   const inverse: Change[] = [];
   const puts: AssignmentRecord[] = [];
   const dels: [string, string][] = [];
@@ -583,22 +618,25 @@ async function applyChanges(changes: Change[]): Promise<Change[]> {
     const inv = byNo.get(ch.no);
     if (!inv) continue;
     const prev = m.get(ch.no) ?? null;
-    inverse.push({ no: ch.no, code: prev, source: bn.has(ch.no) ? 'bulk' : 'manual' });
+    inverse.push({ no: ch.no, code: prev, source: bn.has(ch.no) ? 'bulk' : rn.has(ch.no) ? 'rule' : 'manual' });
     if (prev && prev !== ch.code) bump(inv.supplierVkn, prev, -1);
     if (ch.code && prev !== ch.code) bump(inv.supplierVkn, ch.code, +1);
     if (ch.code) {
       m.set(ch.no, ch.code);
       if (ch.source === 'bulk') bn.add(ch.no); else bn.delete(ch.no);
+      if (ch.source === 'rule') rn.add(ch.no); else rn.delete(ch.no);
       puts.push({ batchId: b.id, no: ch.no, code: ch.code, at: now, source: ch.source });
     } else {
       m.delete(ch.no);
       bn.delete(ch.no);
+      rn.delete(ch.no);
       dels.push([b.id, ch.no]);
     }
   }
   sbatch(() => {
     assignments.value = m;
     bulkNos.value = bn;
+    ruleNos.value = rn;
     dirty.value = true;
   });
   if (puts.length) await db.assignments.bulkPut(puts);
@@ -732,6 +770,7 @@ interface WorkspaceExport {
   firms: FirmRecord[];
   history: FirmHistoryEntry[];
   accounts: AccountRecord[];
+  rules?: Rule[];
   batches: { batch: BatchRecord; assignments: AssignmentRecord[]; invoices: InvoiceMeta[] }[];
 }
 
@@ -752,6 +791,7 @@ export async function exportWorkspace() {
     firms: await db.firms.toArray(),
     history: await db.firmHistory.toArray(),
     accounts: await db.firmAccounts.toArray(),
+    rules: await db.rules.toArray(),
     batches: [],
   };
   for (const batch of batches) {
@@ -846,12 +886,17 @@ export async function importWorkspace(file: File) {
     for (const a of raw.accounts ?? []) {
       await db.firmAccounts.put({ firmId: fid((a as AccountRecord).firmId), code: a.code, name: a.name, addedAt: a.addedAt ?? Date.now() });
     }
+    let nr = 0;
+    for (const r of raw.rules ?? []) {
+      if (!r?.kind || !r.pattern || !r.code) continue;
+      nr += await mergeRule({ ...r, firmId: fid(r.firmId) }) ? 1 : 0;
+    }
     firms.value = await db.firms.orderBy('name').toArray();
     await loadFirmData();
     await refreshBatchList();
     const latest = batchList.value[0];
     if (latest) await openBatch(batchRec.value?.id ?? latest.id);
-    showToast(`İçe aktarıldı: ${srcFirms.length} firma, ${nb} yeni parti, ${ni} fatura, ${na} atama`, 5000);
+    showToast(`İçe aktarıldı: ${srcFirms.length} firma, ${nb} yeni parti, ${ni} fatura, ${na} atama${nr ? `, ${nr} kural` : ''}`, 5000);
   } catch (e) {
     showToast((e as Error).message, 5000);
   } finally {
@@ -968,4 +1013,116 @@ export async function pickFromChart(code: string) {
   closeChart();
   if (selected.value.size > 0) await assignBulk(code);
   else await assign(code);
+}
+
+// ---------- otomatik atama kuralları ----------
+
+/** Aynı firmada aynı tür+belirteç varsa onu günceller (daha yeniyse), yoksa ekler. true = yazıldı */
+async function mergeRule(r: Rule): Promise<boolean> {
+  const key = normPattern(r.kind, r.pattern);
+  const same = (await db.rules.where('firmId').equals(r.firmId).toArray()).find((x) => x.kind === r.kind && normPattern(x.kind, x.pattern) === key);
+  if (same) {
+    if ((r.updatedAt ?? 0) <= same.updatedAt && same.code === r.code) return false;
+    await db.rules.put({ ...same, code: r.code, enabled: r.enabled ?? true, updatedAt: Math.max(same.updatedAt, r.updatedAt ?? 0) });
+    return true;
+  }
+  const byId = r.id ? await db.rules.get(r.id) : undefined;
+  await db.rules.put({ ...r, id: byId ? newId() : r.id || newId(), enabled: r.enabled ?? true, createdAt: r.createdAt ?? Date.now(), updatedAt: r.updatedAt ?? Date.now() });
+  return true;
+}
+
+async function reloadRules() {
+  rules.value = (await db.rules.where('firmId').equals(currentFirmId.value).toArray()).sort((a, b) => b.updatedAt - a.updatedAt);
+}
+
+/** Kural ekler (aynı belirteç varsa günceller) ve partideki atanmamış uyan faturalara hemen uygular. */
+export async function addRule(kind: RuleKind, patternRaw: string, codeRaw: string): Promise<string | null> {
+  const pattern = patternRaw.trim();
+  const code = codeRaw.trim();
+  const err = validateRule(kind, pattern, code);
+  if (err) return err;
+  const now = Date.now();
+  await mergeRule({ id: newId(), firmId: currentFirmId.value, kind, pattern: kind === 'vkn' ? normPattern(kind, pattern) : pattern, code, enabled: true, createdAt: now, updatedAt: now });
+  await reloadRules();
+  const n = await applyRules(() => true, true);
+  showToast(n ? `Kural kaydedildi · ${n} faturaya uygulandı` : 'Kural kaydedildi', 3500);
+  return null;
+}
+
+export async function updateRule(id: string, patch: Partial<Pick<Rule, 'code' | 'enabled' | 'pattern'>>) {
+  const r = rules.value.find((x) => x.id === id);
+  if (!r) return;
+  await db.rules.put({ ...r, ...patch, updatedAt: Date.now() });
+  await reloadRules();
+}
+
+export async function deleteRule(id: string) {
+  await db.rules.delete(id);
+  await reloadRules();
+}
+
+/**
+ * Kuralları partideki kod almamış faturalara uygular (yalnızca `pick` ile seçilenler); kaynak "kural".
+ * Geri alınabilir. Uygulanan sayıyı döndürür.
+ */
+export async function applyRules(pick: (inv: Invoice) => boolean, pushToUndo = true): Promise<number> {
+  if (!batchRec.value || rules.value.length === 0) return 0;
+  const changes: Change[] = [];
+  for (const inv of invoices.value) {
+    if (assignments.value.has(inv.no) || !pick(inv)) continue;
+    const r = ruleFor.value.get(inv.no);
+    if (r) changes.push({ no: inv.no, code: r.code, source: 'rule' });
+  }
+  if (changes.length === 0) return 0;
+  const inverse = await applyChanges(changes);
+  if (pushToUndo) pushUndo(`${changes.length} faturaya kural`, inverse, changes);
+  if (current.value && ruleNos.value.has(current.value.no)) next();
+  return changes.length;
+}
+
+/** Panelden: seçili faturanın satıcısı için kural taslağıyla pencereyi aç */
+export function openRules(draft?: { kind: RuleKind; pattern: string; code: string }) {
+  ruleDraft.value = draft ?? null;
+  rulesOpen.value = true;
+}
+export function closeRules() {
+  rulesOpen.value = false;
+  ruleDraft.value = null;
+}
+
+export function exportRules() {
+  const data: RulesFile = {
+    app: 'fatura-hesap-kodu',
+    kind: 'rules',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    firmName: firm.value.name,
+    rules: rules.value.map(({ kind, pattern, code, enabled }) => ({ kind, pattern, code, enabled })),
+  };
+  const name = `kurallar-${(firm.value.name || 'firma').toLocaleLowerCase('tr').replace(/[^a-z0-9çğıöşü]+/g, '-')}.json`;
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  showToast(`${data.rules.length} kural dışa aktarıldı: ${name}`, 4000);
+}
+
+/** Kural dosyasını bu firmaya ekler (aynı belirteç güncellenir, hiçbir kural silinmez) */
+export async function importRules(file: File) {
+  try {
+    const f = parseRulesFile(await file.text());
+    const now = Date.now();
+    let n = 0;
+    for (const r of f.rules) n += (await mergeRule({ id: newId(), firmId: currentFirmId.value, ...r, createdAt: now, updatedAt: now })) ? 1 : 0;
+    await reloadRules();
+    const applied = await applyRules(() => true, true);
+    showToast(`${n} kural alındı${f.firmName ? ` (${f.firmName})` : ''}${applied ? ` · ${applied} faturaya uygulandı` : ''}`, 4500);
+  } catch (e) {
+    showToast((e as Error).message, 5000);
+  }
 }

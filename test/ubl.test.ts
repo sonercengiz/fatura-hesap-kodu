@@ -25,6 +25,7 @@ describe('UBL-TR XML ayrıştırma', () => {
       taxExclusive: 1250,
       taxAmount: 250,
       lineCount: 2,
+      itemText: 'kalem defteri | tükenmez kalem',
       xsltFileName: 'ornek.xslt',
     });
     expect(u.xslt).toContain('xsl:stylesheet');

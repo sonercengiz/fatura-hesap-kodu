@@ -31,9 +31,21 @@ export function SidePanel() {
             <div class="detail-row"><span>Matrah · vergi</span><b>{fmtAmount(inv.taxExclusive, inv.currency)}{inv.taxAmount != null ? ` · ${fmtAmount(inv.taxAmount, inv.currency)}` : ''}</b></div>
           )}
           <div class={`detail-code slot-${S.slotIndexOf(code)}`}>
-            <span>Atanan</span>
+            <span>Atanan{S.ruleNos.value.has(inv.no) && <span class="bulk-tag" title="Kuralla atandı">kural</span>}</span>
             <b>{code ?? '—'}</b>
           </div>
+          {(() => {
+            const r = S.ruleFor.value.get(inv.no);
+            if (r && r.code !== code) return (
+              <button class="hint" onClick={() => S.assign(r.code)} title={`Kural: ${r.pattern}`}>
+                Kural diyor ki: <b>{r.code}</b> <span class="muted">({r.pattern})</span>
+              </button>
+            );
+            if (code && !r) return (
+              <button class="ghost tiny rule-make" onClick={() => S.openRules({ kind: 'vkn', pattern: inv.supplierVkn, code })} title="Bu satıcının her faturası bu kodu alsın (kural)">⚡ Kural yap: {inv.supplierVkn} → {code}</button>
+            );
+            return null;
+          })()}
           {S.hint.value && S.hint.value.code !== code && (
             <button class="hint" onClick={() => S.assign(S.hint.value!.code)} title="Bu satıcıya daha önce verilen kodu ata (Boşluk)">
               Bu satıcıya önce: <b>{S.hint.value.code}</b> <span class="muted">×{S.hint.value.count}</span> <kbd>Boşluk</kbd>
@@ -82,10 +94,11 @@ export function SidePanel() {
           const iss = S.attentionIssues(i);
           const sel = S.selected.value.has(i.no);
           const bulk = S.bulkNos.value.has(i.no);
+          const ruled = S.ruleNos.value.has(i.no);
           const si = S.slotIndexOf(c);
           return (
             <div
-              class={`row ${k === idx ? 'current' : ''} ${c ? `done slot-row-${si}` : ''} ${sel ? 'selected' : ''} ${bulk ? 'bulk' : ''}`}
+              class={`row ${k === idx ? 'current' : ''} ${c ? `done slot-row-${si}` : ''} ${sel ? 'selected' : ''} ${bulk || ruled ? 'bulk' : ''}`}
               onClick={(e) => {
                 if (e.shiftKey && S.lastClicked.value >= 0) { S.selectRange(S.lastClicked.value, k); S.lastClicked.value = k; return; }
                 if (e.ctrlKey || e.metaKey) { S.toggleSelect(i.no); S.lastClicked.value = k; return; }
@@ -99,7 +112,7 @@ export function SidePanel() {
                 <span class="row-name">{i.supplierName}</span>
                 <span class="row-sub">{i.no} · {i.date}</span>
               </span>
-              <span class="row-code">{bulk && <span class="bulk-tag" title="Toplu atandı (doğal gezintide atlanır, Ctrl+ok ile görülür)">toplu</span>}{c ?? ''}{iss.length > 0 && <span class="warn-dot" title={iss.map((x) => S.ISSUE_LABEL[x]).join('\n')}>!</span>}</span>
+              <span class="row-code">{bulk && <span class="bulk-tag" title="Toplu atandı (doğal gezintide atlanır, Ctrl+ok ile görülür)">toplu</span>}{ruled && <span class="bulk-tag" title="Kuralla atandı (doğal gezintide atlanır, Ctrl+ok ile görülür)">kural</span>}{c ?? ''}{iss.length > 0 && <span class="warn-dot" title={iss.map((x) => S.ISSUE_LABEL[x]).join('\n')}>!</span>}</span>
             </div>
           );
         })}

@@ -25,6 +25,8 @@ export interface Invoice {
   profile: string;
   /** XML + XSLT mevcut → fatura görseli çizilebilir */
   hasView: boolean;
+  /** Kalem adları (normalize), kurallar için */
+  itemText: string;
 }
 
 export interface ShortcutSlot {
@@ -34,7 +36,7 @@ export interface ShortcutSlot {
 
 export type ViewMode = 'top' | 'last' | 'margin';
 export type SortMode = 'date-supplier' | 'added';
-export type FilterMode = 'all' | 'unassigned' | 'manual' | 'bulk';
+export type FilterMode = 'all' | 'unassigned' | 'manual' | 'bulk' | 'rule';
 
 export interface Settings {
   codeColumnIndex: number; // 1 tabanlı; varsayılan 3

@@ -3,6 +3,8 @@ import type { Settings, ShortcutSlot } from '../core/types';
 import { DEFAULT_SHORTCUT_KEYS } from '../core/types';
 import type { HistoryEntry } from '../core/suggest/engine';
 import { sheetToInvoices, type EdmSheet } from '../core/legacy';
+import type { Rule } from '../core/rules';
+import { itemTextOf } from '../core/xml/parseUbl';
 
 export interface FirmHistoryEntry extends HistoryEntry {
   firmId: string;
@@ -46,6 +48,8 @@ export interface InvoiceRecord {
   taxExclusive: number | null;
   taxAmount: number | null;
   lineCount: number | null;
+  /** Kalem adları (normalize); kurallar için. Eski kayıtlarda boş olabilir */
+  itemText: string;
   xml: string | null;
   xsltId: string | null;
   fileName: string;
@@ -59,7 +63,7 @@ export interface XsltRecord {
   text: string;
 }
 
-export type AssignmentSource = 'manual' | 'bulk';
+export type AssignmentSource = 'manual' | 'bulk' | 'rule';
 
 export interface AssignmentRecord {
   batchId: string;
@@ -88,6 +92,7 @@ class AppDb extends Dexie {
   invoices!: Table<InvoiceRecord, [string, string]>;
   xslts!: Table<XsltRecord, string>;
   assignments!: Table<AssignmentRecord, [string, string]>;
+  rules!: Table<Rule, string>;
   settings!: Table<SettingRecord, string>;
   firms!: Table<FirmRecord, string>;
   firmHistory!: Table<FirmHistoryEntry, [string, string, string]>;
@@ -174,6 +179,7 @@ class AppDb extends Dexie {
               taxExclusive: null,
               taxAmount: null,
               lineCount: null,
+              itemText: '',
               xml: null,
               xsltId: null,
               fileName: b.sourceFileName ?? '',
@@ -187,6 +193,21 @@ class AppDb extends Dexie {
         }
         const s = (await tx.table('settings').get('settings'))?.value as Partial<Settings> & { sortMode?: string } | undefined;
         if (s && (s.sortMode as string) === 'excel') await tx.table('settings').put({ key: 'settings', value: { ...s, sortMode: 'added' } });
+      });
+    // v7: otomatik atama kuralları; faturalara kalem metni (kalem kuralları için)
+    this.version(7)
+      .stores({ rules: 'id, firmId' })
+      .upgrade(async (tx) => {
+        if (typeof DOMParser === 'undefined') return;
+        await tx.table('invoices').toCollection().modify((r: InvoiceRecord) => {
+          if (r.itemText !== undefined) return;
+          r.itemText = '';
+          if (!r.xml) return;
+          try {
+            const doc = new DOMParser().parseFromString(r.xml, 'application/xml');
+            r.itemText = itemTextOf(doc.documentElement);
+          } catch { /* kalem metni boş kalır */ }
+        });
       });
   }
 }

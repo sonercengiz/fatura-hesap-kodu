@@ -26,6 +26,8 @@ export interface UblInvoice {
   taxExclusive: number | null;
   taxAmount: number | null;
   lineCount: number | null;
+  /** Kalem adlarının birleştirilmiş, normalize edilmiş metni (kurallar için; en çok 4000 karakter) */
+  itemText: string;
   /** Gömülü görünüm şablonu (metin); yoksa null */
   xslt: string | null;
   xsltFileName: string | null;
@@ -176,10 +178,22 @@ export function parseUbl(xmlText: string): UblInvoice {
     taxExclusive: toNum(cbc(total, 'TaxExclusiveAmount')),
     taxAmount,
     lineCount: toNum(cbc(root, 'LineCountNumeric')) ?? children(root, NS.cac, 'InvoiceLine').length,
+    itemText: itemTextOf(root),
     xslt,
     xsltFileName,
     xml: new XMLSerializer().serializeToString(doc),
   };
+}
+
+/** Kalem adları (Item/Name, yoksa Description) tek metin halinde: küçük harf, tekilleştirilmiş, sınırlı uzunluk */
+export function itemTextOf(root: Element | null, max = 4000): string {
+  const seen = new Set<string>();
+  for (const ln of children(root, NS.cac, 'InvoiceLine')) {
+    const item = cac(ln, 'Item');
+    const name = (cbc(item, 'Name') || cbc(item, 'Description')).toLocaleLowerCase('tr').replace(/\s+/g, ' ').trim();
+    if (name) seen.add(name);
+  }
+  return Array.from(seen).join(' | ').slice(0, max);
 }
 
 /** Fatura kalemleri (yedek görünüm için). */
