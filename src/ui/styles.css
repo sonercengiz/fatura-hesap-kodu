@@ -364,3 +364,8 @@ tr.iss-chart td.code-col { color: var(--warn); text-decoration: underline wavy v
   .print-item.brk { break-after: page; }
   .print-item.brk:last-child { break-after: auto; }
 }
+
+.print-list-head { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--panel); z-index: 1; }
+.print-check { margin: 0; flex: none; }
+.print-row.off { opacity: .45; } .print-row.off .print-main { text-decoration: line-through; }
+.print-opts select, .print-opts input[type="text"], .print-opts input:not([type]) { width: 100%; }
