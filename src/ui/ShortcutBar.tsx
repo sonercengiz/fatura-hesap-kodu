@@ -71,6 +71,32 @@ function SlotButton({ i }: { i: number }) {
   );
 }
 
+/** Seçili faturanın atama durumu: yuva rengiyle dolu kart (atandı) ya da kesikli boş kart (atanmadı). */
+function AssignStatus() {
+  const inv = S.current.value;
+  if (!inv) return <div class="status none" />;
+  const code = S.assignments.value.get(inv.no);
+  if (!code) {
+    return (
+      <div class="status empty" title="Bu faturaya henüz hesap kodu verilmedi">
+        <span class="status-label">Bu fatura</span>
+        <b class="status-code">Atanmadı</b>
+        <span class="status-sub">Q–D kısayol · / elle yaz</span>
+      </div>
+    );
+  }
+  const si = S.slotIndexOf(code);
+  const src = S.bulkNos.value.has(inv.no) ? 'toplu' : S.ruleNos.value.has(inv.no) ? 'kuralla' : 'elle';
+  const name = S.accountMap.value.get(code);
+  return (
+    <div class={`status done slot-${si}`} title={`${inv.no} → ${code} (${src}). Backspace: kaldır`}>
+      <span class="status-label">Atandı · {src}</span>
+      <b class="status-code">{code}</b>
+      <span class="status-sub">{name ?? (si >= 0 ? `${S.firm.value.shortcuts[si]?.key.toUpperCase()} kısayolu` : '\u00a0')}</span>
+    </div>
+  );
+}
+
 export function ShortcutBar() {
   const keys = S.firm.value.shortcuts;
   const manual = S.mode.value === 'manual';
@@ -92,6 +118,7 @@ export function ShortcutBar() {
       <div class="slots">
         {keys.map((_, i) => <SlotButton i={i} />)}
       </div>
+      <AssignStatus />
       <div class="manual-box">
         {manual ? (
           <>
