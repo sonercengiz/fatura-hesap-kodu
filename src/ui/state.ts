@@ -755,7 +755,7 @@ export async function exportExcel() {
   if (!b) return;
   if (dirty.value) await save();
   const bytes = buildOutputWorkbook(outputOrder.value, outputOptions());
-  const name = buildFileName(firm.value.name);
+  const name = buildFileName(firm.value.name, outputOrder.value);
   const blob = new Blob([bytes as unknown as ArrayBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');

@@ -98,15 +98,30 @@ export function buildOutputWorkbook(invoices: Invoice[], opts: OutputOptions): U
   return XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as Uint8Array;
 }
 
-/** "GÜN AY YIL FİRMA_ADI FATURA.xlsx" */
-export function buildFileName(firmName: string, date: Date = new Date()): string {
-  const dd = String(date.getDate()).padStart(2, '0');
-  const mm = String(date.getMonth() + 1).padStart(2, '0');
-  const yyyy = date.getFullYear();
+/** Faturaların çoğunun ait olduğu ay: "AA YYYY"; tarih yoksa null */
+export function dominantMonthKey(invoices: Pick<Invoice, 'isoDate'>[]): { mm: string; yyyy: string } | null {
+  const count = new Map<string, number>();
+  for (const i of invoices) {
+    const m = i.isoDate.match(/^(\d{4})-(\d{2})/);
+    if (m) count.set(`${m[1]}-${m[2]}`, (count.get(`${m[1]}-${m[2]}`) ?? 0) + 1);
+  }
+  let best: string | null = null;
+  let n = 0;
+  for (const [k, c] of count) if (c > n || (c === n && best !== null && k > best)) { best = k; n = c; }
+  if (!best) return null;
+  const [yyyy, mm] = best.split('-');
+  return { mm, yyyy };
+}
+
+/** "AY YIL FİRMA_ADI FATURA.xlsx" — aylık işlendiği için gün yok; ay = faturaların baskın ayı, yoksa verilen tarih */
+export function buildFileName(firmName: string, invoices: Pick<Invoice, 'isoDate'>[] = [], fallback: Date = new Date()): string {
+  const dom = dominantMonthKey(invoices);
+  const mm = dom?.mm ?? String(fallback.getMonth() + 1).padStart(2, '0');
+  const yyyy = dom?.yyyy ?? String(fallback.getFullYear());
   const firm = (firmName || 'FIRMA')
     .trim()
     .toLocaleUpperCase('tr')
     .replace(/[\\/:*?"<>|]/g, '')
     .replace(/\s+/g, '_');
-  return `${dd} ${mm} ${yyyy} ${firm} FATURA.xlsx`;
+  return `${mm} ${yyyy} ${firm} FATURA.xlsx`;
 }

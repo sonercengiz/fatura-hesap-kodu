@@ -52,7 +52,8 @@ describe('EDM düzeninde çıktı', () => {
     const ws = XLSX.read(bytes, { type: 'array' }).Sheets['Sheet0'];
     expect(ws['G2'].t).toBe('s'); // VKN kod sütunundan sonra olduğu için G'de
   });
-  it('dosya adı GÜN AY YIL FİRMA FATURA biçimindedir', () => {
-    expect(buildFileName('Abc Ltd. Şti', new Date(2026, 9, 25))).toBe('25 10 2026 ABC_LTD._ŞTİ FATURA.xlsx');
+  it('dosya adı AY YIL FİRMA FATURA biçimindedir; ay faturaların baskın ayıdır', () => {
+    expect(buildFileName('Abc Ltd. Şti', [{ isoDate: '2026-09-10' }, { isoDate: '2026-09-30' }, { isoDate: '2026-10-01' }])).toBe('09 2026 ABC_LTD._ŞTİ FATURA.xlsx');
+    expect(buildFileName('Abc', [], new Date(2026, 9, 25))).toBe('10 2026 ABC FATURA.xlsx');
   });
 });
