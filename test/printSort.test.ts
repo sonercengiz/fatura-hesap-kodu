@@ -15,15 +15,22 @@ const list = [
 const codes = new Map([['DDD2026000000001', '770.02'], ['ZZZ2026000000009', '153'], ['BBB2026000000002', '770.01']]);
 
 describe('yazdırma sırası', () => {
-  it('varsayılan: tarih eskiden yeniye, gün içinde fatura no, satıcı blokları', () => {
+  it('varsayılan: tarih eskiden yeniye, gün içinde yalnızca fatura no (gruplama yok)', () => {
+    expect(DEFAULT_PLAN_SORT.groupSupplier).toBe(false);
     expect(sortPlan(list, DEFAULT_PLAN_SORT, codes).map((i) => i.no)).toEqual([
+      'DDD2026000000001', 'BBB2026000000001', 'BBB2026000000002',
+      'AAA2026000000005', 'AAA2026000000007', 'CCC2026000000001', 'ZZZ2026000000009',
+    ]);
+  });
+  it('satıcı gruplama açıkken gün içinde satıcı blokları', () => {
+    expect(sortPlan(list, { ...DEFAULT_PLAN_SORT, groupSupplier: true }, codes).map((i) => i.no)).toEqual([
       'DDD2026000000001', 'BBB2026000000001', 'BBB2026000000002',
       'AAA2026000000005', 'AAA2026000000007', // C bloğu (en küçük no)
       'CCC2026000000001', 'ZZZ2026000000009', // A bloğu
     ]);
   });
   it('tarih yeniden eskiye; gruplama kapalıyken saf no sırası', () => {
-    const r = sortPlan(list, { ...DEFAULT_PLAN_SORT, dir: 'desc', groupSupplier: false }, codes).map((i) => i.no);
+    const r = sortPlan(list, { ...DEFAULT_PLAN_SORT, dir: 'desc' }, codes).map((i) => i.no);
     expect(r.slice(0, 4)).toEqual(['AAA2026000000005', 'AAA2026000000007', 'CCC2026000000001', 'ZZZ2026000000009']);
     expect(r[6]).toBe('DDD2026000000001');
   });
@@ -43,7 +50,8 @@ describe('yazdırma sırası', () => {
   it('açıklama düz Türkçe ve uçları söyler', () => {
     const items = sortPlan(list, DEFAULT_PLAN_SORT, codes);
     const d = describePlan(DEFAULT_PLAN_SORT, items, codes);
-    expect(d.summary).toBe('Önce fatura tarihi: eskiden yeniye. Aynı gündekiler kendi içinde fatura numarası: A → Z / küçükten büyüğe. Aynı satıcının faturaları bir arada.');
+    expect(d.summary).toBe('Önce fatura tarihi: eskiden yeniye. Aynı gündekiler kendi içinde fatura numarası: A → Z / küçükten büyüğe.');
+    expect(describePlan({ ...DEFAULT_PLAN_SORT, groupSupplier: true }, items, codes).summary).toContain('Aynı satıcının faturaları bir arada.');
     expect(d.top).toContain('28/09/2026');
     expect(d.bottom).toContain('30/09/2026');
     expect(describePlan({ ...DEFAULT_PLAN_SORT, primary: 'code' }, items, codes).summary).toContain('atanmamışlar en sonda');

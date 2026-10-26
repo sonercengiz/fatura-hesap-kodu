@@ -14,7 +14,8 @@ export interface PlanSort {
   groupSupplier: boolean;
 }
 
-export const DEFAULT_PLAN_SORT: PlanSort = { primary: 'date', dir: 'asc', secondary: 'no', dir2: 'asc', groupSupplier: true };
+/** Varsayılan: yalnızca tarih, sonra fatura numarası. Satıcı gruplama kullanıcı isterse açılır. */
+export const DEFAULT_PLAN_SORT: PlanSort = { primary: 'date', dir: 'asc', secondary: 'no', dir2: 'asc', groupSupplier: false };
 
 export const KEY_LABELS: Record<SortKey, string> = {
   date: 'Fatura tarihi',
