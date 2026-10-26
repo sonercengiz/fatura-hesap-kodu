@@ -13,15 +13,12 @@ pnpm test       # çekirdek testleri (Excel okuma/yazma, eşleştirme, öneri)
 pnpm build      # dist/ klasörüne statik site
 ```
 
-## Yayınlama (kullanıcılar tarayıcıdan açar, kurulum yok)
+## Yayın
 
-`pnpm build` sonrası oluşan `dist/` klasörü statik bir sitedir. Seçenekler:
-
-- **Cloudflare Pages / Netlify / Vercel:** `dist/` klasörünü sürükle-bırak ile yükleyin. Ücretsiz bir adres verir; güncellemede tekrar yükleyin, herkes anında yeni sürümü alır.
-- **GitHub Pages:** `dist/` içeriğini `gh-pages` dalına koyun.
-- **Ofis içi:** `dist/` klasörünü herhangi bir web sunucusuna (IIS, nginx) kopyalayın. `file://` ile doğrudan açmak çalışmaz; HTTP gerekir.
-
-Uygulama `base: './'` ile derlendiği için alt klasörde de çalışır.
+- **Canlı adres:** https://faturahesapkodu.pages.dev/ (Cloudflare Pages; GitHub deposuna bağlı, `main` dalına her gönderimde otomatik derlenir ve yayınlanır; derleme `pnpm build`, çıktı `dist`, Node 22).
+- **Yedek adres:** https://sonercengiz.github.io/fatura-hesap-kodu/ (GitHub Pages; `.github/workflows/pages.yml` testleri çalıştırır, derler, yayınlar).
+- Elle yayın gerekirse `dist/` klasörü herhangi bir statik web sunucusuna kopyalanır. Dosyadan (`file://`) açmak çalışmaz; bir web adresi gerekir.
+- Gizlilik: fatura verileri hiçbir sunucuya gönderilmez, yalnızca kullanıcının tarayıcısında saklanır. Depodaki örnek veriler anonimdir.
 
 ## Kullanım
 
