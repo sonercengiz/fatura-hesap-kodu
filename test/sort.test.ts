@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { sortInvoices, dateKey } from '../src/core/sort';
 import type { Invoice } from '../src/core/types';
 
-const mk = (rowIndex: number, no: string, date: string, vkn: string): Invoice => ({ no, rowIndex, date, supplierVkn: vkn, supplierName: vkn, amount: 1, currency: 'TRY', invoiceType: '', profile: '' });
+const mk = (order: number, no: string, date: string, vkn: string): Invoice => ({ no, order, date, isoDate: '', uuid: '', supplierVkn: vkn, supplierName: vkn, amount: 1, taxExclusive: null, taxAmount: null, currency: 'TRY', invoiceType: '', profile: '', hasView: true });
 const list = [
   mk(0, 'ZZZ2026000000009', '30/09/2026', 'A'),
   mk(1, 'BBB2026000000002', '29/09/2026', 'B'),
@@ -19,8 +19,8 @@ describe('sıralama', () => {
     expect(dateKey('2026-10-05')).toBe(20261005);
     expect(dateKey('bozuk')).toBe(0);
   });
-  it('excel sırası satır sırasıdır', () => {
-    expect(sortInvoices(list, 'excel').map((i) => i.rowIndex)).toEqual([0, 1, 2, 3, 4, 5, 6]);
+  it('yükleme sırası ekleniş sırasıdır', () => {
+    expect(sortInvoices(list, 'added').map((i) => i.order)).toEqual([0, 1, 2, 3, 4, 5, 6]);
   });
   it('tarih eskiden yeniye, gün içinde satıcı blokları ve fatura no', () => {
     expect(sortInvoices(list, 'date-supplier').map((i) => i.no)).toEqual([

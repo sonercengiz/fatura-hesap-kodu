@@ -1,17 +1,18 @@
 import { chromium } from 'playwright';
-import { readFileSync, existsSync } from 'node:fs';
-const SCR = '/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/04627602-e09f-44db-bd85-15ef9828baa0/scratchpad';
-const XLSX = `${SCR}/demo/EDM Gelen Faturalar Ekim 2026.xlsx`;
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
+const SCR = '/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/aa071f3a-6270-4292-9e7a-d102afeef53e/scratchpad';
+const XML_DIR = process.env.XML_DIR || `/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/aa071f3a-6270-4292-9e7a-d102afeef53e/scratchpad/xmlin`; // gerçek e-Fatura XML'leri (depoya girmez)
+const XMLS = readdirSync(XML_DIR).filter((f) => f.endsWith('.xml')).sort().map((f) => `${XML_DIR}/${f}`);
 const browser = await chromium.launch({ channel: 'chrome', headless: true });
 const errors = [];
 const mk = async () => { const ctx = await browser.newContext({ viewport: { width: 1440, height: 820 }, acceptDownloads: true }); const page = await ctx.newPage();
-  page.on('pageerror', (e) => errors.push('pageerror: ' + e.message)); page.on('console', (m) => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
+  page.on('pageerror', (e) => errors.push('pageerror: ' + e.message)); page.on('console', (m) => { if (m.type() === 'error' && !/srcdoc|sandboxed/.test(m.text())) errors.push('console: ' + m.text()); });
   page.on('dialog', (d) => d.accept(d.type() === 'prompt' ? 'Beta Ltd' : undefined));
   await page.addInitScript(() => { try { localStorage.setItem('guideSeen', '1'); } catch {} }); await page.goto('http://localhost:5179/'); return page; };
 const a = await mk();
 await a.waitForSelector('.firm-select');
 console.log('varsayılan firma:', await a.locator('.firm-select option:checked').innerText());
-await a.locator('input[accept=".xlsx,.xls"]').setInputFiles(XLSX); await a.waitForSelector('.card-no');
+await a.locator('input[accept=".xml,text/xml,application/xml"]').setInputFiles(XMLS); await a.waitForSelector('.inv-frame');
 for (const c of ['770.01', '770.01', '770.01']) { await a.keyboard.press('/'); await a.waitForSelector('.manual-input'); await a.keyboard.type(c); await a.keyboard.press('Enter'); await a.waitForTimeout(80); }
 await a.locator('.slot').nth(0).locator('.slot-icon.save').click(); await a.waitForTimeout(150);
 await a.locator('button[title="Ayarlar"]').click();
@@ -22,7 +23,7 @@ console.log('A firması: slot Q =', (await a.locator('.slot').nth(0).innerText()
 // Yeni firma (prompt → "Beta Ltd")
 await a.locator('.firm-select').selectOption('__new'); await a.waitForTimeout(400);
 console.log('yeni firma seçili:', await a.locator('.firm-select option:checked').innerText(), '| karşılama görünüyor:', await a.locator('.welcome').count(), '| slot Q:', (await a.locator('.slot').nth(0).innerText()).replace(/\n/g,' '), '| firma sayısı:', (await a.locator('.firm-select option').count()) - 1);
-await a.locator('input[accept=".xlsx,.xls"]').setInputFiles(XLSX); await a.waitForSelector('.card-no');
+await a.locator('input[accept=".xml,text/xml,application/xml"]').setInputFiles(XMLS); await a.waitForSelector('.inv-frame');
 console.log('Beta: ilk fatura kodu (Alfa atamaları sızmamalı):', await a.locator('.detail-code b').innerText(), '| ipucu:', await a.locator('button.hint').count(), '| hesap listesi:', await a.evaluate(() => document.querySelectorAll('.acc-row').length));
 await a.keyboard.press('/'); await a.keyboard.type('600.002'); await a.keyboard.press('Enter'); await a.waitForTimeout(100);
 await a.locator('.slot').nth(1).hover(); await a.locator('.slot').nth(1).locator('.slot-icon.edit').click(); await a.keyboard.type('600.002'); await a.keyboard.press('Enter'); await a.waitForTimeout(150);

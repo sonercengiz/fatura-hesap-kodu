@@ -3,12 +3,11 @@ import * as S from './state';
 import { Toolbar } from './Toolbar';
 import { SidePanel } from './SidePanel';
 import { ShortcutBar } from './ShortcutBar';
-import { PdfView } from './PdfView';
+import { InvoiceView, printCurrentInvoice } from './InvoiceView';
 import { InvoiceCard } from './InvoiceCard';
 import { PreviewModal } from './PreviewModal';
 import { SettingsModal } from './SettingsModal';
 import { GuideModal } from './GuideModal';
-import { LinkModal } from './LinkModal';
 import { ChartModal } from './ChartModal';
 
 export function App() {
@@ -16,8 +15,6 @@ export function App() {
   const inv = S.current.value;
   const code = inv ? S.assignments.value.get(inv.no) : undefined;
   const slotIdx = S.slotIndexOf(code);
-  const pref = inv ? S.refFor(inv.no) : null;
-  const file = pref ? S.fileById(pref.fileId) : undefined;
 
   useEffect(() => {
     try {
@@ -43,6 +40,10 @@ export function App() {
         if (e.key === 'F1') S.exportExcel();
         else if (e.key === 'F2') S.save();
         else S.previewOpen.value = !S.previewOpen.value;
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p') {
+        if (S.current.value?.hasView) { e.preventDefault(); printCurrentInvoice(); }
         return;
       }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
@@ -75,12 +76,11 @@ export function App() {
         }
         return;
       }
-      if (S.previewOpen.value || S.settingsOpen.value || S.guideOpen.value || S.linkTarget.value) {
+      if (S.previewOpen.value || S.settingsOpen.value || S.guideOpen.value) {
         if (e.key === 'Escape') {
           S.previewOpen.value = false;
           S.settingsOpen.value = false;
           S.guideOpen.value = false;
-          S.linkTarget.value = null;
         }
         return;
       }
@@ -183,12 +183,7 @@ export function App() {
     e.preventDefault();
     setDrag(false);
     const list = Array.from(e.dataTransfer?.files ?? []);
-    const xlsx = list.find((f) => /\.xlsx?$/i.test(f.name));
-    const pdfs = list.filter((f) => /\.pdf$/i.test(f.name));
-    (async () => {
-      if (xlsx) await S.importExcel(xlsx);
-      if (pdfs.length) await S.addPdfs(pdfs);
-    })();
+    if (list.length) S.importXml(list);
   };
 
   return (
@@ -214,25 +209,26 @@ export function App() {
       )}
       {!S.batchRec.value ? (
         <main class="welcome">
-          <h1>EDM fatura listesini yükleyin</h1>
-          <p>EDM'den indirdiğiniz Excel dosyasını buraya sürükleyin ya da üstteki <b>Excel yükle</b> düğmesini kullanın. PDF'leri sonra ekleyebilirsiniz.</p>
-          <p class="muted">Veriler yalnızca bu tarayıcıda saklanır. Çıktı, aynı Excel'in Hesap Kodu sütunu eklenmiş halidir.</p>
+          <h1>e-Fatura XML dosyalarını yükleyin</h1>
+          <p>EDM'den indirdiğiniz fatura XML'lerini buraya sürükleyin ya da üstteki <b>XML yükle</b> / <b>Klasör yükle</b> düğmelerini kullanın. Faturalar kendi resmî görünümüyle çizilir; tek tuşla hesap kodu verirsiniz.</p>
+          <p class="muted">Veriler yalnızca bu tarayıcıda saklanır. Çıktı, EDM fatura listesi düzeninde (Hesap Kodu sütunu eklenmiş) bir Excel dosyasıdır.</p>
           <p><button class="primary" onClick={() => (S.guideOpen.value = true)}>Kullanım rehberini aç</button></p>
         </main>
       ) : (
         <main class="work">
           <section class={`viewer slot-bg-${slotIdx}`}>
-            {inv && pref && file ? (
-              <PdfView file={file} pref={pref} invoiceNo={inv.no} viewMode={S.settings.value.viewMode} marginPx={S.settings.value.marginPx} />
+            {inv && inv.hasView ? (
+              <InvoiceView invoiceNo={inv.no} viewMode={S.settings.value.viewMode} marginPx={S.settings.value.marginPx} />
             ) : inv ? (
-              <InvoiceCard inv={inv} hasFiles={S.files.value.length > 0} />
+              <InvoiceCard inv={inv} />
             ) : (
-              <div class="pdf-status">Fatura yok.</div>
+              <div class="pdf-status">{S.invoices.value.length === 0 ? 'Bu partide fatura yok. XML yükleyin.' : 'Fatura yok.'}</div>
             )}
             {inv && (
               <div class="viewer-badge">
                 <span class="muted">{S.currentIndex.value + 1}/{S.invoices.value.length}</span>
                 {code && <b class={`badge slot-${slotIdx}`}>{code}</b>}
+                {inv.hasView && <button class="ghost tiny" title="Yazdır / PDF olarak kaydet (Ctrl+P)" onClick={printCurrentInvoice}>🖨</button>}
               </div>
             )}
           </section>
@@ -243,11 +239,10 @@ export function App() {
       {S.previewOpen.value && <PreviewModal />}
       {S.settingsOpen.value && <SettingsModal />}
       {S.guideOpen.value && <GuideModal />}
-      {S.linkTarget.value && <LinkModal />}
       {S.chartOpen.value && <ChartModal />}
       {S.busy.value && <div class="busy">{S.busy.value}</div>}
       {S.toast.value && <div class="toast">{S.toast.value}</div>}
-      {drag && <div class="drop-hint">Bırakın: Excel veya PDF</div>}
+      {drag && <div class="drop-hint">Bırakın: e-Fatura XML dosyaları</div>}
     </div>
   );
 }

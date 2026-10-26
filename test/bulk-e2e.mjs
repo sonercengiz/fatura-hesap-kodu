@@ -1,19 +1,22 @@
 import { chromium } from 'playwright';
-const DEMO = '/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/04627602-e09f-44db-bd85-15ef9828baa0/scratchpad/demo/EDM Gelen Faturalar Ekim 2026.xlsx';
+import { readdirSync } from 'node:fs';
+const XML_DIR = process.env.XML_DIR || `/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/aa071f3a-6270-4292-9e7a-d102afeef53e/scratchpad/xmlin`; // gerçek e-Fatura XML'leri (depoya girmez)
+const XMLS = readdirSync(XML_DIR).filter((f) => f.endsWith('.xml')).sort().map((f) => `${XML_DIR}/${f}`);
 const OUT = '/Users/sonercengiz/Documents/scc/fatura-hesap-kodu/public/guide';
 const browser = await chromium.launch({ channel: 'chrome', headless: true });
 const page = await (await browser.newContext({ viewport: { width: 1440, height: 820 }, deviceScaleFactor: 1.5 })).newPage();
-const errors = []; page.on('pageerror', (e) => errors.push(e.message)); page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+const errors = []; page.on('pageerror', (e) => errors.push(e.message)); page.on('console', (m) => { if (m.type() === 'error' && !/srcdoc|sandboxed/.test(m.text())) errors.push(m.text()); });
 await page.addInitScript(() => { try { localStorage.setItem('guideSeen', '1'); } catch {} });
 await page.goto('http://localhost:5179/');
-await page.locator('input[accept=".xlsx,.xls"]').setInputFiles(DEMO);
-await page.waitForSelector('.card-no');
-const no = () => page.locator('.card-no').innerText();
+await page.locator('input[accept=".xml,text/xml,application/xml"]').setInputFiles(XMLS);
+await page.waitForSelector('.inv-frame');
+const no = () => page.locator('.detail-row b').first().innerText();
 // elle 2 atama (770.01 x2) → Q'ya kaydet
 for (const c of ['770.01', '770.01', '770.01']) { await page.keyboard.press('/'); await page.waitForSelector('.manual-input'); await page.keyboard.type(c); await page.keyboard.press('Enter'); await page.waitForTimeout(100); }
 await page.locator('.slot').nth(0).locator('.slot-icon.save').click();
 await page.keyboard.press('Home');
 console.log('başlangıç:', await no());
+await page.locator('.bulk-toggle').click(); // seçim yardımcılarını aç
 // "Bu satıcıyı seç" (YILDIZ: 3 fatura: idx 0, 6, 12)
 await page.locator('button:has-text("Bu satıcıyı seç")').click();
 console.log('seçili:', await page.locator('.row.selected').count(), '| bar:', (await page.locator('.bulk-bar').innerText()).replace(/\n/g, ' | '));
@@ -55,6 +58,7 @@ await page.reload(); await page.waitForSelector('.row');
 console.log('reload sonrası toplu satır:', await page.locator('.row.bulk').count());
 // rehber görseli: seçim yapılmış hal
 await page.keyboard.press('Home');
+await page.locator('.bulk-toggle').click(); // yenileme sonrası yardımcılar kapalı
 await page.locator('button:has-text("Bu satıcıyı seç")').click();
 await page.locator('.bulk-input').fill('770.0');
 await page.waitForTimeout(200);

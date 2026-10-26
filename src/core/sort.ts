@@ -1,10 +1,10 @@
-import type { Invoice } from './types';
+import type { Invoice, SortMode } from './types';
 
-export type SortMode = 'excel' | 'date-supplier';
+export type { SortMode };
 
 export const SORT_LABELS: Record<SortMode, string> = {
-  excel: 'Excel sırası',
   'date-supplier': 'Tarih (eskiden yeniye), satıcı gruplu',
+  added: 'Yükleme sırası',
 };
 
 /** "GG/AA/YYYY" (veya "GG.AA.YYYY", "YYYY-AA-GG") → YYYYMMDD sayı; çözülemezse 0 */
@@ -19,10 +19,10 @@ export function dateKey(s: string): number {
 /**
  * Tarih eskiden yeniye; aynı gün içinde faturalar fatura numarasına göre, ancak aynı satıcının
  * faturaları bir blok halinde tutulur (bloklar satıcının o günkü en küçük fatura numarasına göre sıralanır).
- * Çıktı sırasını etkilemez; yalnızca ekran listesi içindir.
+ * Çıktı dosyası da bu sırayı kullanır ("added" yalnızca ekran içindir).
  */
 export function sortInvoices(list: Invoice[], mode: SortMode): Invoice[] {
-  if (mode === 'excel') return list.slice().sort((a, b) => a.rowIndex - b.rowIndex);
+  if (mode === 'added') return list.slice().sort((a, b) => a.order - b.order);
   const minNoByDaySupplier = new Map<string, string>();
   for (const inv of list) {
     const k = `${dateKey(inv.date)}|${inv.supplierVkn}`;
@@ -37,6 +37,6 @@ export function sortInvoices(list: Invoice[], mode: SortMode): Invoice[] {
     const gb = minNoByDaySupplier.get(`${db}|${b.supplierVkn}`) ?? '';
     if (ga !== gb) return ga < gb ? -1 : 1;
     if (a.no !== b.no) return a.no < b.no ? -1 : 1;
-    return a.rowIndex - b.rowIndex;
+    return a.order - b.order;
   });
 }

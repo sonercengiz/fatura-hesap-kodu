@@ -2,6 +2,7 @@ import { useRef, useState } from 'preact/hooks';
 import { parseAccountSheet, parseAccountText } from '../core/chart';
 import * as S from './state';
 import type { ViewMode } from '../core/types';
+import { EDM_HEADERS } from '../core/excel/writeOutput';
 
 export function SettingsModal() {
   const s = S.settings.value;
@@ -10,7 +11,7 @@ export function SettingsModal() {
   const [accText, setAccText] = useState('');
   const [accFilter, setAccFilter] = useState('');
   const accList = S.accounts.value.filter((a) => !accFilter || a.code.includes(accFilter) || a.name.toLocaleLowerCase('tr').includes(accFilter.toLocaleLowerCase('tr')));
-  const width = S.batchRec.value?.sheet.headers.length ?? 20;
+  const width = EDM_HEADERS.length;
   return (
     <div class="modal-backdrop" onClick={() => (S.settingsOpen.value = false)}>
       <div class="modal" onClick={(e) => e.stopPropagation()}>
@@ -31,7 +32,7 @@ export function SettingsModal() {
               <span class="muted small">{S.firms.value.length} firma kayıtlı.</span>
               <span>
                 <button onClick={() => { const n = prompt('Yeni firma adı:'); if (n) S.createFirm(n); }}>+ Yeni firma</button>{' '}
-                {S.firms.value.length > 1 && <button class="danger" onClick={() => { const f = S.firm.value; if (confirm(`"${f.name}" firması, tüm partileri, atamaları, PDF'leri, hesap listesi ve geçmişiyle silinsin mi? Bu işlem geri alınamaz.`)) { S.deleteFirm(f.id); S.settingsOpen.value = false; } }}>Firmayı sil</button>}
+                {S.firms.value.length > 1 && <button class="danger" onClick={() => { const f = S.firm.value; if (confirm(`"${f.name}" firması, tüm partileri, faturaları, atamaları, hesap listesi ve geçmişiyle silinsin mi? Bu işlem geri alınamaz.`)) { S.deleteFirm(f.id); S.settingsOpen.value = false; } }}>Firmayı sil</button>}
               </span>
             </div>
           </fieldset>
@@ -48,7 +49,7 @@ export function SettingsModal() {
               <input value={s.codeHeader} onInput={(e) => S.updateSettings({ codeHeader: (e.currentTarget as HTMLInputElement).value || 'Hesap Kodu' })} />
             </label>
           </div>
-          <div class="muted small">Sütun araya eklenir; mevcut sütunlar silinmez, sağa kayar. Varsayılan 3 (C sütunu).</div>
+          <div class="muted small">Çıktı, EDM fatura listesi düzenindedir (20 sütun); Hesap Kodu araya eklenir, diğer sütunlar sağa kayar. Varsayılan 3 (C sütunu).</div>
 
           <fieldset>
             <legend>Kısayollar — {S.firm.value.name} (yalnızca kaydedilen kodlar; kendiliğinden değişmez)</legend>
@@ -67,7 +68,7 @@ export function SettingsModal() {
           </fieldset>
 
           <fieldset>
-            <legend>PDF görünümü: yeni faturaya geçince</legend>
+            <legend>Fatura görünümü: yeni faturaya geçince</legend>
             {([['top', 'En üstten başlasın'], ['last', 'Son kaldığım yerden başlasın'], ['margin', 'Belirli bir yükseklikten başlasın']] as [ViewMode, string][]).map(([v, label]) => (
               <label class="radio">
                 <input type="radio" name="viewMode" checked={s.viewMode === v} onChange={() => S.updateSettings({ viewMode: v })} />
@@ -133,7 +134,7 @@ export function SettingsModal() {
           <fieldset>
             <legend>Yedekleme ve bilgisayarlar arası paylaşım</legend>
             <div class="row-inline">
-              <span class="muted">Tüm firmalar, partiler, atamalar, elle bağlantılar, hesap kodu listeleri ve öneri geçmişi tek bir .json dosyasına yazılır; başka bilgisayarda içe aktarılınca mevcut veriyle <b>birleştirilir</b>, hiçbir şey silinmez. PDF'ler dosyaya dahil edilmez.</span>
+              <span class="muted">Tüm firmalar, partiler, fatura listeleri, atamalar, hesap kodu listeleri ve öneri geçmişi tek bir .json dosyasına yazılır; başka bilgisayarda içe aktarılınca mevcut veriyle <b>birleştirilir</b>, hiçbir şey silinmez. Fatura XML'leri (görseller) dosyaya dahil edilmez; gerekirse XML'ler yeniden yüklenir, atamalar korunur.</span>
             </div>
             <div class="row-inline" style="justify-content:flex-start; margin-top:8px">
               <button onClick={() => S.exportWorkspace()}>Dışa aktar (.json)</button>
@@ -149,11 +150,15 @@ export function SettingsModal() {
           {S.batchRec.value && (
             <fieldset>
               <legend>Parti</legend>
-              <div class="row-inline">
-                <span class="muted">"{S.batchRec.value.name}" partisini ve atamalarını kalıcı olarak sil.</span>
+              <label>
+                <span>Parti adı{S.batchRec.value.autoName ? ' (yüklenen faturaların ayına göre kendiliğinden verildi)' : ''}</span>
+                <input value={S.batchRec.value.name} onKeyDown={(e) => e.stopPropagation()} onChange={(e) => S.renameBatch((e.currentTarget as HTMLInputElement).value)} />
+              </label>
+              <div class="row-inline" style="margin-top:8px">
+                <span class="muted">{S.invoices.value.length} fatura. Partiyi, faturalarını ve atamalarını kalıcı olarak sil.</span>
                 <button class="danger" onClick={() => {
                   const b = S.batchRec.value;
-                  if (b && confirm(`"${b.name}" partisi ve atamaları silinsin mi?`)) {
+                  if (b && confirm(`"${b.name}" partisi, faturaları ve atamaları silinsin mi?`)) {
                     S.deleteBatch(b.id);
                     S.settingsOpen.value = false;
                   }
@@ -170,7 +175,7 @@ export function SettingsModal() {
               <div><kbd>/</kbd> <kbd>Enter</kbd> <kbd>0–9</kbd> manuel kod girişi · <kbd>Esc</kbd> vazgeç</div>
               <div><kbd>Backspace</kbd> atamayı kaldır · <kbd>Ctrl+F</kbd> ara</div>
               <div><kbd>Ctrl+.</kbd> hesap kodu listesinde ara ve ata · <kbd>Ctrl+Z</kbd> geri al · <kbd>Ctrl+Y</kbd> yinele</div>
-              <div><kbd>F2</kbd> kaydet · <kbd>F5</kbd> önizle · <kbd>F1</kbd> Excel üret</div>
+              <div><kbd>F2</kbd> kaydet · <kbd>F5</kbd> önizle · <kbd>F1</kbd> Excel üret · <kbd>Ctrl+P</kbd> faturayı yazdır</div>
             </div>
           </fieldset>
         </div>

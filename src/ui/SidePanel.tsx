@@ -15,9 +15,7 @@ export function SidePanel() {
     el?.scrollIntoView({ block: 'nearest' });
   }, [idx]);
 
-  const m = S.match.value;
   const code = inv ? S.assignments.value.get(inv.no) : undefined;
-  const pref = inv ? S.refFor(inv.no) : null;
 
   return (
     <aside class="side">
@@ -28,9 +26,9 @@ export function SidePanel() {
           <div class="detail-row"><span>Tarih</span><b>{inv.date}</b></div>
           <div class="detail-row"><span>VKN</span><b>{inv.supplierVkn}</b></div>
           <div class="detail-row"><span>Tip</span><b>{inv.invoiceType} · {inv.profile}</b></div>
-          <div class="detail-row"><span>Tutar</span><b>{fmtAmount(inv.amount, inv.currency)}</b></div>
-          {pref && (
-            <div class="detail-row"><span>PDF</span><b title={pref.fileName}>{pref.fileName} · s.{pref.pageStart}{pref.pageEnd > pref.pageStart ? `–${pref.pageEnd}` : ''}{S.manualLinkFor(inv.no) && <button class="ghost tiny" title="Elle kurulan bağlantıyı kaldır" onClick={() => S.unlink(inv.no)}>elle · kaldır</button>}</b></div>
+          <div class="detail-row"><span>Ödenecek</span><b>{fmtAmount(inv.amount, inv.currency)}</b></div>
+          {inv.taxExclusive != null && (
+            <div class="detail-row"><span>Matrah · vergi</span><b>{fmtAmount(inv.taxExclusive, inv.currency)}{inv.taxAmount != null ? ` · ${fmtAmount(inv.taxAmount, inv.currency)}` : ''}</b></div>
           )}
           <div class={`detail-code slot-${S.slotIndexOf(code)}`}>
             <span>Atanan</span>
@@ -50,7 +48,7 @@ export function SidePanel() {
         </div>
       )}
       <div class="list-controls">
-        <select class="sort-select" value={S.settings.value.sortMode} title="Liste sırası (çıktıyı etkilemez)" onChange={(e) => S.setSortMode((e.currentTarget as HTMLSelectElement).value as SortMode)}>
+        <select class="sort-select" value={S.settings.value.sortMode} title="Liste sırası (çıktı her zaman tarih sırasındadır)" onChange={(e) => S.setSortMode((e.currentTarget as HTMLSelectElement).value as SortMode)}>
           {(Object.keys(SORT_LABELS) as SortMode[]).map((m) => <option value={m}>Sıra: {SORT_LABELS[m]}</option>)}
         </select>
         <select class="filter-select" value={S.filterMode.value} title="Hangi faturalar listelensin ve gezilsin" onChange={(e) => S.setFilter((e.currentTarget as HTMLSelectElement).value as FilterMode)}>
@@ -106,24 +104,11 @@ export function SidePanel() {
           );
         })}
       </div>
-      {S.files.value.length > 0 && (
-        <div class="files">
-          <div>PDF: {S.files.value.length} dosya · {m.refs.size} fatura eşleşti</div>
-          {m.unmatched.length > 0 && (
-            <details open>
-              <summary class="warn">{m.unmatched.length} eşleşmeyen dosya/sayfa</summary>
-              {m.unmatched.map((u) => (
-                <div class="unmatched">
-                  <span title={u.fileName}>{u.fileName} s.{u.pageStart}–{u.pageEnd}</span>
-                  <span class="muted">{u.reason === 'no-text' ? 'metin yok' : 'fatura no yok'}</span>
-                  <button class="tiny" onClick={() => (S.linkTarget.value = u)}>bağla</button>
-                  <button class="ghost tiny" onClick={() => S.removeFile(u.fileId)}>kaldır</button>
-                </div>
-              ))}
-            </details>
-          )}
-        </div>
-      )}
+      <div class="files">
+        <span>{S.invoices.value.length} fatura · {S.viewCount.value} görselli</span>
+        {inv && <button class="ghost tiny" title="Bu faturayı partiden çıkar (yanlış yüklendiyse)" onClick={() => { if (confirm(`${inv.no} partiden çıkarılsın mı? Ataması da silinir.`)) S.removeInvoices([inv.no]); }}>çıkar</button>}
+        {S.selected.value.size > 1 && <button class="ghost tiny" title="Seçili faturaları partiden çıkar" onClick={() => { const n = S.selected.value.size; if (confirm(`${n} fatura partiden çıkarılsın mı? Atamaları da silinir.`)) S.removeInvoices(Array.from(S.selected.value)); }}>{S.selected.value.size} seçiliyi çıkar</button>}
+      </div>
     </aside>
   );
 }

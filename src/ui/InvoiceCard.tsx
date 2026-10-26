@@ -5,7 +5,8 @@ export function fmtAmount(n: number | null, cur: string) {
   return `${n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${cur}`;
 }
 
-export function InvoiceCard({ inv, hasFiles }: { inv: Invoice; hasFiles: boolean }) {
+/** XML'i olmayan (eski Excel partisinden gelen) faturalar için büyük puntolu kart. */
+export function InvoiceCard({ inv }: { inv: Invoice }) {
   return (
     <div class="card">
       <div class="card-name">{inv.supplierName || '—'}</div>
@@ -17,7 +18,7 @@ export function InvoiceCard({ inv, hasFiles }: { inv: Invoice; hasFiles: boolean
         {inv.profile && <span class="chip">{inv.profile}</span>}
       </div>
       <div class="card-amount">{fmtAmount(inv.amount, inv.currency)}</div>
-      <div class="card-hint">{hasFiles ? 'Bu fatura için PDF eşleşmedi.' : 'PDF eklenmedi; Excel bilgileri gösteriliyor.'}</div>
+      <div class="card-hint">Bu faturanın XML'i yok (eski Excel partisi); yalnızca liste bilgileri gösteriliyor. XML'ini yüklerseniz görsel çizilir.</div>
     </div>
   );
 }

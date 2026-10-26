@@ -1,14 +1,17 @@
 import { chromium } from 'playwright';
-const SCR = '/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/04627602-e09f-44db-bd85-15ef9828baa0/scratchpad';
+const SCR = '/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/aa071f3a-6270-4292-9e7a-d102afeef53e/scratchpad';
+import { readdirSync } from 'node:fs';
+const XML_DIR = process.env.XML_DIR || `/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/aa071f3a-6270-4292-9e7a-d102afeef53e/scratchpad/xmlin`; // gerçek e-Fatura XML'leri (depoya girmez)
+const XMLS = readdirSync(XML_DIR).filter((f) => f.endsWith('.xml')).sort().map((f) => `${XML_DIR}/${f}`);
 const OUT = '/Users/sonercengiz/Documents/scc/fatura-hesap-kodu/public/guide';
 const browser = await chromium.launch({ channel: 'chrome', headless: true });
 const page = await (await browser.newContext({ viewport: { width: 1440, height: 820 }, deviceScaleFactor: 1.5 })).newPage();
-const errors = []; page.on('pageerror', (e) => errors.push(e.message)); page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+const errors = []; page.on('pageerror', (e) => errors.push(e.message)); page.on('console', (m) => { if (m.type() === 'error' && !/srcdoc|sandboxed/.test(m.text())) errors.push(m.text()); });
 await page.addInitScript(() => { try { localStorage.setItem('guideSeen', '1'); } catch {} });
 await page.goto('http://localhost:5179/');
-await page.locator('input[accept=".xlsx,.xls"]').setInputFiles(`${SCR}/demo/EDM Gelen Faturalar Ekim 2026.xlsx`);
-await page.waitForSelector('.card-no');
-const no = () => page.locator('.card-no').innerText();
+await page.locator('input[accept=".xml,text/xml,application/xml"]').setInputFiles(XMLS);
+await page.waitForSelector('.inv-frame');
+const no = () => page.locator('.detail-row b').first().innerText();
 const code = () => page.locator('.detail-code b').innerText();
 // Liste yükle (metinle)
 await page.locator('button[title="Ayarlar"]').click();
@@ -48,6 +51,7 @@ console.log('Ctrl+Z sonrası:', await code(), '(önce', before + ') | toast:', a
 await page.keyboard.press('Control+y'); await page.waitForTimeout(200);
 console.log('Ctrl+Y sonrası:', await code());
 // Undo: toplu
+await page.locator('.bulk-toggle').click(); // seçim yardımcılarını aç
 await page.locator('button:has-text("Görünenleri seç")').click();
 await page.keyboard.press('Control+Period'); await page.keyboard.type('153'); await page.keyboard.press('Enter'); await page.waitForTimeout(300);
 console.log('toplu (Ctrl+. ile):', await page.locator('.toast').innerText(), '| toplu satır:', await page.locator('.row.bulk').count());

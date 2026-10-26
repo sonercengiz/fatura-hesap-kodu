@@ -1,16 +1,17 @@
 import { useEffect, useRef } from 'preact/hooks';
 import * as S from './state';
+import { codeColumnAt } from '../core/excel/writeOutput';
 
 export function PreviewModal() {
   const rows = S.outputRows();
-  const invs = S.invoices.value;
-  const byRow = new Map(invs.map((i) => [i.rowIndex, i]));
-  const at = Math.min(Math.max(S.settings.value.codeColumnIndex, 1), (S.batchRec.value?.sheet.headers.length ?? 0) + 1) - 1;
+  const invs = S.outputOrder.value;
+  const byRow = new Map(invs.map((i, k) => [k, i]));
+  const at = codeColumnAt(S.settings.value.codeColumnIndex);
   const box = useRef<HTMLDivElement>(null);
-  const counts = { 'no-code': 0, 'not-in-chart': 0, type: 0, 'no-pdf': 0, 'dup-pdf': 0, 'dup-no': 0 } as Record<S.IssueKind, number>;
+  const counts = { 'no-code': 0, 'not-in-chart': 0, type: 0, 'no-view': 0 } as Record<S.IssueKind, number>;
   const rowIssues = rows.slice(1).map((_, i) => {
     const inv = byRow.get(i);
-    const iss = inv ? S.issuesFor(inv) : [];
+    const iss = inv ? S.issuesFor(inv).filter((k) => k !== 'no-view') : [];
     for (const k of iss) counts[k]++;
     return iss;
   });
@@ -25,7 +26,7 @@ export function PreviewModal() {
       <div class="modal wide" onClick={(e) => e.stopPropagation()}>
         <div class="modal-head">
           <b>Çıktı önizlemesi</b>
-          <span class="muted">{rows.length - 1} satır · {rows[0]?.length ?? 0} sütun · Hesap Kodu {colName(at)} sütununda</span>
+          <span class="muted">{rows.length - 1} satır · {rows[0]?.length ?? 0} sütun · Hesap Kodu {colName(at)} sütununda · tarih sırası</span>
           <div class="spacer" />
           <span class="legend">
             {(Object.keys(counts) as S.IssueKind[]).filter((k) => counts[k] > 0).map((k) => (

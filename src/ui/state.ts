@@ -1,13 +1,15 @@
 import { signal, computed, batch as sbatch } from '@preact/signals';
-import { DEFAULT_SETTINGS, DEFAULT_SHORTCUT_KEYS, type Settings, type Invoice, type PdfRef, type FilterMode } from '../core/types';
-import { readEdmSheet, extractInvoices } from '../core/excel/readEdm';
+import { DEFAULT_SETTINGS, DEFAULT_SHORTCUT_KEYS, typeLabel, profileLabel, toDisplayDate, type Settings, type Invoice, type FilterMode } from '../core/types';
 import { buildOutputWorkbook, buildFileName, buildOutputRows } from '../core/excel/writeOutput';
-import { matchPdfs, applyManualLinks, type UnmatchedSegment } from '../core/match/matcher';
+import { parseUbl, decodeBytes, dominantMonth, UblParseError } from '../core/xml/parseUbl';
+import { sha256 } from '../core/hash';
+import { sheetToInvoices, type EdmSheet } from '../core/legacy';
 import { ghostCandidates, supplierHint, type HistoryEntry } from '../core/suggest/engine';
-import { sortInvoices } from '../core/sort';
-import { db, DEFAULT_FIRM_ID, loadSettings, saveSettings, newId, type BatchRecord, type FileRecord, type LinkRecord, type AssignmentRecord, type AccountRecord, type AssignmentSource, type FirmRecord, type FirmHistoryEntry } from '../storage/db';
+import { sortInvoices, SORT_LABELS } from '../core/sort';
+import { db, DEFAULT_FIRM_ID, loadSettings, saveSettings, newId, type BatchRecord, type InvoiceRecord, type AssignmentRecord, type AccountRecord, type AssignmentSource, type FirmRecord, type FirmHistoryEntry } from '../storage/db';
 import { searchAccounts, type Account } from '../core/chart';
-import { loadPdf, extractPageTexts, evictPdf } from '../pdf/pdfjs';
+import { ensureXslt, transformToHtml, decorateHtml, cachedHtml, rememberHtml, forgetHtml } from '../render/xslt';
+import { fallbackHtml } from '../render/fallback';
 
 export const settings = signal<Settings>(DEFAULT_SETTINGS);
 export const firms = signal<FirmRecord[]>([]);
@@ -17,8 +19,9 @@ const EMPTY_FIRM: FirmRecord = { id: DEFAULT_FIRM_ID, name: '', createdAt: 0, sh
 export const firm = computed<FirmRecord>(() => firms.value.find((f) => f.id === currentFirmId.value) ?? firms.value[0] ?? EMPTY_FIRM);
 export const batchRec = signal<BatchRecord | null>(null);
 export const batchList = signal<BatchRecord[]>([]);
+/** Açık partinin fatura kayıtları (XML dahil) */
+export const invoiceRecs = signal<InvoiceRecord[]>([]);
 export const assignments = signal<Map<string, string>>(new Map());
-export const files = signal<FileRecord[]>([]);
 export const currentIndex = signal(0);
 export const mode = signal<'nav' | 'manual'>('nav');
 export const manualText = signal('');
@@ -29,12 +32,9 @@ export const toast = signal<string | null>(null);
 export const previewOpen = signal(false);
 export const settingsOpen = signal(false);
 export const guideOpen = signal(false);
-export const links = signal<LinkRecord[]>([]);
 /** Alt çubukta düzenlenen kısayol yuvası ve yazılan metin (global tuş yakalayıcı da kullanır) */
 export const editingSlot = signal<number | null>(null);
 export const editingText = signal('');
-/** Elle bağlama penceresi: hangi eşleşmeyen parça bağlanacak */
-export const linkTarget = signal<UnmatchedSegment | null>(null);
 export const busy = signal<string | null>(null);
 export const searchText = signal('');
 /** Toplu atama ile kod alan faturalar (doğal gezinti bunları atlar) */
@@ -76,23 +76,32 @@ export function dismissBackup() {
 }
 export const FILTER_LABELS: Record<FilterMode, string> = { all: 'Tümü', unassigned: 'Atanmamış', manual: 'Elle atanmış', bulk: 'Toplu atanmış' };
 
-const rawInvoices = computed<Invoice[]>(() => (batchRec.value ? extractInvoices(batchRec.value.sheet) : []));
-/** Ekran listesi sırası; çıktı her zaman Excel satır sırasını korur. */
-export const invoices = computed<Invoice[]>(() => sortInvoices(rawInvoices.value, settings.value.sortMode));
-export const current = computed<Invoice | null>(() => invoices.value[currentIndex.value] ?? null);
-export const knownNos = computed(() => new Set(invoices.value.map((i) => i.no)));
-export const match = computed(() =>
-  applyManualLinks(
-    matchPdfs(
-      knownNos.value,
-      files.value.map((f) => ({ fileId: f.id, fileName: f.name, pages: f.pageTexts })),
-    ),
-    links.value.filter((l) => files.value.some((f) => f.id === l.fileId)),
-  ),
-);
-export function manualLinkFor(no: string): LinkRecord | undefined {
-  return links.value.find((l) => l.no === no && files.value.some((f) => f.id === l.fileId));
+export function toInvoice(r: InvoiceRecord): Invoice {
+  return {
+    no: r.no,
+    order: r.order,
+    date: toDisplayDate(r.issueDate),
+    isoDate: /^\d{4}-\d{2}-\d{2}/.test(r.issueDate) ? r.issueDate.slice(0, 10) : '',
+    uuid: r.uuid,
+    supplierVkn: r.supplierVkn,
+    supplierName: r.supplierName,
+    amount: r.payable,
+    taxExclusive: r.taxExclusive,
+    taxAmount: r.taxAmount,
+    currency: r.currency || 'TRY',
+    invoiceType: typeLabel(r.typeCode),
+    profile: profileLabel(r.profileId),
+    hasView: !!r.xml,
+  };
 }
+
+const rawInvoices = computed<Invoice[]>(() => invoiceRecs.value.map(toInvoice));
+/** Ekran listesi sırası. */
+export const invoices = computed<Invoice[]>(() => sortInvoices(rawInvoices.value, settings.value.sortMode));
+/** Çıktı dosyası sırası: her zaman tarih + satıcı bloğu + fatura no (ekran sırasından bağımsız, kararlı). */
+export const outputOrder = computed<Invoice[]>(() => sortInvoices(rawInvoices.value, 'date-supplier'));
+export const current = computed<Invoice | null>(() => invoices.value[currentIndex.value] ?? null);
+export const recByNo = computed(() => new Map(invoiceRecs.value.map((r) => [r.no, r])));
 /** Kısayol yuvaları: yalnızca kullanıcının kaydettiği kodlar; kendiliğinden değişmez. */
 export const slots = computed<(string | null)[]>(() => {
   const arr = firm.value.shortcuts.map((s) => s.code);
@@ -112,45 +121,28 @@ export const knownCodes = computed(() => {
   return set;
 });
 export const assignedCount = computed(() => invoices.value.filter((i) => assignments.value.has(i.no)).length);
-export const duplicateNos = computed(() => {
-  const seen = new Set<string>();
-  const dup = new Set<string>();
-  for (const i of invoices.value) (seen.has(i.no) ? dup : seen).add(i.no);
-  return dup;
-});
+export const viewCount = computed(() => invoices.value.filter((i) => i.hasView).length);
 
-export type IssueKind = 'no-code' | 'not-in-chart' | 'type' | 'no-pdf' | 'dup-pdf' | 'dup-no';
+export type IssueKind = 'no-code' | 'not-in-chart' | 'type' | 'no-view';
 export function issuesFor(inv: Invoice): IssueKind[] {
   const out: IssueKind[] = [];
   const code = assignments.value.get(inv.no);
   if (!code) out.push('no-code');
   else if (accounts.value.length > 0 && !accountMap.value.has(code)) out.push('not-in-chart');
   if (/tevkifat|iade/i.test(inv.invoiceType)) out.push('type');
-  if (files.value.length > 0 && !match.value.refs.has(inv.no)) out.push('no-pdf');
-  if (match.value.duplicates.includes(inv.no)) out.push('dup-pdf');
-  if (duplicateNos.value.has(inv.no)) out.push('dup-no');
+  if (!inv.hasView) out.push('no-view');
   return out;
 }
 export const ISSUE_LABEL: Record<IssueKind, string> = {
   'no-code': 'Hesap kodu atanmamış',
   'not-in-chart': 'Kod hesap kodu listesinde yok',
   type: 'Tevkifat / İade faturası, kontrol edin',
-  'no-pdf': 'PDF eşleşmedi',
-  'dup-pdf': 'Birden fazla PDF eşleşti',
-  'dup-no': 'Aynı fatura no birden fazla satırda',
+  'no-view': 'XML yok (eski Excel partisi); görsel çizilemez',
 };
 
-/** Toolbar ve listede gösterilecek uyarılar: atanmamış kod ve PDF eksikliği hariç. */
+/** Toolbar ve listede gösterilecek uyarılar: atanmamış kod ve görsel eksikliği hariç. */
 export function attentionIssues(inv: Invoice): IssueKind[] {
-  return issuesFor(inv).filter((k) => k !== 'no-code' && k !== 'no-pdf');
-}
-
-export function refFor(no: string): PdfRef | null {
-  return match.value.refs.get(no)?.[0] ?? null;
-}
-
-export function fileById(id: string): FileRecord | undefined {
-  return files.value.find((f) => f.id === id);
+  return issuesFor(inv).filter((k) => k !== 'no-code' && k !== 'no-view');
 }
 
 let toastTimer: number | undefined;
@@ -165,10 +157,50 @@ export function slotIndexOf(code: string | null | undefined): number {
   return slots.value.indexOf(code);
 }
 
+// ---------- fatura görseli ----------
+
+export interface InvoiceView {
+  html: string;
+  /** Resmî şablon (XSLT) ile mi çizildi, yoksa sade yedek görünüm mü */
+  official: boolean;
+}
+
+/** Faturanın HTML görünümü; sonuç bellekte önbelleklenir. */
+export async function getInvoiceView(no: string): Promise<InvoiceView | null> {
+  const b = batchRec.value;
+  const rec = recByNo.value.get(no);
+  if (!b || !rec) return null;
+  const key = `${b.id}|${no}`;
+  const hit = cachedHtml(key);
+  if (hit !== undefined) return { html: hit, official: !hit.startsWith('<!--fallback-->') };
+  const inv = toInvoice(rec);
+  let html: string;
+  let official = false;
+  if (rec.xml && rec.xsltId) {
+    const xslt = await db.xslts.get(rec.xsltId);
+    try {
+      if (!xslt) throw new Error('XSLT kaydı yok');
+      await ensureXslt();
+      html = decorateHtml(transformToHtml(rec.xml, xslt.text));
+      official = true;
+    } catch (e) {
+      console.warn('Fatura görseli çizilemedi', no, e);
+      html = '<!--fallback-->' + fallbackHtml(inv, rec.xml, 'Faturanın kendi şablonu çizilemedi; XML içeriği sade biçimde gösteriliyor.');
+    }
+  } else if (rec.xml) {
+    html = '<!--fallback-->' + fallbackHtml(inv, rec.xml, 'Bu faturada görünüm şablonu (XSLT) yok; XML içeriği sade biçimde gösteriliyor.');
+  } else {
+    return null;
+  }
+  rememberHtml(key, html);
+  return { html, official };
+}
+
 // ---------- yükleme ----------
 
 export async function init() {
   settings.value = await loadSettings(DEFAULT_SETTINGS);
+  if (!(settings.value.sortMode in SORT_LABELS)) settings.value = { ...settings.value, sortMode: 'date-supplier' };
   lastExportAt.value = ((await db.settings.get('lastExportAt'))?.value as number | undefined) ?? null;
   try { backupDismissedAt.value = Number(localStorage.getItem('backupDismissedAt') ?? 0) || 0; } catch { /* yok say */ }
   await ensureFirms();
@@ -178,6 +210,8 @@ export async function init() {
   await refreshBatchList();
   const latest = batchList.value[0];
   if (latest) await openBatch(latest.id);
+  // Motoru arka planda ısıt (polyfill gerekiyorsa ilk fatura beklemesin)
+  ensureXslt().catch(() => undefined);
 }
 
 async function ensureFirms() {
@@ -202,10 +236,9 @@ export async function switchFirm(id: string) {
   await loadFirmData();
   sbatch(() => {
     batchRec.value = null;
+    invoiceRecs.value = [];
     assignments.value = new Map();
     bulkNos.value = new Set();
-    files.value = [];
-    links.value = [];
     selected.value = new Set();
     undoStack.value = [];
     redoStack.value = [];
@@ -237,7 +270,7 @@ export async function updateFirm(patch: Partial<Omit<FirmRecord, 'id'>>) {
   firms.value = await db.firms.orderBy('name').toArray();
 }
 
-/** Firmayı ve ona bağlı her şeyi (partiler, atamalar, PDF'ler, liste, geçmiş) siler */
+/** Firmayı ve ona bağlı her şeyi (partiler, faturalar, atamalar, liste, geçmiş) siler */
 export async function deleteFirm(id: string) {
   if (firms.value.length <= 1) { showToast('Son firma silinemez.'); return; }
   const batchIds = await db.batches.where('firmId').equals(id).primaryKeys();
@@ -257,11 +290,10 @@ export async function openBatch(id: string) {
   const rec = await db.batches.get(id);
   if (!rec) return;
   const asg = await db.assignments.where('batchId').equals(id).toArray();
-  const fl = await db.files.where('batchId').equals(id).toArray();
-  const lk = await db.links.where('batchId').equals(id).toArray();
-  for (const f of files.value) evictPdf(f.id);
+  const recs = (await db.invoices.where('batchId').equals(id).toArray()).sort((a, b) => a.order - b.order);
   sbatch(() => {
     batchRec.value = rec;
+    invoiceRecs.value = recs;
     assignments.value = new Map(asg.map((a) => [a.no, a.code]));
     bulkNos.value = new Set(asg.filter((a) => a.source === 'bulk').map((a) => a.no));
     selected.value = new Set();
@@ -269,9 +301,6 @@ export async function openBatch(id: string) {
     filterMode.value = 'all';
     undoStack.value = [];
     redoStack.value = [];
-    files.value = fl.sort((a, b) => a.addedAt - b.addedAt);
-    links.value = lk;
-    linkTarget.value = null;
     recentCodes.value = asg.sort((a, b) => a.at - b.at).slice(-10).map((a) => a.code);
     dirty.value = false;
     mode.value = 'nav';
@@ -282,110 +311,185 @@ export async function openBatch(id: string) {
   currentIndex.value = idx >= 0 ? idx : firstNavigable();
 }
 
-export async function importExcel(file: File) {
-  busy.value = 'Excel okunuyor…';
+/** Yeni, boş parti oluşturur ve açar. Ad verilmezse ilk XML yüklemesinde baskın aya göre adlanır. */
+export async function createBatch(name?: string) {
+  const now = Date.now();
+  const n = (name ?? '').trim();
+  const rec: BatchRecord = {
+    id: newId(),
+    firmId: currentFirmId.value,
+    name: n || `Yeni parti ${new Date(now).toLocaleDateString('tr-TR')}`,
+    autoName: !n,
+    createdAt: now,
+    updatedAt: now,
+    savedAt: null,
+  };
+  await db.batches.put(rec);
+  await refreshBatchList();
+  await openBatch(rec.id);
+  return rec;
+}
+
+export async function renameBatch(name: string) {
+  const b = batchRec.value;
+  const n = name.trim();
+  if (!b || !n) return;
+  await db.batches.update(b.id, { name: n, autoName: false });
+  batchRec.value = { ...b, name: n, autoName: false };
+  await refreshBatchList();
+}
+
+export interface ImportReport {
+  added: number;
+  skipped: number;
+  failed: { file: string; reason: string }[];
+}
+
+/**
+ * e-Fatura XML dosyalarını açık partiye ekler (parti yoksa oluşturur). Aynı fatura no partide varsa atlanır.
+ * XSLT'ler özetleriyle tekilleştirilir; daha önce başka partide atanmış faturaların kodu taşınır.
+ */
+export async function importXml(list: File[]): Promise<ImportReport> {
+  const report: ImportReport = { added: 0, skipped: 0, failed: [] };
+  const xmls = list.filter((f) => /\.xml$/i.test(f.name) || f.type === 'text/xml' || f.type === 'application/xml');
+  if (xmls.length === 0) {
+    showToast('XML dosyası seçilmedi. e-Fatura XML dosyalarını (.xml) yükleyin.', 4000);
+    return report;
+  }
+  busy.value = 'XML okunuyor…';
   try {
-    const sheet = readEdmSheet(await file.arrayBuffer());
+    const b = batchRec.value ?? (await createBatch());
+    const existing = new Set(invoiceRecs.value.map((r) => r.no));
+    const seenNow = new Set<string>();
+    const recs: InvoiceRecord[] = [];
+    const xsltTexts = new Map<string, string>();
+    let order = invoiceRecs.value.reduce((m, r) => Math.max(m, r.order + 1), 0);
     const now = Date.now();
-    const rec: BatchRecord = {
-      id: newId(),
-      firmId: currentFirmId.value,
-      name: file.name.replace(/\.xlsx?$/i, ''),
-      sourceFileName: file.name,
-      createdAt: now,
-      updatedAt: now,
-      savedAt: null,
-      sheet,
-    };
-    await db.batches.put(rec);
-    // Daha önce başka partide atanmış aynı faturalar varsa atamayı taşı
-    const nos = extractInvoices(sheet).map((i) => i.no);
-    const prior = await db.assignments.where('no').anyOf(nos).toArray();
-    if (prior.length) {
-      const latestByNo = new Map<string, { code: string; at: number; source?: 'manual' | 'bulk' }>();
-      for (const a of prior) {
-        const cur = latestByNo.get(a.no);
-        if (!cur || a.at > cur.at) latestByNo.set(a.no, { code: a.code, at: a.at, source: a.source });
+    let n = 0;
+    for (const f of xmls) {
+      n++;
+      if (n % 10 === 0 || n === xmls.length) busy.value = `XML okunuyor ${n}/${xmls.length}`;
+      try {
+        const text = decodeBytes(new Uint8Array(await f.arrayBuffer()));
+        const u = parseUbl(text);
+        const no = u.no.toUpperCase();
+        if (existing.has(no) || seenNow.has(no)) { report.skipped++; continue; }
+        seenNow.add(no);
+        let xsltId: string | null = null;
+        if (u.xslt) {
+          xsltId = await sha256(u.xslt);
+          if (!xsltTexts.has(xsltId)) xsltTexts.set(xsltId, u.xslt);
+        }
+        recs.push({
+          batchId: b.id,
+          no,
+          uuid: u.uuid,
+          issueDate: u.issueDate,
+          issueTime: u.issueTime,
+          profileId: u.profileId,
+          typeCode: u.typeCode,
+          currency: u.currency,
+          supplierVkn: u.supplierVkn,
+          supplierName: u.supplierName,
+          payable: u.payable,
+          taxExclusive: u.taxExclusive,
+          taxAmount: u.taxAmount,
+          lineCount: u.lineCount,
+          xml: u.xml,
+          xsltId,
+          fileName: f.name,
+          addedAt: now,
+          order: order++,
+        });
+      } catch (e) {
+        report.failed.push({ file: f.name, reason: e instanceof UblParseError ? e.message : 'okunamadı' });
       }
-      await db.assignments.bulkPut(Array.from(latestByNo, ([no, v]) => ({ batchId: rec.id, no, code: v.code, at: v.at, source: v.source })));
     }
-    await refreshBatchList();
-    await openBatch(rec.id);
-    showToast(`${sheet.rows.length} fatura yüklendi`);
-  } catch (e) {
-    showToast((e as Error).message, 5000);
+    if (recs.length) {
+      busy.value = 'Kaydediliyor…';
+      if (xsltTexts.size) {
+        const have = new Set((await db.xslts.where('id').anyOf(Array.from(xsltTexts.keys())).primaryKeys()) as string[]);
+        const put = Array.from(xsltTexts, ([id, text]) => ({ id, text })).filter((x) => !have.has(x.id));
+        if (put.length) await db.xslts.bulkPut(put);
+      }
+      await db.invoices.bulkPut(recs);
+      // Daha önce başka partide atanmış aynı faturalar varsa atamayı taşı
+      const prior = (await db.assignments.where('no').anyOf(recs.map((r) => r.no)).toArray()).filter((a) => a.batchId !== b.id);
+      if (prior.length) {
+        const latestByNo = new Map<string, AssignmentRecord>();
+        for (const a of prior) {
+          const cur = latestByNo.get(a.no);
+          if (!cur || a.at > cur.at) latestByNo.set(a.no, a);
+        }
+        const own = new Set((await db.assignments.where('batchId').equals(b.id).primaryKeys()).map((k) => k[1]));
+        await db.assignments.bulkPut(Array.from(latestByNo.values()).filter((a) => !own.has(a.no)).map((a) => ({ ...a, batchId: b.id })));
+      }
+      const patch: Partial<BatchRecord> = { updatedAt: now };
+      if (b.autoName) {
+        const all = [...invoiceRecs.value, ...recs].map((r) => r.issueDate);
+        const month = dominantMonth(all);
+        if (month) patch.name = month;
+      }
+      await db.batches.update(b.id, patch);
+      report.added = recs.length;
+      await refreshBatchList();
+      const keepNo = current.value?.no;
+      await openBatch(b.id);
+      if (keepNo && existing.size) {
+        const idx = invoices.value.findIndex((i) => i.no === keepNo);
+        if (idx >= 0) currentIndex.value = idx;
+      }
+    }
+    const parts = [`${report.added} fatura eklendi`];
+    if (report.skipped) parts.push(`${report.skipped} zaten vardı`);
+    if (report.failed.length) parts.push(`${report.failed.length} dosya okunamadı`);
+    showToast(parts.join(' · '), report.failed.length ? 6000 : 3500);
+    if (report.failed.length) console.warn('Okunamayan XML dosyaları', report.failed);
   } finally {
     busy.value = null;
   }
+  return report;
 }
 
-export async function addPdfs(list: File[]) {
+/** Faturaları partiden çıkarır (atamalarıyla birlikte). */
+export async function removeInvoices(nos: string[]) {
   const b = batchRec.value;
-  if (!b) {
-    showToast('Önce EDM Excel dosyasını yükleyin.');
-    return;
-  }
-  const pdfs = list.filter((f) => /\.pdf$/i.test(f.name) || f.type === 'application/pdf');
-  if (pdfs.length === 0) return;
-  const existing = new Set(files.value.map((f) => `${f.name}|${f.size}`));
-  let n = 0;
-  const added: FileRecord[] = [];
-  for (const f of pdfs) {
-    n++;
-    busy.value = `PDF okunuyor ${n}/${pdfs.length}: ${f.name}`;
-    if (existing.has(`${f.name}|${f.size}`)) continue;
-    try {
-      const buf = await f.arrayBuffer();
-      const doc = await loadPdf(buf.slice(0));
-      const pageTexts = await extractPageTexts(doc);
-      const rec: FileRecord = {
-        id: newId(),
-        batchId: b.id,
-        name: f.name,
-        size: f.size,
-        pageCount: doc.numPages,
-        pageTexts,
-        blob: new Blob([buf], { type: 'application/pdf' }),
-        addedAt: Date.now(),
-      };
-      await doc.loadingTask.destroy();
-      await db.files.put(rec);
-      added.push(rec);
-    } catch (e) {
-      console.warn('PDF okunamadı', f.name, e);
-    }
-  }
-  // Daha önce elle bağlanmış (ad+boyut aynı) dosyalar yeniden eklendiyse bağlantıyı yeni id'ye taşı
-  for (const rec of added) {
-    const stale = links.value.filter((l) => l.fileName === rec.name && l.fileSize === rec.size && l.fileId !== rec.id);
-    for (const l of stale) await db.links.update(l.id!, { fileId: rec.id });
-  }
-  files.value = [...files.value, ...added];
-  links.value = await db.links.where('batchId').equals(b.id).toArray();
-  busy.value = null;
-  const m = match.value;
-  showToast(`${added.length} PDF eklendi · ${m.refs.size} fatura eşleşti · ${m.unmatched.length} eşleşmedi`, 4000);
+  if (!b || nos.length === 0) return;
+  await db.transaction('rw', db.invoices, db.assignments, db.batches, async () => {
+    await db.invoices.bulkDelete(nos.map((no) => [b.id, no] as [string, string]));
+    await db.assignments.bulkDelete(nos.map((no) => [b.id, no] as [string, string]));
+    await db.batches.update(b.id, { updatedAt: Date.now() });
+  });
+  for (const no of nos) forgetHtml(`${b.id}|${no}`);
+  const idx = currentIndex.value;
+  await openBatch(b.id);
+  goTo(idx);
+  await cleanupXslts();
+  showToast(`${nos.length} fatura partiden çıkarıldı`);
 }
 
-export async function removeFile(id: string) {
-  await db.files.delete(id);
-  evictPdf(id);
-  files.value = files.value.filter((f) => f.id !== id);
+/** Hiçbir faturanın kullanmadığı XSLT kayıtlarını siler */
+async function cleanupXslts() {
+  const used = new Set<string>();
+  await db.invoices.each((r) => { if (r.xsltId) used.add(r.xsltId); });
+  const all = (await db.xslts.toCollection().primaryKeys()) as string[];
+  const orphan = all.filter((id) => !used.has(id));
+  if (orphan.length) await db.xslts.bulkDelete(orphan);
 }
 
 export async function deleteBatch(id: string) {
-  const fl = await db.files.where('batchId').equals(id).primaryKeys();
-  await db.transaction('rw', db.batches, db.assignments, db.files, db.links, async () => {
+  await db.transaction('rw', db.batches, db.assignments, db.invoices, async () => {
     await db.batches.delete(id);
     await db.assignments.where('batchId').equals(id).delete();
-    await db.files.bulkDelete(fl);
-    await db.links.where('batchId').equals(id).delete();
+    await db.invoices.where('batchId').equals(id).delete();
   });
+  forgetHtml(`${id}|`);
   if (batchRec.value?.id === id) {
     batchRec.value = null;
+    invoiceRecs.value = [];
     assignments.value = new Map();
-    files.value = [];
   }
+  await cleanupXslts();
   await refreshBatchList();
   const latest = batchList.value[0];
   if (latest && !batchRec.value) await openBatch(latest.id);
@@ -416,6 +520,7 @@ export function matchesSearch(i: Invoice, q: string): boolean {
     i.no.toLocaleLowerCase('tr').includes(q) ||
     i.supplierName.toLocaleLowerCase('tr').includes(q) ||
     i.supplierVkn.includes(q) ||
+    i.uuid.toLocaleLowerCase('tr').includes(q) ||
     (i.amount != null && String(i.amount).includes(q.replace(',', '.')))
   );
 }
@@ -571,26 +676,22 @@ export async function save() {
   showToast(`Kaydedildi · ${assignedCount.value}/${invoices.value.length} atandı`);
 }
 
-export function outputRows() {
-  const b = batchRec.value;
-  if (!b) return [];
-  return buildOutputRows(b.sheet, codesByRow());
+function outputOptions() {
+  const codes = new Map<string, string>();
+  for (const [no, c] of assignments.value) if (c) codes.set(no, c);
+  return { codeColumnIndex: settings.value.codeColumnIndex, codeHeader: settings.value.codeHeader, codes };
 }
 
-function codesByRow() {
-  const codes = new Map<number, string>();
-  for (const inv of invoices.value) {
-    const c = assignments.value.get(inv.no);
-    if (c) codes.set(inv.rowIndex, c);
-  }
-  return { codeColumnIndex: settings.value.codeColumnIndex, codeHeader: settings.value.codeHeader, codes };
+export function outputRows() {
+  if (!batchRec.value) return [];
+  return buildOutputRows(outputOrder.value, outputOptions());
 }
 
 export async function exportExcel() {
   const b = batchRec.value;
   if (!b) return;
   if (dirty.value) await save();
-  const bytes = buildOutputWorkbook(b.sheet, codesByRow());
+  const bytes = buildOutputWorkbook(outputOrder.value, outputOptions());
   const name = buildFileName(firm.value.name);
   const blob = new Blob([bytes as unknown as ArrayBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   const url = URL.createObjectURL(blob);
@@ -618,50 +719,34 @@ export function exitManual() {
   mode.value = 'nav';
 }
 
-// ---------- elle PDF bağlama ----------
-
-export async function linkSegment(seg: { fileId: string; fileName: string; pageStart: number; pageEnd: number }, no: string) {
-  const b = batchRec.value;
-  const f = fileById(seg.fileId);
-  if (!b || !f) return;
-  // Aynı fatura için eski elle bağlantı varsa değiştir
-  const old = links.value.filter((l) => l.no === no);
-  for (const l of old) await db.links.delete(l.id!);
-  await db.links.add({ batchId: b.id, no, fileId: seg.fileId, fileName: f.name, fileSize: f.size, pageStart: seg.pageStart, pageEnd: seg.pageEnd });
-  links.value = await db.links.where('batchId').equals(b.id).toArray();
-  linkTarget.value = null;
-  const idx = invoices.value.findIndex((i) => i.no === no);
-  if (idx >= 0) goTo(idx);
-  showToast(`${f.name} → ${no} bağlandı`);
-}
-
-export async function unlink(no: string) {
-  const b = batchRec.value;
-  if (!b) return;
-  const old = links.value.filter((l) => l.no === no);
-  for (const l of old) await db.links.delete(l.id!);
-  links.value = await db.links.where('batchId').equals(b.id).toArray();
-  showToast('Elle bağlantı kaldırıldı');
-}
-
 // ---------- çalışma alanı dışa/içe aktarma ----------
+
+/** Yedekte XML ve XSLT taşınmaz (boyut); başlık alanları yeter, çıktı üretilebilir, görsel için XML yeniden yüklenir. */
+type InvoiceMeta = Omit<InvoiceRecord, 'xml' | 'xsltId'>;
 
 interface WorkspaceExport {
   app: 'fatura-hesap-kodu';
-  version: 2;
+  version: 3;
   exportedAt: string;
   settings: Settings;
   firms: FirmRecord[];
   history: FirmHistoryEntry[];
   accounts: AccountRecord[];
-  batches: { batch: BatchRecord; assignments: AssignmentRecord[]; links: Omit<LinkRecord, 'id' | 'fileId'>[] }[];
+  batches: { batch: BatchRecord; assignments: AssignmentRecord[]; invoices: InvoiceMeta[] }[];
+}
+
+/** Eski (v1/v2) yedek parti biçimi */
+interface LegacyBatchExport {
+  batch: BatchRecord & { sheet?: EdmSheet; sourceFileName?: string };
+  assignments: AssignmentRecord[];
+  invoices?: InvoiceMeta[];
 }
 
 export async function exportWorkspace() {
   const batches = await db.batches.toArray();
   const data: WorkspaceExport = {
     app: 'fatura-hesap-kodu',
-    version: 2,
+    version: 3,
     exportedAt: new Date().toISOString(),
     settings: settings.value,
     firms: await db.firms.toArray(),
@@ -671,8 +756,8 @@ export async function exportWorkspace() {
   };
   for (const batch of batches) {
     const assignments = await db.assignments.where('batchId').equals(batch.id).toArray();
-    const lk = await db.links.where('batchId').equals(batch.id).toArray();
-    data.batches.push({ batch, assignments, links: lk.map(({ id: _id, fileId: _f, ...rest }) => rest) });
+    const invs = await db.invoices.where('batchId').equals(batch.id).toArray();
+    data.batches.push({ batch, assignments, invoices: invs.map(({ xml: _x, xsltId: _s, ...rest }) => rest) });
   }
   const d = new Date();
   const name = `fatura-hesap-kodu-calisma-alani-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}.json`;
@@ -694,11 +779,11 @@ export async function exportWorkspace() {
 export async function importWorkspace(file: File) {
   busy.value = 'Çalışma alanı içe aktarılıyor…';
   try {
-    const raw = JSON.parse(await file.text()) as Partial<WorkspaceExport> & { app?: string; version?: number };
+    const raw = JSON.parse(await file.text()) as Partial<WorkspaceExport> & { app?: string; version?: number; batches?: LegacyBatchExport[] };
     if (raw?.app !== 'fatura-hesap-kodu' || !Array.isArray(raw.batches)) throw new Error('Bu dosya bir çalışma alanı yedeği değil.');
     // Sürüm 1 (firmasız) yedekler: her şey "varsayılan firma"ya
     const legacyFirm = currentFirmId.value;
-    const srcFirms: FirmRecord[] = raw.version === 2 && raw.firms?.length ? raw.firms : [{ ...firm.value, id: legacyFirm }];
+    const srcFirms: FirmRecord[] = (raw.version ?? 1) >= 2 && raw.firms?.length ? raw.firms : [{ ...firm.value, id: legacyFirm }];
     const firmMap = new Map<string, string>(); // kaynak id → yerel id
     const local = await db.firms.toArray();
     for (const f of srcFirms) {
@@ -720,8 +805,10 @@ export async function importWorkspace(file: File) {
     const fid = (src?: string) => firmMap.get(src ?? '') ?? firmMap.get(legacyFirm) ?? currentFirmId.value;
     let nb = 0;
     let na = 0;
-    for (const { batch, assignments: asg, links: lk } of raw.batches) {
-      const b2 = { ...batch, firmId: fid(batch.firmId) };
+    let ni = 0;
+    for (const { batch, assignments: asg, invoices: invs } of raw.batches) {
+      const { sheet, sourceFileName, ...plain } = batch;
+      const b2: BatchRecord = { ...plain, firmId: fid(batch.firmId), autoName: batch.autoName ?? false };
       const cur = await db.batches.get(b2.id);
       if (!cur) {
         await db.batches.put(b2);
@@ -729,18 +816,24 @@ export async function importWorkspace(file: File) {
       } else if (b2.updatedAt > cur.updatedAt) {
         await db.batches.put({ ...b2, savedAt: cur.savedAt ?? b2.savedAt });
       }
+      // Faturalar: yerelde olmayanlar eklenir (XML'siz); yereldekiler korunur
+      const metas: InvoiceMeta[] = invs ?? (sheet ? sheetToInvoices(sheet).map((f) => ({
+        batchId: b2.id, no: f.no, uuid: '', issueDate: f.issueDate, issueTime: '', profileId: f.profileId, typeCode: f.typeCode, currency: f.currency,
+        supplierVkn: f.supplierVkn, supplierName: f.supplierName, payable: f.payable, taxExclusive: null, taxAmount: null, lineCount: null,
+        fileName: sourceFileName ?? '', addedAt: batch.createdAt, order: f.order,
+      })) : []);
+      for (const m of metas) {
+        const have = await db.invoices.get([b2.id, m.no]);
+        if (!have) {
+          await db.invoices.put({ ...m, batchId: b2.id, xml: null, xsltId: null });
+          ni++;
+        }
+      }
       for (const a of asg ?? []) {
         const c = await db.assignments.get([a.batchId, a.no]);
         if (!c || a.at > c.at) {
           await db.assignments.put(a);
           na++;
-        }
-      }
-      for (const l of lk ?? []) {
-        const exists = await db.links.where('batchId').equals(l.batchId).filter((x) => x.no === l.no).count();
-        if (!exists) {
-          const f = await db.files.where('batchId').equals(l.batchId).filter((x) => x.name === l.fileName && x.size === l.fileSize).first();
-          await db.links.add({ ...l, fileId: f?.id ?? '' });
         }
       }
     }
@@ -758,7 +851,7 @@ export async function importWorkspace(file: File) {
     await refreshBatchList();
     const latest = batchList.value[0];
     if (latest) await openBatch(batchRec.value?.id ?? latest.id);
-    showToast(`İçe aktarıldı: ${srcFirms.length} firma, ${nb} yeni parti, ${na} atama`, 5000);
+    showToast(`İçe aktarıldı: ${srcFirms.length} firma, ${nb} yeni parti, ${ni} fatura, ${na} atama`, 5000);
   } catch (e) {
     showToast((e as Error).message, 5000);
   } finally {

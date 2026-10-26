@@ -1,7 +1,8 @@
 import Dexie, { type Table } from 'dexie';
-import type { EdmSheet, Settings, ShortcutSlot } from '../core/types';
+import type { Settings, ShortcutSlot } from '../core/types';
 import { DEFAULT_SHORTCUT_KEYS } from '../core/types';
 import type { HistoryEntry } from '../core/suggest/engine';
+import { sheetToInvoices, type EdmSheet } from '../core/legacy';
 
 export interface FirmHistoryEntry extends HistoryEntry {
   firmId: string;
@@ -16,15 +17,46 @@ export interface FirmRecord {
   chartName: string;
 }
 
+/** Parti: bir dönemin faturaları (XML'ler peyderpey eklenebilir). */
 export interface BatchRecord {
   id: string;
   firmId: string;
   name: string;
-  sourceFileName: string;
+  /** Ad kullanıcı tarafından verilmediyse baskın aya göre kendiliğinden güncellenir */
+  autoName: boolean;
   createdAt: number;
   updatedAt: number;
   savedAt: number | null;
-  sheet: EdmSheet;
+}
+
+/** Bir fatura; XML'i (XSLT'si ayrılmış) ve başlık alanları. Eski Excel partilerinde xml null. */
+export interface InvoiceRecord {
+  batchId: string;
+  no: string;
+  uuid: string;
+  /** YYYY-AA-GG */
+  issueDate: string;
+  issueTime: string;
+  profileId: string;
+  typeCode: string;
+  currency: string;
+  supplierVkn: string;
+  supplierName: string;
+  payable: number | null;
+  taxExclusive: number | null;
+  taxAmount: number | null;
+  lineCount: number | null;
+  xml: string | null;
+  xsltId: string | null;
+  fileName: string;
+  addedAt: number;
+  order: number;
+}
+
+/** Gömülü görünüm şablonu; içerik özetiyle tekilleştirilir */
+export interface XsltRecord {
+  id: string;
+  text: string;
 }
 
 export type AssignmentSource = 'manual' | 'bulk';
@@ -36,29 +68,6 @@ export interface AssignmentRecord {
   at: number;
   /** Elle (uygulama içi) ya da toplu atama; eski kayıtlarda yoksa elle sayılır */
   source?: AssignmentSource;
-}
-
-export interface FileRecord {
-  id: string;
-  batchId: string;
-  name: string;
-  size: number;
-  pageCount: number;
-  pageTexts: string[];
-  blob: Blob;
-  addedAt: number;
-}
-
-/** Kullanıcının elle kurduğu PDF ↔ fatura bağlantısı. Dosya ad+boyut ile de tutulur ki PDF'ler yeniden eklenince bağlantı korunsun. */
-export interface LinkRecord {
-  id?: number;
-  batchId: string;
-  no: string;
-  fileId: string;
-  fileName: string;
-  fileSize: number;
-  pageStart: number;
-  pageEnd: number;
 }
 
 /** Kullanıcının kendi hesap kodu listesi (kod + isim), firmaya bağlı */
@@ -76,10 +85,10 @@ export interface SettingRecord {
 
 class AppDb extends Dexie {
   batches!: Table<BatchRecord, string>;
+  invoices!: Table<InvoiceRecord, [string, string]>;
+  xslts!: Table<XsltRecord, string>;
   assignments!: Table<AssignmentRecord, [string, string]>;
-  files!: Table<FileRecord, string>;
   settings!: Table<SettingRecord, string>;
-  links!: Table<LinkRecord, number>;
   firms!: Table<FirmRecord, string>;
   firmHistory!: Table<FirmHistoryEntry, [string, string, string]>;
   firmAccounts!: Table<AccountRecord, [string, string]>;
@@ -128,7 +137,7 @@ class AppDb extends Dexie {
           shortcuts: settings?.shortcuts ?? DEFAULT_SHORTCUT_KEYS.map((key) => ({ key, code: null })),
           chartName: settings?.chartName || 'Hesap kodu listem',
         });
-        await tx.table('batches').toCollection().modify((b: BatchRecord) => { if (!b.firmId) b.firmId = firmId; });
+        await tx.table('batches').toCollection().modify((b: { firmId?: string }) => { if (!b.firmId) b.firmId = firmId; });
         const hist = await tx.table('history').toArray();
         if (hist.length) await tx.table('firmHistory').bulkPut(hist.map((h) => ({ ...h, firmId })));
         const acc = await tx.table('accounts').toArray();
@@ -136,6 +145,49 @@ class AppDb extends Dexie {
         await tx.table('settings').put({ key: 'currentFirmId', value: firmId });
       });
     this.version(5).stores({ history: null, accounts: null });
+    // v6: kaynak XML; Excel partileri fatura kayıtlarına çevrilir, PDF dosyaları ve elle bağlantılar kalkar
+    this.version(6)
+      .stores({
+        batches: 'id, updatedAt, firmId',
+        invoices: '[batchId+no], batchId, no',
+        xslts: 'id',
+        files: null,
+        links: null,
+      })
+      .upgrade(async (tx) => {
+        const batches = await tx.table('batches').toArray();
+        const now = Date.now();
+        for (const b of batches as (BatchRecord & { sheet?: EdmSheet; sourceFileName?: string })[]) {
+          if (b.sheet) {
+            const recs: InvoiceRecord[] = sheetToInvoices(b.sheet).map((f) => ({
+              batchId: b.id,
+              no: f.no,
+              uuid: '',
+              issueDate: f.issueDate,
+              issueTime: '',
+              profileId: f.profileId,
+              typeCode: f.typeCode,
+              currency: f.currency,
+              supplierVkn: f.supplierVkn,
+              supplierName: f.supplierName,
+              payable: f.payable,
+              taxExclusive: null,
+              taxAmount: null,
+              lineCount: null,
+              xml: null,
+              xsltId: null,
+              fileName: b.sourceFileName ?? '',
+              addedAt: b.createdAt ?? now,
+              order: f.order,
+            }));
+            if (recs.length) await tx.table('invoices').bulkPut(recs);
+          }
+          const { sheet: _s, sourceFileName: _f, ...rest } = b;
+          await tx.table('batches').put({ ...rest, autoName: false });
+        }
+        const s = (await tx.table('settings').get('settings'))?.value as Partial<Settings> & { sortMode?: string } | undefined;
+        if (s && (s.sortMode as string) === 'excel') await tx.table('settings').put({ key: 'settings', value: { ...s, sortMode: 'added' } });
+      });
   }
 }
 
@@ -151,7 +203,6 @@ export async function loadSettings(defaults: Settings): Promise<Settings> {
 export async function saveSettings(s: Settings): Promise<void> {
   await db.settings.put({ key: 'settings', value: s });
 }
-
 
 export function newId(): string {
   return crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
