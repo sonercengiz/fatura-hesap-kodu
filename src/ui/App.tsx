@@ -152,9 +152,12 @@ export function App() {
         return;
       }
       if (e.key === ' ') {
-        if (S.hint.value) {
+        // Boşluk: kural varsa kuralın kodu, yoksa satıcıya daha önce verilen kod
+        const r = S.current.value ? S.ruleFor.value.get(S.current.value.no) : undefined;
+        const c = r?.code ?? S.hint.value?.code;
+        if (c) {
           e.preventDefault();
-          S.assign(S.hint.value.code);
+          S.assign(c);
         }
         return;
       }

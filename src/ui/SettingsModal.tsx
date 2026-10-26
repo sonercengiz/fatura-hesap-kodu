@@ -134,7 +134,7 @@ export function SettingsModal() {
           <fieldset>
             <legend>Otomatik atama kuralları — {S.firm.value.name}</legend>
             <div class="row-inline">
-              <span class="muted">{S.rules.value.length} kural. Satıcı VKN/TCKN'si, unvanı ya da kalem adı uyan faturalar yüklenir yüklenmez sabit kodu alır. Yedeğe girer; dosya olarak paylaşılır.</span>
+              <span class="muted">{S.rules.value.filter((r) => !r.batchId).length} kalıcı kural. Satıcı VKN/TCKN'si, unvanı ya da kalem adı uyan faturalar yüklenir yüklenmez sabit kodu alır. Yedeğe girer; dosya olarak paylaşılır.</span>
               <button onClick={() => { S.settingsOpen.value = false; S.openRules(); }}>Kuralları aç</button>
             </div>
           </fieldset>

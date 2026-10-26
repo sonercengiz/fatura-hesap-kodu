@@ -10,7 +10,7 @@ import { db, DEFAULT_FIRM_ID, loadSettings, saveSettings, newId, type BatchRecor
 import { searchAccounts, type Account } from '../core/chart';
 import { ensureXslt, transformToHtml, decorateHtml, cachedHtml, rememberHtml, forgetHtml } from '../render/xslt';
 import { fallbackHtml } from '../render/fallback';
-import { matchRules, validateRule, normPattern, parseRulesFile, type Rule, type RuleKind, type RulesFile } from '../core/rules';
+import { matchRules, matchPermanent, activeRules, validateRule, normPattern, parseRulesFile, type Rule, type RuleKind, type RulesFile } from '../core/rules';
 
 export const settings = signal<Settings>(DEFAULT_SETTINGS);
 export const firms = signal<FirmRecord[]>([]);
@@ -46,7 +46,9 @@ export const ruleNos = signal<Set<string>>(new Set());
 export const rules = signal<Rule[]>([]);
 export const rulesOpen = signal(false);
 /** Kurallar penceresi açılırken forma önceden doldurulacak değerler */
-export const ruleDraft = signal<{ kind: RuleKind; pattern: string; code: string } | null>(null);
+export const ruleDraft = signal<{ kind: RuleKind; pattern: string; code: string; scope?: RuleScope } | null>(null);
+/** Kural kapsamı: firma geneli (kalıcı) ya da yalnızca açık parti */
+export type RuleScope = 'firm' | 'batch';
 /** Listede seçili faturalar (toplu atama için) */
 export const selected = signal<Set<string>>(new Set());
 export const lastClicked = signal<number>(-1);
@@ -134,14 +136,28 @@ export const viewCount = computed(() => invoices.value.filter((i) => i.hasView).
 /** Her fatura için uyan kural (varsa); sıralı listeyle aynı anda hesaplanır */
 export const ruleFor = computed(() => {
   const m = new Map<string, Rule>();
-  const rs = rules.value;
+  const rs = activeRules(rules.value, batchRec.value?.id ?? null);
   if (rs.length === 0) return m;
   for (const i of rawInvoices.value) {
-    const r = matchRules(i, rs);
+    const r = matchRules(i, rs, batchRec.value?.id ?? null);
     if (r) m.set(i.no, r);
   }
   return m;
 });
+/** Bu partide geçerli kurallar (kalıcılar + bu partininkiler) */
+export const batchRules = computed(() => activeRules(rules.value, batchRec.value?.id ?? null));
+/** Parti kuralının bu partide geçersiz kıldığı kalıcı kural(lar): fatura sayısı ve kodlar */
+export function overriddenBy(rule: Rule): { count: number; codes: string[] } {
+  if (!rule.batchId) return { count: 0, codes: [] };
+  const codes = new Set<string>();
+  let count = 0;
+  for (const i of rawInvoices.value) {
+    if (ruleFor.value.get(i.no)?.id !== rule.id) continue;
+    const p = matchPermanent(i, rules.value);
+    if (p && p.code !== rule.code) { count++; codes.add(p.code); }
+  }
+  return { count, codes: Array.from(codes) };
+}
 /** Partide kurala uyan ama henüz kod almamış faturalar */
 export const rulePending = computed(() => invoices.value.filter((i) => !assignments.value.has(i.no) && ruleFor.value.has(i.no)));
 
@@ -510,11 +526,13 @@ async function cleanupXslts() {
 }
 
 export async function deleteBatch(id: string) {
-  await db.transaction('rw', db.batches, db.assignments, db.invoices, async () => {
+  await db.transaction('rw', db.batches, db.assignments, db.invoices, db.rules, async () => {
     await db.batches.delete(id);
     await db.assignments.where('batchId').equals(id).delete();
     await db.invoices.where('batchId').equals(id).delete();
+    await db.rules.where('batchId').equals(id).delete();
   });
+  rules.value = rules.value.filter((r) => r.batchId !== id);
   forgetHtml(`${id}|`);
   if (batchRec.value?.id === id) {
     batchRec.value = null;
@@ -889,7 +907,7 @@ export async function importWorkspace(file: File) {
     let nr = 0;
     for (const r of raw.rules ?? []) {
       if (!r?.kind || !r.pattern || !r.code) continue;
-      nr += await mergeRule({ ...r, firmId: fid(r.firmId) }) ? 1 : 0;
+      nr += await mergeRule({ ...r, batchId: r.batchId ?? null, firmId: fid(r.firmId) }) ? 1 : 0;
     }
     firms.value = await db.firms.orderBy('name').toArray();
     await loadFirmData();
@@ -1017,17 +1035,18 @@ export async function pickFromChart(code: string) {
 
 // ---------- otomatik atama kuralları ----------
 
-/** Aynı firmada aynı tür+belirteç varsa onu günceller (daha yeniyse), yoksa ekler. true = yazıldı */
+/** Aynı firma + kapsamda aynı tür+belirteç varsa onu günceller (daha yeniyse), yoksa ekler. true = yazıldı */
 async function mergeRule(r: Rule): Promise<boolean> {
   const key = normPattern(r.kind, r.pattern);
-  const same = (await db.rules.where('firmId').equals(r.firmId).toArray()).find((x) => x.kind === r.kind && normPattern(x.kind, x.pattern) === key);
+  const scope = r.batchId ?? null;
+  const same = (await db.rules.where('firmId').equals(r.firmId).toArray()).find((x) => (x.batchId ?? null) === scope && x.kind === r.kind && normPattern(x.kind, x.pattern) === key);
   if (same) {
     if ((r.updatedAt ?? 0) <= same.updatedAt && same.code === r.code) return false;
     await db.rules.put({ ...same, code: r.code, enabled: r.enabled ?? true, updatedAt: Math.max(same.updatedAt, r.updatedAt ?? 0) });
     return true;
   }
   const byId = r.id ? await db.rules.get(r.id) : undefined;
-  await db.rules.put({ ...r, id: byId ? newId() : r.id || newId(), enabled: r.enabled ?? true, createdAt: r.createdAt ?? Date.now(), updatedAt: r.updatedAt ?? Date.now() });
+  await db.rules.put({ ...r, batchId: scope, id: byId ? newId() : r.id || newId(), enabled: r.enabled ?? true, createdAt: r.createdAt ?? Date.now(), updatedAt: r.updatedAt ?? Date.now() });
   return true;
 }
 
@@ -1035,14 +1054,15 @@ async function reloadRules() {
   rules.value = (await db.rules.where('firmId').equals(currentFirmId.value).toArray()).sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
-/** Kural ekler (aynı belirteç varsa günceller) ve partideki atanmamış uyan faturalara hemen uygular. */
-export async function addRule(kind: RuleKind, patternRaw: string, codeRaw: string): Promise<string | null> {
+/** Kural ekler (aynı kapsamda aynı belirteç varsa günceller) ve partideki atanmamış uyan faturalara hemen uygular. */
+export async function addRule(kind: RuleKind, patternRaw: string, codeRaw: string, scope: RuleScope = 'firm'): Promise<string | null> {
   const pattern = patternRaw.trim();
   const code = codeRaw.trim();
   const err = validateRule(kind, pattern, code);
   if (err) return err;
+  if (scope === 'batch' && !batchRec.value) return 'Partiye özel kural için açık bir parti gerekir.';
   const now = Date.now();
-  await mergeRule({ id: newId(), firmId: currentFirmId.value, kind, pattern: kind === 'vkn' ? normPattern(kind, pattern) : pattern, code, enabled: true, createdAt: now, updatedAt: now });
+  await mergeRule({ id: newId(), firmId: currentFirmId.value, batchId: scope === 'batch' ? batchRec.value!.id : null, kind, pattern: kind === 'vkn' ? normPattern(kind, pattern) : pattern, code, enabled: true, createdAt: now, updatedAt: now });
   await reloadRules();
   const n = await applyRules(() => true, true);
   showToast(n ? `Kural kaydedildi · ${n} faturaya uygulandı` : 'Kural kaydedildi', 3500);
@@ -1081,7 +1101,7 @@ export async function applyRules(pick: (inv: Invoice) => boolean, pushToUndo = t
 }
 
 /** Panelden: seçili faturanın satıcısı için kural taslağıyla pencereyi aç */
-export function openRules(draft?: { kind: RuleKind; pattern: string; code: string }) {
+export function openRules(draft?: { kind: RuleKind; pattern: string; code: string; scope?: RuleScope }) {
   ruleDraft.value = draft ?? null;
   rulesOpen.value = true;
 }
@@ -1097,7 +1117,7 @@ export function exportRules() {
     version: 1,
     exportedAt: new Date().toISOString(),
     firmName: firm.value.name,
-    rules: rules.value.map(({ kind, pattern, code, enabled }) => ({ kind, pattern, code, enabled })),
+    rules: rules.value.filter((r) => r.batchId === null).map(({ kind, pattern, code, enabled }) => ({ kind, pattern, code, enabled })),
   };
   const name = `kurallar-${(firm.value.name || 'firma').toLocaleLowerCase('tr').replace(/[^a-z0-9çğıöşü]+/g, '-')}.json`;
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -1118,7 +1138,7 @@ export async function importRules(file: File) {
     const f = parseRulesFile(await file.text());
     const now = Date.now();
     let n = 0;
-    for (const r of f.rules) n += (await mergeRule({ id: newId(), firmId: currentFirmId.value, ...r, createdAt: now, updatedAt: now })) ? 1 : 0;
+    for (const r of f.rules) n += (await mergeRule({ id: newId(), firmId: currentFirmId.value, batchId: null, ...r, createdAt: now, updatedAt: now })) ? 1 : 0;
     await reloadRules();
     const applied = await applyRules(() => true, true);
     showToast(`${n} kural alındı${f.firmName ? ` (${f.firmName})` : ''}${applied ? ` · ${applied} faturaya uygulandı` : ''}`, 4500);

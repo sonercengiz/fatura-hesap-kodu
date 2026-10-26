@@ -209,6 +209,10 @@ class AppDb extends Dexie {
           } catch { /* kalem metni boş kalır */ }
         });
       });
+    // v8: kural kapsamı (kalıcı / partiye özel)
+    this.version(8).stores({ rules: 'id, firmId, batchId' }).upgrade(async (tx) => {
+      await tx.table('rules').toCollection().modify((r: Rule) => { if (r.batchId === undefined) r.batchId = null; });
+    });
   }
 }
 

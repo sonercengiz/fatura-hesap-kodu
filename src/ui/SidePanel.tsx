@@ -36,17 +36,21 @@ export function SidePanel() {
           </div>
           {(() => {
             const r = S.ruleFor.value.get(inv.no);
+            const perm = r?.batchId ? S.overriddenBy(r) : null;
             if (r && r.code !== code) return (
-              <button class="hint" onClick={() => S.assign(r.code)} title={`Kural: ${r.pattern}`}>
-                Kural diyor ki: <b>{r.code}</b> <span class="muted">({r.pattern})</span>
+              <button class="hint" onClick={() => S.assign(r.code)} title={`${r.batchId ? 'Parti kuralı' : 'Kalıcı kural'}: ${r.pattern}`}>
+                {r.batchId ? 'Parti kuralı' : 'Kural'} diyor ki: <b>{r.code}</b> <span class="muted">({r.pattern})</span> <kbd>Boşluk</kbd>
               </button>
+            );
+            if (r && r.batchId && perm && perm.count > 0 && S.ruleNos.value.has(inv.no)) return (
+              <div class="muted small rule-note" title="Bu partiye özel kural, kalıcı kuralın önüne geçti">Parti kuralı · kalıcı {perm.codes.join(', ')} yerine</div>
             );
             if (code && !r) return (
               <button class="ghost tiny rule-make" onClick={() => S.openRules({ kind: 'vkn', pattern: inv.supplierVkn, code })} title="Bu satıcının her faturası bu kodu alsın (kural)">⚡ Kural yap: {inv.supplierVkn} → {code}</button>
             );
             return null;
           })()}
-          {S.hint.value && S.hint.value.code !== code && (
+          {S.hint.value && S.hint.value.code !== code && !S.ruleFor.value.has(inv.no) && (
             <button class="hint" onClick={() => S.assign(S.hint.value!.code)} title="Bu satıcıya daha önce verilen kodu ata (Boşluk)">
               Bu satıcıya önce: <b>{S.hint.value.code}</b> <span class="muted">×{S.hint.value.count}</span> <kbd>Boşluk</kbd>
             </button>

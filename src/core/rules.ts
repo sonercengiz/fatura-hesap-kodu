@@ -8,6 +8,8 @@ export type RuleKind = 'vkn' | 'name' | 'item';
 export interface Rule {
   id: string;
   firmId: string;
+  /** null = kalıcı (firma geneli); dolu = yalnızca o partide (ay) geçerli */
+  batchId: string | null;
   kind: RuleKind;
   /** VKN/TCKN için rakamlar; diğerlerinde aranan metin (büyük/küçük harf önemsiz) */
   pattern: string;
@@ -52,14 +54,36 @@ export function ruleMatches(rule: Rule, t: RuleTarget): boolean {
   }
 }
 
-/** Uyan kurallardan en öncelikli olanı (aynı türde en son güncellenen). Yoksa null. */
-export function matchRules(t: RuleTarget, rules: Rule[]): Rule | null {
+/** Bu partide geçerli kurallar: kalıcılar + yalnızca bu partininkiler */
+export function activeRules(rules: Rule[], batchId: string | null): Rule[] {
+  return rules.filter((r) => r.batchId === null || r.batchId === batchId);
+}
+
+/** a, b'den önce mi gelir: parti kuralı kalıcıdan önce; sonra tür önceliği; sonra en son güncellenen */
+function beats(a: Rule, b: Rule): boolean {
+  const sa = a.batchId ? 0 : 1;
+  const sb = b.batchId ? 0 : 1;
+  if (sa !== sb) return sa < sb;
+  if (PRIORITY[a.kind] !== PRIORITY[b.kind]) return PRIORITY[a.kind] < PRIORITY[b.kind];
+  return a.updatedAt > b.updatedAt;
+}
+
+/**
+ * Uyan kurallardan en öncelikli olanı. `batchId` verilirse yalnızca kalıcılar ve o partinin kuralları değerlendirilir;
+ * parti kuralı kalıcı kuralın önüne geçer. Yoksa null.
+ */
+export function matchRules(t: RuleTarget, rules: Rule[], batchId: string | null = null): Rule | null {
   let best: Rule | null = null;
   for (const r of rules) {
-    if (!r.enabled || !ruleMatches(r, t)) continue;
-    if (!best || PRIORITY[r.kind] < PRIORITY[best.kind] || (PRIORITY[r.kind] === PRIORITY[best.kind] && r.updatedAt > best.updatedAt)) best = r;
+    if (!r.enabled || (r.batchId !== null && r.batchId !== batchId) || !ruleMatches(r, t)) continue;
+    if (!best || beats(r, best)) best = r;
   }
   return best;
+}
+
+/** Yalnızca kalıcı kurallar arasında en öncelikli uyan (parti kuralının neyi geçersiz kıldığını göstermek için) */
+export function matchPermanent(t: RuleTarget, rules: Rule[]): Rule | null {
+  return matchRules(t, rules.filter((r) => r.batchId === null), null);
 }
 
 export function ruleLabel(r: Rule): string {
@@ -75,7 +99,7 @@ export function validateRule(kind: RuleKind, pattern: string, code: string): str
   return null;
 }
 
-/** Kural dosyası (.json) biçimi: yalnızca kurallar, firma adıyla; başka kullanıcıya verilebilir */
+/** Kural dosyası (.json) biçimi: yalnızca kalıcı kurallar, firma adıyla; başka kullanıcıya verilebilir */
 export interface RulesFile {
   app: 'fatura-hesap-kodu';
   kind: 'rules';

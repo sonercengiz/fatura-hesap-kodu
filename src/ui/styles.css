@@ -279,3 +279,12 @@ tr.iss-chart td.code-col { color: var(--warn); text-decoration: underline wavy v
 .rule-make { margin-top: 6px; width: 100%; text-align: left; border-style: dashed; }
 .detail-code .bulk-tag { margin-left: 6px; margin-right: 0; }
 @media (max-width: 700px) { .rule-form { grid-template-columns: 1fr 1fr; } }
+
+.scope-seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; align-self: flex-start; }
+.scope-seg button { border: 0; border-radius: 0; background: transparent; padding: 5px 12px; font-size: 13px; }
+.scope-seg button + button { border-left: 1px solid var(--line); }
+.scope-seg button.on { background: var(--accent); color: var(--accent-ink); }
+.rule-row.scoped { background: color-mix(in srgb, var(--s2) 45%, transparent); }
+.scope-tag { margin-right: 6px; }
+.override-note { color: var(--warn); font-weight: 400; font-size: 12px; }
+.rule-note { margin-top: 4px; }

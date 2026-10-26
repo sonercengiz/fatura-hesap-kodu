@@ -2,8 +2,8 @@ import 'fake-indexeddb/auto';
 import { describe, it, expect, beforeAll } from 'vitest';
 import Dexie from 'dexie';
 
-/** Sürüm 3 (firmasız, Excel tabanlı) veritabanı oluşturup uygulamanın sürüm 7 şemasına yükseltilmesini doğrular. */
-describe('veritabanı geçişi v3 → v7', () => {
+/** Sürüm 3 (firmasız, Excel tabanlı) veritabanı oluşturup uygulamanın sürüm 8 şemasına yükseltilmesini doğrular. */
+describe('veritabanı geçişi v3 → v8', () => {
   beforeAll(async () => {
     const old = new Dexie('fatura-hesap-kodu');
     old.version(3).stores({
@@ -29,7 +29,7 @@ describe('veritabanı geçişi v3 → v7', () => {
   it('eski veriler varsayılan firmaya taşınır', async () => {
     const { db, DEFAULT_FIRM_ID } = await import('../src/storage/db');
     await db.open();
-    expect(db.verno).toBe(7);
+    expect(db.verno).toBe(8);
     const firms = await db.firms.toArray();
     expect(firms.length).toBe(1);
     expect(firms[0]).toMatchObject({ id: DEFAULT_FIRM_ID, name: 'Eski Firma', chartName: 'Liste X' });
