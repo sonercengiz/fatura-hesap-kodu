@@ -11,6 +11,8 @@ import { GuideModal } from './GuideModal';
 import { ChartModal } from './ChartModal';
 import { RulesModal } from './RulesModal';
 import { ListView } from './ListView';
+import { PrintModal } from './PrintModal';
+import { PrintRoot } from './PrintRoot';
 
 export function App() {
   const [drag, setDrag] = useState(false);
@@ -46,7 +48,11 @@ export function App() {
         return;
       }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p') {
-        if (S.current.value?.hasView) { e.preventDefault(); printCurrentInvoice(); }
+        // Ctrl+P: seçili faturayı yazdır; Ctrl+Shift+P: yazdırma planı
+        e.preventDefault();
+        if (e.shiftKey) S.openPrint();
+        else if (S.current.value?.hasView) printCurrentInvoice();
+        else S.openPrint();
         return;
       }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
@@ -77,6 +83,11 @@ export function App() {
           else if (e.key === 'Backspace') { e.preventDefault(); S.chartQuery.value = S.chartQuery.value.slice(0, -1); S.chartIndex.value = 0; }
           else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); S.chartQuery.value += e.key; S.chartIndex.value = 0; }
         }
+        return;
+      }
+      if (S.printOpen.value) {
+        if (e.key === 'Escape') S.closePrint();
+        else if (e.key === 'Enter' && !inInput) { e.preventDefault(); document.querySelector<HTMLButtonElement>('.print-modal .modal-head button.primary')?.click(); }
         return;
       }
       if (S.previewOpen.value || S.settingsOpen.value || S.guideOpen.value || S.rulesOpen.value) {
@@ -250,6 +261,8 @@ export function App() {
       {S.guideOpen.value && <GuideModal />}
       {S.chartOpen.value && <ChartModal />}
       {S.rulesOpen.value && <RulesModal />}
+      {S.printOpen.value && <PrintModal />}
+      <PrintRoot />
       {S.busy.value && <div class="busy">{S.busy.value}</div>}
       {S.toast.value && <div class="toast">{S.toast.value}</div>}
       {drag && <div class="drop-hint">Bırakın: e-Fatura XML dosyaları</div>}

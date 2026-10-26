@@ -45,6 +45,10 @@ export const ruleNos = signal<Set<string>>(new Set());
 /** Firmanın otomatik atama kuralları */
 export const rules = signal<Rule[]>([]);
 export const rulesOpen = signal(false);
+/** Yazdırma planı penceresi ve çalışan yazdırma işi */
+export const printOpen = signal(false);
+export interface PrintOpts { pageBreak: boolean; strip: boolean; summary: boolean }
+export const printJob = signal<{ items: Invoice[]; opts: PrintOpts } | null>(null);
 /** Kurallar penceresi açılırken forma önceden doldurulacak değerler */
 export const ruleDraft = signal<{ kind: RuleKind; pattern: string; code: string; scope?: RuleScope } | null>(null);
 /** Kural kapsamı: firma geneli (kalıcı) ya da yalnızca açık parti */
@@ -229,7 +233,8 @@ export async function getInvoiceView(no: string): Promise<InvoiceView | null> {
   } else if (rec.xml) {
     html = '<!--fallback-->' + fallbackHtml(inv, rec.xml, 'Bu faturada görünüm şablonu (XSLT) yok; XML içeriği sade biçimde gösteriliyor.');
   } else {
-    return null;
+    // XML'siz (eski Excel partisi): ekranda kart gösterilir, yazdırmada sade özet
+    return { html: '<!--fallback-->' + fallbackHtml(inv, null, 'Bu faturanın XML\'i yok (eski Excel partisi); yalnızca liste bilgileri.'), official: false };
   }
   rememberHtml(key, html);
   return { html, official };
@@ -1125,6 +1130,25 @@ export function openRules(draft?: { kind: RuleKind; pattern: string; code: strin
 export function closeRules() {
   rulesOpen.value = false;
   ruleDraft.value = null;
+}
+
+// ---------- yazdırma ----------
+
+export function openPrint() {
+  if (!batchRec.value || invoices.value.length === 0) { showToast('Yazdırılacak fatura yok.'); return; }
+  printOpen.value = true;
+}
+export function closePrint() {
+  printOpen.value = false;
+}
+export function startPrint(items: Invoice[], opts: PrintOpts) {
+  if (items.length === 0) return;
+  printOpen.value = false;
+  printJob.value = { items, opts };
+}
+export function finishPrint() {
+  printJob.value = null;
+  busy.value = null;
 }
 
 export function exportRules() {
