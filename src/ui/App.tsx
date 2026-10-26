@@ -34,7 +34,8 @@ export function App() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
-      const inInput = !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
+      // Yalnızca yazı girişleri tuşları yutar; onay kutusu / radyo odaklıyken kısayollar ve Esc çalışmaya devam eder
+      const inInput = !!t && ((t.tagName === 'INPUT' && !/^(checkbox|radio|button)$/.test((t as HTMLInputElement).type)) || t.tagName === 'TEXTAREA' || t.isContentEditable);
 
       if (e.key === 'F1' || e.key === 'F2' || e.key === 'F5') {
         e.preventDefault();
