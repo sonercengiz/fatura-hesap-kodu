@@ -2,34 +2,17 @@ import { useEffect, useMemo, useState } from 'preact/hooks';
 import * as S from './state';
 import { fmtAmount } from './InvoiceCard';
 import type { Invoice, FilterMode } from '../core/types';
-import { sortInvoices } from '../core/sort';
+import { sortPlan, describePlan, DEFAULT_PLAN_SORT, KEY_LABELS, DIR_LABELS, type PlanSort, type SortKey, type Dir } from '../core/printSort';
 
 type Source = 'all' | 'selected' | 'visible';
-type Order = 'date' | 'supplier' | 'code' | 'added';
-const ORDER_LABELS: Record<Order, string> = { date: 'Tarih (çıktı sırası)', supplier: 'Satıcı (A→Z), sonra tarih', code: 'Hesap kodu, sonra tarih', added: 'Yükleme sırası' };
-
-function orderList(list: Invoice[], order: Order, reverse: boolean, codes: Map<string, string>): Invoice[] {
-  let out: Invoice[];
-  const byDate = sortInvoices(list, 'date-supplier');
-  if (order === 'date') out = byDate;
-  else if (order === 'added') out = sortInvoices(list, 'added');
-  else if (order === 'supplier') out = byDate.slice().sort((a, b) => a.supplierName.localeCompare(b.supplierName, 'tr') || 0);
-  else out = byDate.slice().sort((a, b) => {
-    const ca = codes.get(a.no) ?? '￿';
-    const cb = codes.get(b.no) ?? '￿';
-    return ca < cb ? -1 : ca > cb ? 1 : 0;
-  });
-  return reverse ? out.slice().reverse() : out;
-}
-
 /** Yazdırma planı: kaynak, sıra, elle düzenleme ve seçenekler; yazdırma tarayıcıdan yapılır (PDF olarak kaydetmek dahil). */
 export function PrintModal() {
   const all = S.invoices.value;
   const selectedNos = S.selected.value;
   const visible = all.filter(S.passesFilter);
   const [source, setSource] = useState<Source>(selectedNos.size ? 'selected' : 'all');
-  const [order, setOrder] = useState<Order>('date');
-  const [reverse, setReverse] = useState(false);
+  const [sort, setSort] = useState<PlanSort>(DEFAULT_PLAN_SORT);
+  const setS = (p: Partial<PlanSort>) => { setSort({ ...sort, ...p }); setManual(null); };
   const [pageBreak, setPageBreak] = useState(true);
   const [strip, setStrip] = useState(true);
   const [summary, setSummary] = useState(false);
@@ -53,7 +36,7 @@ export function PrintModal() {
     if (q && !(S.matchesSearch(i, q) || (code ?? '').toLocaleLowerCase('tr').includes(q))) return false;
     return true;
   });
-  const auto = useMemo(() => orderList(base, order, reverse, S.assignments.value), [base, order, reverse, S.assignments.value]);
+  const auto = useMemo(() => sortPlan(base, sort, S.assignments.value), [base, sort, S.assignments.value]);
   const items = useMemo(() => {
     if (!manual) return auto;
     const byNo = new Map(auto.map((i) => [i.no, i]));
@@ -114,11 +97,34 @@ export function PrintModal() {
             </fieldset>
             <fieldset>
               <legend>Sıra</legend>
-              {(Object.keys(ORDER_LABELS) as Order[]).map((v) => (
-                <label class="radio"><input type="radio" name="pord" checked={order === v} onChange={() => { setOrder(v); setManual(null); }} /><span>{ORDER_LABELS[v]}</span></label>
-              ))}
-              <label class="radio"><input type="checkbox" checked={reverse} onChange={(e) => { setReverse((e.currentTarget as HTMLInputElement).checked); setManual(null); }} /><span>Tersten</span></label>
-              {manual && <div class="muted small">Elle düzenlendi. <button class="ghost tiny" onClick={() => setManual(null)}>Sıfırla</button></div>}
+              <label><span>Önce şuna göre diz</span>
+                <div class="sort-pair">
+                  <select value={sort.primary} onChange={(e) => { const k = (e.currentTarget as HTMLSelectElement).value as SortKey; setS({ primary: k, secondary: sort.secondary === k ? (k === 'no' ? 'date' : 'no') : sort.secondary }); }} onKeyDown={(e) => e.stopPropagation()}>
+                    {(Object.keys(KEY_LABELS) as SortKey[]).map((k) => <option value={k}>{KEY_LABELS[k]}</option>)}
+                  </select>
+                  <select value={sort.dir} onChange={(e) => setS({ dir: (e.currentTarget as HTMLSelectElement).value as Dir })} onKeyDown={(e) => e.stopPropagation()}>
+                    <option value="asc">{DIR_LABELS[sort.primary][0]}</option><option value="desc">{DIR_LABELS[sort.primary][1]}</option>
+                  </select>
+                </div>
+              </label>
+              <label><span>Eşit olanları şuna göre diz</span>
+                <div class="sort-pair">
+                  <select value={sort.secondary} onChange={(e) => setS({ secondary: (e.currentTarget as HTMLSelectElement).value as SortKey })} onKeyDown={(e) => e.stopPropagation()}>
+                    {(Object.keys(KEY_LABELS) as SortKey[]).filter((k) => k !== sort.primary).map((k) => <option value={k}>{KEY_LABELS[k]}</option>)}
+                  </select>
+                  <select value={sort.dir2} onChange={(e) => setS({ dir2: (e.currentTarget as HTMLSelectElement).value as Dir })} onKeyDown={(e) => e.stopPropagation()}>
+                    <option value="asc">{DIR_LABELS[sort.secondary][0]}</option><option value="desc">{DIR_LABELS[sort.secondary][1]}</option>
+                  </select>
+                </div>
+              </label>
+              <label class="radio"><input type="checkbox" checked={sort.groupSupplier} disabled={sort.primary === 'supplier'} onChange={(e) => setS({ groupSupplier: (e.currentTarget as HTMLInputElement).checked })} /><span>Aynı satıcının faturaları bir arada dursun</span></label>
+              {(() => { const d = describePlan(sort, toPrint, S.assignments.value); return (
+                <div class="sort-explain">
+                  <div>{d.summary}</div>
+                  <div class="sort-ends"><span><b>En üstte:</b> {d.top}</span><span><b>En altta:</b> {d.bottom}</span></div>
+                </div>
+              ); })()}
+              {manual && <div class="muted small">Sırayı elle değiştirdiniz; açıklama otomatik sırayı anlatır. <button class="ghost tiny" onClick={() => setManual(null)}>Otomatik sıraya dön</button></div>}
             </fieldset>
             <fieldset>
               <legend>Sayfa</legend>
