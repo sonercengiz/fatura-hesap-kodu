@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'preact/hooks';
+import { useEffect, useMemo, useState } from 'preact/hooks';
 import * as S from './state';
 import { fmtAmount } from './InvoiceCard';
 import type { Invoice } from '../core/types';
@@ -36,6 +36,7 @@ export function PrintModal() {
   const [manual, setManual] = useState<string[] | null>(null); // elle sürüklenmiş sıra (fatura no listesi)
   const [dragNo, setDragNo] = useState<string | null>(null);
 
+
   const base = source === 'selected' ? all.filter((i) => selectedNos.has(i.no)) : source === 'visible' ? visible : all;
   const auto = useMemo(() => orderList(base, order, reverse, S.assignments.value), [base, order, reverse, S.assignments.value]);
   const items = useMemo(() => {
@@ -57,6 +58,16 @@ export function PrintModal() {
     setManual(nos);
   };
   const noView = items.filter((i) => !i.hasView).length;
+  const [hoverNo, setHoverNo] = useState<string | null>(null);
+  const [preview, setPreview] = useState<{ no: string; html: string } | null>(null);
+  const previewNo = hoverNo ?? items[0]?.no ?? null;
+  useEffect(() => {
+    if (!previewNo) { setPreview(null); return; }
+    let cancelled = false;
+    S.getInvoiceView(previewNo).then((v) => { if (!cancelled && v) setPreview({ no: previewNo, html: v.html }); });
+    return () => { cancelled = true; };
+  }, [previewNo]);
+  const previewInv = previewNo ? items.find((i) => i.no === previewNo) : undefined;
 
   return (
     <div class="modal-backdrop" onClick={() => S.closePrint()}>
@@ -105,6 +116,7 @@ export function PrintModal() {
                   onDrop={(e) => { e.preventDefault(); const from = e.dataTransfer?.getData('text/plain') || dragNo; if (from) move(from, i.no); setDragNo(null); }}
                   onDragEnd={() => setDragNo(null)}
                   onDblClick={() => { S.closePrint(); S.goTo(S.invoices.value.indexOf(i)); }}
+                  onMouseEnter={() => setHoverNo(i.no)}
                   title="Sürükle: sırala · çift tık: faturaya git"
                 >
                   <span class="print-n">{k + 1}</span>
@@ -115,6 +127,13 @@ export function PrintModal() {
               );
             })}
             {items.length === 0 && <div class="chart-empty">Yazdırılacak fatura yok.</div>}
+          </div>
+          <div class="print-preview" onMouseEnter={() => undefined}>
+            <div class="print-preview-head muted small">{previewInv ? `${items.indexOf(previewInv) + 1}. ${previewInv.no}` : 'Önizleme'}</div>
+            <div class="print-preview-page">
+              {preview && preview.no === previewNo && <iframe class="print-preview-frame" sandbox="allow-same-origin" srcdoc={preview.html} title="önizleme" />}
+            </div>
+            <div class="muted small">Basılacak görünüm: faturanın kendi şablonu (EDM PDF'i ile aynı).</div>
           </div>
         </div>
       </div>

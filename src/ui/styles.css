@@ -325,8 +325,8 @@ tr.iss-chart td.code-col { color: var(--warn); text-decoration: underline wavy v
 .layout-btn.on { background: var(--neutral); }
 
 /* ---- Yazdırma planı ---- */
-.modal.print-modal { width: min(1000px, 96vw); height: 88vh; }
-.print-body { display: grid; grid-template-columns: 330px 1fr; min-height: 0; flex: 1; }
+.modal.print-modal { width: min(1240px, 96vw); height: 88vh; }
+.print-body { display: grid; grid-template-columns: 330px 1fr 300px; min-height: 0; flex: 1; }
 .print-opts { padding: 12px 14px; border-right: 1px solid var(--line); overflow: auto; display: flex; flex-direction: column; gap: 10px; }
 .print-opts fieldset { display: flex; flex-direction: column; gap: 4px; }
 .print-list { overflow: auto; min-height: 0; }
@@ -337,7 +337,13 @@ tr.iss-chart td.code-col { color: var(--warn); text-decoration: underline wavy v
 .print-code { font-family: ui-monospace, Menlo, monospace; font-weight: 600; padding: 2px 8px; border-radius: 6px; min-width: 70px; text-align: center; }
 .print-code.slot--1 { background: var(--assigned); }
 .print-grip { color: var(--muted); letter-spacing: -2px; }
+@media (max-width: 1100px) { .print-body { grid-template-columns: 330px 1fr; } .print-preview { display: none; } }
 @media (max-width: 800px) { .print-body { grid-template-columns: 1fr; } .print-opts { border-right: none; border-bottom: 1px solid var(--line); } }
+.print-preview { border-left: 1px solid var(--line); padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; min-height: 0; overflow: hidden; }
+.print-preview-head { font-family: ui-monospace, Menlo, monospace; }
+.print-preview-page { width: 272px; height: 385px; overflow: hidden; background: #fff; border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 2px 10px rgba(0,0,0,.12); flex: none; }
+.print-preview-frame { width: 800px; height: 1132px; border: 0; transform: scale(0.34); transform-origin: top left; pointer-events: none; }
+:root[data-theme="dark"] .print-preview-page { filter: brightness(.86); }
 
 /* Yazdırma kökü: ekranda görünmez, yazdırmada tek içerik */
 .print-root { position: fixed; left: -20000px; top: 0; width: 740px; background: #fff; color: #000; }

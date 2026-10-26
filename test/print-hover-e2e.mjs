@@ -1,0 +1,17 @@
+import { chromium } from 'playwright';
+import { readdirSync } from 'node:fs';
+const S='/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/aa071f3a-6270-4292-9e7a-d102afeef53e/scratchpad';
+const files=readdirSync(S+'/xmlin').filter(f=>f.endsWith('.xml')).sort().map(f=>S+'/xmlin/'+f).slice(0,20);
+const browser=await chromium.launch({channel:'chrome',headless:true});
+const page=await (await browser.newContext({viewport:{width:1500,height:900}})).newPage();
+await page.addInitScript(()=>{try{localStorage.setItem('guideSeen','1')}catch{}});
+await page.goto('http://localhost:5179/'); await page.waitForSelector('.welcome');
+await page.locator('input[accept=".xml,text/xml,application/xml"]').setInputFiles(files); await page.waitForSelector('.inv-frame'); await page.waitForFunction(()=>!document.querySelector('.busy'));
+await page.locator('.toolbar button:has-text("Yazdır")').click(); await page.waitForSelector('.print-modal');
+await page.waitForSelector('.print-preview-frame');
+const head=async()=>page.locator('.print-preview-head').innerText();
+console.log('varsayılan önizleme:', await head());
+await page.locator('.print-row').nth(6).hover(); await page.waitForTimeout(300);
+console.log('7. satır hover:', await head(), '| çerçeve metni var:', (await page.frameLocator('.print-preview-frame').locator('body').innerText()).length>50);
+await page.screenshot({path:`${S}/shots/print-3-hover.png`});
+await browser.close();
