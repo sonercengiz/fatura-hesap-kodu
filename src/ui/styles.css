@@ -87,15 +87,23 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 0;
 
 .bar { grid-row: 4; display: grid; grid-template-columns: minmax(0, 760px) minmax(0, 1fr) 360px; gap: 12px; padding: 10px 12px; background: var(--panel); border-top: 1px solid var(--line); align-items: center; }
 /* Atama durumu kartı: kısayollar ile manuel giriş arasındaki boşlukta, yuva rengini taşır */
-.status { justify-self: center; align-self: stretch; width: clamp(200px, 100%, 320px); display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; gap: 2px; padding: 8px 16px; border-radius: 12px; border: 2px solid transparent; transition: background .25s, border-color .25s; }
+.bar-mid { justify-self: center; align-self: stretch; display: flex; gap: 10px; width: 100%; max-width: 520px; min-width: 0; }
+.status { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; gap: 2px; padding: 8px 16px; border-radius: 12px; border: 2px solid transparent; transition: background .25s, border-color .25s; }
 .status.empty { border-color: var(--line); border-style: dashed; color: var(--muted); }
 .status.done.slot--1 { background: var(--assigned); color: var(--ink); }
 .status-label { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; opacity: .7; }
 .status-code { font-size: 26px; font-weight: 700; font-family: ui-monospace, Menlo, monospace; line-height: 1.15; }
 .status.empty .status-code { font-family: inherit; font-size: 17px; font-weight: 600; }
 .status-sub { font-size: 12px; opacity: .8; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.bar.manual .status { opacity: .6; }
-@media (max-width: 1180px) { .bar { grid-template-columns: minmax(0, 1fr) 360px; } .status { display: none; } }
+.bar.manual .bar-mid { opacity: .6; }
+.progress-card { border-color: var(--line); background: var(--panel); color: var(--muted); max-width: 220px; }
+.progress-card .status-code { color: var(--ink); }
+.progress-card.complete { background: var(--s1); color: var(--s1i); border-color: var(--s1); }
+.progress-card.complete .status-code { color: inherit; }
+.progress-card .status-sub kbd { margin: 0 2px; }
+.progress-card.complete .status-sub kbd { background: rgba(255,255,255,.55); color: inherit; }
+:root[data-theme="dark"] .progress-card.complete .status-sub kbd { background: rgba(0,0,0,.28); }
+@media (max-width: 1180px) { .bar { grid-template-columns: minmax(0, 1fr) 360px; } .bar-mid { display: none; } }
 .slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; max-width: 760px; }
 .slot { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 2px solid transparent; border-radius: 10px; font-size: 16px; font-weight: 600; }
 .slot kbd { margin: 0; font-size: 13px; background: rgba(255,255,255,.6); color: inherit; }
@@ -138,7 +146,7 @@ input.inline { width: 90px; }
 .busy { position: fixed; left: 50%; top: 56px; transform: translateX(-50%); background: var(--accent); color: #fff; padding: 6px 14px; border-radius: 999px; z-index: 30; }
 .toast { position: fixed; left: 50%; bottom: 96px; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 8px 16px; border-radius: 999px; z-index: 30; }
 .drop-hint { position: fixed; inset: 12px; border: 3px dashed var(--accent); border-radius: 16px; display: grid; place-content: center; font-size: 24px; color: var(--accent); background: rgba(47,111,237,.06); pointer-events: none; z-index: 10; }
-@media (max-width: 900px) { .work { grid-template-columns: 1fr; } .side { max-height: 40vh; } .bar { grid-template-columns: 1fr; } .status { display: none; } }
+@media (max-width: 900px) { .work { grid-template-columns: 1fr; } .side { max-height: 40vh; } .bar { grid-template-columns: 1fr; } .bar-mid { display: none; } }
 
 .keys-table td { padding: 5px 10px; vertical-align: top; } .keys-table td:first-child { white-space: nowrap; }
 .keys-table kbd { margin: 0 4px 0 0; font-size: 12px; padding: 3px 7px; }

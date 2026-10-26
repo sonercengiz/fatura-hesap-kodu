@@ -97,6 +97,30 @@ function AssignStatus() {
   );
 }
 
+/** Parti ilerlemesi: atanmamış varken sessiz (zemin rengi), hepsi atanınca renklenir ve sıradaki adımı gösterir. */
+function ProgressCard() {
+  const total = S.invoices.value.length;
+  if (total === 0) return null;
+  const done = S.assignedCount.value;
+  const left = total - done;
+  if (left === 0) {
+    return (
+      <div class="status progress-card complete" title="Bu partideki tüm faturalar hesap kodu aldı">
+        <span class="status-label">Tamamlandı</span>
+        <b class="status-code">{done}/{total}</b>
+        <span class="status-sub">{S.dirty.value ? <><kbd>F2</kbd> kaydet · <kbd>F1</kbd> Excel</> : <><kbd>F1</kbd> Excel üret</>}</span>
+      </div>
+    );
+  }
+  return (
+    <div class="status progress-card" title={`${done} atandı, ${left} fatura kod bekliyor`}>
+      <span class="status-label">Kalan</span>
+      <b class="status-code">{left}</b>
+      <span class="status-sub">{done}/{total} atandı</span>
+    </div>
+  );
+}
+
 export function ShortcutBar() {
   const keys = S.firm.value.shortcuts;
   const manual = S.mode.value === 'manual';
@@ -118,7 +142,10 @@ export function ShortcutBar() {
       <div class="slots">
         {keys.map((_, i) => <SlotButton i={i} />)}
       </div>
-      <AssignStatus />
+      <div class="bar-mid">
+        <AssignStatus />
+        <ProgressCard />
+      </div>
       <div class="manual-box">
         {manual ? (
           <>
