@@ -13,6 +13,7 @@ import { RulesModal } from './RulesModal';
 import { ListView } from './ListView';
 import { PrintModal } from './PrintModal';
 import { PrintRoot } from './PrintRoot';
+import { ImportReportModal } from './ImportReportModal';
 
 export function App() {
   const [drag, setDrag] = useState(false);
@@ -88,6 +89,10 @@ export function App() {
       if (S.printOpen.value) {
         if (e.key === 'Escape') S.closePrint();
         else if (e.key === 'Enter' && !inInput) { e.preventDefault(); document.querySelector<HTMLButtonElement>('.print-modal .modal-head button.primary')?.click(); }
+        return;
+      }
+      if (S.importReport.value) {
+        if (e.key === 'Escape' || e.key === 'Enter') S.importReport.value = null;
         return;
       }
       if (S.previewOpen.value || S.settingsOpen.value || S.guideOpen.value || S.rulesOpen.value) {
@@ -273,6 +278,7 @@ export function App() {
       {S.chartOpen.value && <ChartModal />}
       {S.rulesOpen.value && <RulesModal />}
       {S.printOpen.value && <PrintModal />}
+      {S.importReport.value && <ImportReportModal />}
       <PrintRoot />
       {S.busy.value && <div class="busy">{S.busy.value}</div>}
       {S.toast.value && <div class="toast">{S.toast.value}</div>}

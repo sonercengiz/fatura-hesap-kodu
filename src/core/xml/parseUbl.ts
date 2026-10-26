@@ -121,7 +121,18 @@ export function parseUbl(xmlText: string): UblInvoice {
   const doc = new DOMParser().parseFromString(xmlText.replace(/^﻿/, ''), 'application/xml');
   if (doc.getElementsByTagName('parsererror').length) throw new UblParseError('XML okunamadı (bozuk dosya).');
   const root = doc.documentElement;
-  if (!root || root.localName !== 'Invoice') throw new UblParseError(`Bu bir e-Fatura XML'i değil (kök öğe: ${root?.localName ?? 'yok'}).`);
+  if (!root || root.localName !== 'Invoice') {
+    const KNOWN: Record<string, string> = {
+      DespatchAdvice: 'e-İrsaliye dosyası (fatura değil)',
+      ReceiptAdvice: 'İrsaliye yanıtı (fatura değil)',
+      ApplicationResponse: 'Uygulama yanıtı / zarf cevabı (fatura değil)',
+      StandardBusinessDocument: 'Zarf dosyası; içindeki fatura ayrıca indirilmeli',
+      CreditNote: 'Alacak dekontu (fatura değil)',
+      Envelope: 'Zarf dosyası (fatura değil)',
+    };
+    const name = root?.localName ?? 'yok';
+    throw new UblParseError(KNOWN[name] ?? `e-Fatura XML'i değil (kök öğe: ${name})`);
+  }
 
   const no = cbc(root, 'ID');
   if (!no) throw new UblParseError('Fatura numarası (cbc:ID) bulunamadı.');

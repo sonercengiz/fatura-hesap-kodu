@@ -378,3 +378,7 @@ tr.iss-chart td.code-col { color: var(--warn); text-decoration: underline wavy v
 .sort-explain { min-width: 0; overflow-wrap: anywhere; margin-top: 4px; padding: 8px 10px; border-radius: 8px; background: var(--s0); color: var(--s0i); font-size: 12.5px; line-height: 1.45; }
 .sort-ends { display: flex; flex-direction: column; gap: 2px; margin-top: 6px; padding-top: 6px; border-top: 1px solid color-mix(in srgb, currentColor 25%, transparent); }
 .sort-ends span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.report-list { max-height: 40vh; }
+.report-row { gap: 12px; } .report-file { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.report-reason { color: var(--warn); font-size: 12px; white-space: nowrap; } .report-reason.mono { color: var(--muted); font-family: ui-monospace, Menlo, monospace; }

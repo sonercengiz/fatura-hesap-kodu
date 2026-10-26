@@ -50,7 +50,7 @@ describe('UBL-TR XML ayrıştırma', () => {
   });
   it('bozuk ve fatura olmayan belgeler anlaşılır hata verir', () => {
     expect(() => parseUbl(read('bozuk.xml'))).toThrow(UblParseError);
-    expect(() => parseUbl(read('irsaliye.xml'))).toThrow(/e-Fatura XML'i değil/);
+    expect(() => parseUbl(read('irsaliye.xml'))).toThrow(/e-İrsaliye dosyası/);
   });
   it('etiketler ve tarih biçimi', () => {
     expect(typeLabel('SATIS')).toBe('Satış');

@@ -47,6 +47,9 @@ export const rules = signal<Rule[]>([]);
 export const rulesOpen = signal(false);
 /** Yazdırma planı penceresi ve çalışan yazdırma işi */
 export const printOpen = signal(false);
+/** Yükleme sonucu penceresi (okunamayan dosya varsa kendiliğinden açılır) ve son yükleme özeti */
+export const importReport = signal<ImportReport | null>(null);
+export const lastImportReport = signal<ImportReport | null>(null);
 export interface PrintOpts { pageBreak: boolean; strip: boolean; summary: boolean }
 export const printJob = signal<{ items: Invoice[]; opts: PrintOpts } | null>(null);
 /** Kurallar penceresi açılırken forma önceden doldurulacak değerler */
@@ -390,6 +393,8 @@ export async function renameBatch(name: string) {
 export interface ImportReport {
   added: number;
   skipped: number;
+  /** Zaten partide olduğu için atlanan dosyalar */
+  skippedFiles: { file: string; no: string }[];
   /** Kuralla kendiliğinden atanan */
   ruled: number;
   failed: { file: string; reason: string }[];
@@ -400,10 +405,13 @@ export interface ImportReport {
  * XSLT'ler özetleriyle tekilleştirilir; daha önce başka partide atanmış faturaların kodu taşınır.
  */
 export async function importXml(list: File[]): Promise<ImportReport> {
-  const report: ImportReport = { added: 0, skipped: 0, ruled: 0, failed: [] };
-  const xmls = list.filter((f) => /\.xml$/i.test(f.name) || f.type === 'text/xml' || f.type === 'application/xml');
+  const report: ImportReport = { added: 0, skipped: 0, skippedFiles: [], ruled: 0, failed: [] };
+  const isXml = (f: File) => /\.xml$/i.test(f.name) || f.type === 'text/xml' || f.type === 'application/xml';
+  const xmls = list.filter(isXml);
+  for (const f of list) if (!isXml(f) && !/^\.|\.ds_store$/i.test(f.name)) report.failed.push({ file: f.name, reason: 'XML dosyası değil (yalnızca .xml yüklenir)' });
   if (xmls.length === 0) {
-    showToast('XML dosyası seçilmedi. e-Fatura XML dosyalarını (.xml) yükleyin.', 4000);
+    if (report.failed.length) importReport.value = report;
+    else showToast('XML dosyası seçilmedi. e-Fatura XML dosyalarını (.xml) yükleyin.', 4000);
     return report;
   }
   busy.value = 'XML okunuyor…';
@@ -423,7 +431,7 @@ export async function importXml(list: File[]): Promise<ImportReport> {
         const text = decodeBytes(new Uint8Array(await f.arrayBuffer()));
         const u = parseUbl(text);
         const no = u.no.toUpperCase();
-        if (existing.has(no) || seenNow.has(no)) { report.skipped++; continue; }
+        if (existing.has(no) || seenNow.has(no)) { report.skipped++; report.skippedFiles.push({ file: f.name, no }); continue; }
         seenNow.add(no);
         let xsltId: string | null = null;
         if (u.xslt) {
@@ -453,7 +461,7 @@ export async function importXml(list: File[]): Promise<ImportReport> {
           order: order++,
         });
       } catch (e) {
-        report.failed.push({ file: f.name, reason: e instanceof UblParseError ? e.message : 'okunamadı' });
+        report.failed.push({ file: f.name, reason: e instanceof UblParseError ? e.message : /\.xml$/i.test(f.name) ? 'Dosya okunamadı (bozuk ya da yarım inmiş olabilir)' : 'XML dosyası değil' });
       }
     }
     if (recs.length) {
@@ -498,8 +506,9 @@ export async function importXml(list: File[]): Promise<ImportReport> {
     if (report.ruled) parts.push(`${report.ruled} kuralla atandı`);
     if (report.skipped) parts.push(`${report.skipped} zaten vardı`);
     if (report.failed.length) parts.push(`${report.failed.length} dosya okunamadı`);
-    showToast(parts.join(' · '), report.failed.length ? 6000 : 3500);
-    if (report.failed.length) console.warn('Okunamayan XML dosyaları', report.failed);
+    showToast(parts.join(' · '), 3500);
+    if (report.failed.length) { console.warn('Okunamayan XML dosyaları', report.failed); importReport.value = report; }
+    else lastImportReport.value = report;
   } finally {
     busy.value = null;
   }
