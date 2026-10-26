@@ -120,6 +120,17 @@ export function App() {
         return;
       }
       if (inInput) return;
+      // Tab / Shift+Tab ve Shift+ok: sonraki / önceki atanmamış fatura
+      if (e.key === 'Tab' && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        e.preventDefault();
+        S.jumpUnassigned(e.shiftKey ? -1 : 1);
+        return;
+      }
+      if (e.shiftKey && !e.ctrlKey && !e.metaKey && (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowUp')) {
+        e.preventDefault();
+        S.jumpUnassigned(e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : -1);
+        return;
+      }
       const all = e.ctrlKey || e.metaKey; // Ctrl+ok: toplu atananlar dahil gez
       switch (e.key) {
         case 'ArrowRight':

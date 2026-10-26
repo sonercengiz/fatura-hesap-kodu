@@ -116,7 +116,7 @@ function ProgressCard() {
     <div class="status progress-card" title={`${done} atandı, ${left} fatura kod bekliyor`}>
       <span class="status-label">Kalan</span>
       <b class="status-code">{left}</b>
-      <span class="status-sub">{done}/{total} atandı</span>
+      <span class="status-sub">{done}/{total} atandı · <kbd>Tab</kbd> sıradakine</span>
     </div>
   );
 }

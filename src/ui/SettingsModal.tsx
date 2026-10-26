@@ -189,7 +189,7 @@ export function SettingsModal() {
           <fieldset>
             <legend>Klavye</legend>
             <div class="keys">
-              <div><kbd>←</kbd><kbd>→</kbd> önceki / sonraki fatura</div>
+              <div><kbd>←</kbd><kbd>→</kbd> önceki / sonraki fatura · <kbd>Tab</kbd> / <kbd>Shift+Tab</kbd> (ya da <kbd>Shift+ok</kbd>) sonraki / önceki <b>atanmamış</b> fatura · <kbd>Ctrl+ok</kbd> toplu/kural atananlar dahil</div>
               <div><kbd>Q</kbd><kbd>W</kbd><kbd>E</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> kısayolla ata, sonrakine geç</div>
               <div><kbd>/</kbd> <kbd>Enter</kbd> <kbd>0–9</kbd> manuel kod girişi · <kbd>Esc</kbd> vazgeç</div>
               <div><kbd>Backspace</kbd> atamayı kaldır · <kbd>Ctrl+F</kbd> ara</div>

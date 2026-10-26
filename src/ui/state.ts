@@ -617,6 +617,15 @@ export function last(all = false) {
   const list = invoices.value;
   for (let i = list.length - 1; i >= 0; i--) if (navigable(list[i], all)) { currentIndex.value = i; return; }
 }
+/** Sonraki / önceki atanmamış faturaya atla (filtre ve aramaya uyanlar içinde). Yoksa yerinde kalır ve bildirir. */
+export function jumpUnassigned(dir: 1 | -1) {
+  const list = invoices.value;
+  for (let i = currentIndex.value + dir; i >= 0 && i < list.length; i += dir) {
+    if (passesFilter(list[i]) && !assignments.value.has(list[i].no)) { currentIndex.value = i; return; }
+  }
+  const left = list.filter((x) => passesFilter(x) && !assignments.value.has(x.no)).length;
+  showToast(left === 0 ? 'Atanmamış fatura kalmadı.' : dir > 0 ? 'İleride atanmamış fatura yok (geride var).' : 'Geride atanmamış fatura yok (ileride var).');
+}
 export function setFilter(mode: FilterMode) {
   filterMode.value = mode;
   if (current.value && !passesFilter(current.value)) first(true);
