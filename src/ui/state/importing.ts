@@ -4,7 +4,7 @@ import { sheetToInvoices, type EdmSheet } from '../../core/legacy';
 import { readEdmSheet, edmRowsByNo } from '../../core/excel/readEdm';
 import { db, type BatchRecord, type InvoiceRecord, type AssignmentRecord } from '../../storage/db';
 import { forgetHtml } from '../../render/xslt';
-import { unzipSync } from 'fflate';
+import { readZip, ZipError } from '../../core/zip';
 import { batchRec, busy, current, currentIndex, importReport, invoiceRecs, invoices, lastImportReport, settingsOpen, settingsTab, showToast } from './core';
 import { createBatch, isQuotaError, notifyOtherTabs, openBatch, refreshBatchList } from './firms';
 import { applyRules } from './rules';
@@ -15,10 +15,10 @@ export async function expandZips(list: File[], depth = 0): Promise<File[]> {
   for (const f of list) {
     if (!/\.zip$/i.test(f.name) && f.type !== 'application/zip' && f.type !== 'application/x-zip-compressed') { out.push(f); continue; }
     try {
-      const entries = unzipSync(new Uint8Array(await f.arrayBuffer()));
+      const entries = readZip(new Uint8Array(await f.arrayBuffer()));
       const inner: File[] = [];
-      for (const [path, bytes] of Object.entries(entries)) {
-        if (path.endsWith('/') || /(^|\/)__MACOSX\//.test(path) || /(^|\/)\./.test(path)) continue;
+      for (const { path, bytes } of entries) {
+        if (/(^|\/)__MACOSX\//.test(path) || /(^|\/)\./.test(path)) continue;
         const name = path.split('/').pop() || path;
         const type = /\.xml$/i.test(name) ? 'application/xml' : /\.zip$/i.test(name) ? 'application/zip' : '';
         inner.push(new File([bytes as BlobPart], name, { type }));
@@ -26,8 +26,9 @@ export async function expandZips(list: File[], depth = 0): Promise<File[]> {
       const xmlsOrZips = inner.filter((x) => /\.(xml|zip)$/i.test(x.name));
       if (xmlsOrZips.length === 0) { out.push(new File([], `${f.name} (içinde XML yok)`, { type: '' })); continue; }
       out.push(...(depth < 1 ? await expandZips(xmlsOrZips, depth + 1) : xmlsOrZips.filter((x) => /\.xml$/i.test(x.name))));
-    } catch {
-      out.push(new File([], `${f.name} (ZIP açılamadı)`, { type: '' }));
+    } catch (e) {
+      console.warn('ZIP açılamadı', f.name, e);
+      out.push(new File([], `${f.name} (ZIP açılamadı${e instanceof ZipError ? ': ' + e.message : ''})`, { type: '' }));
     }
   }
   return out;
@@ -60,7 +61,7 @@ export async function importXml(rawList: File[]): Promise<ImportReport> {
   const isEdm = (f: File) => /\.xlsx?$/i.test(f.name);
   const xmls = list.filter(isXml);
   const edms = list.filter(isEdm);
-  for (const f of list) if (!isXml(f) && !isEdm(f) && !/^\.|\.ds_store$/i.test(f.name)) report.failed.push({ file: f.name, reason: /\(içinde XML yok\)|\(ZIP açılamadı\)$/.test(f.name) ? 'ZIP içeriği kullanılamadı' : 'XML dosyası değil (yalnızca .xml ve .zip yüklenir)' });
+  for (const f of list) if (!isXml(f) && !isEdm(f) && !/^\.|\.ds_store$/i.test(f.name)) report.failed.push({ file: f.name, reason: /\(içinde XML yok\)$/.test(f.name) ? 'ZIP içinde XML yok' : /\(ZIP açılamadı.*\)$/.test(f.name) ? 'ZIP açılamadı; arşivi bilgisayarınızda açıp XML dosyalarını yükleyin' : 'XML dosyası değil (yalnızca .xml ve .zip yüklenir)' });
   if (xmls.length === 0 && edms.length === 0) {
     busy.value = null;
     if (report.failed.length) importReport.value = report;
