@@ -55,9 +55,13 @@ export function App() {
       // Yalnızca yazı girişleri tuşları yutar; onay kutusu / radyo odaklıyken kısayollar ve Esc çalışmaya devam eder
       const inInput = !!t && ((t.tagName === 'INPUT' && !/^(checkbox|radio|button)$/.test((t as HTMLInputElement).type)) || t.tagName === 'TEXTAREA' || t.isContentEditable);
 
+      // Açık pencere varken genel kısayollar (F1/F5/Ctrl+P/Ctrl+F/Ctrl+./Ctrl+Z) çalışmaz: arkada pencere açılmasın, odak çalınmasın, görünmeyen geri alma olmasın.
+      // İstisnalar: önizlemede F1 (başlıkta yazıyor) ve F5 (önizlemeyi kapatır); hesap listesinde Ctrl+. (kapatır).
+      const modalOpen = S.settingsOpen.value || S.guideOpen.value || S.rulesOpen.value || S.printOpen.value || !!S.quickRule.value || S.moveOpen.value || S.templateOpen.value || S.accountsOpen.value || !!S.importReport.value || !!dialog.value;
+      const onlyPreview = S.previewOpen.value && !modalOpen && !S.chartOpen.value;
       if (e.key === 'F1' || e.key === 'F5') {
         e.preventDefault();
-        if (!S.batchRec.value) return;
+        if (!S.batchRec.value || modalOpen || S.chartOpen.value) return;
         if (e.key === 'F1') S.exportExcel();
         else S.previewOpen.value = !S.previewOpen.value;
         return;
@@ -65,12 +69,14 @@ export function App() {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p') {
         // Ctrl+P: seçili faturayı yazdır; Ctrl+Shift+P: yazdırma planı
         e.preventDefault();
+        if (modalOpen || S.previewOpen.value || S.chartOpen.value) return;
         if (e.shiftKey) S.openPrint();
         else if (S.current.value?.hasView) printCurrentInvoice();
         else S.openPrint();
         return;
       }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
+        if (modalOpen || S.previewOpen.value || S.chartOpen.value) return; // pencerenin kendi araması ya da tarayıcı araması
         e.preventDefault();
         document.getElementById('search')?.focus();
         return;
@@ -78,12 +84,12 @@ export function App() {
       if ((e.ctrlKey || e.metaKey) && (e.key === '.' || e.code === 'Period')) {
         e.preventDefault();
         if (!S.batchRec.value) return;
-        if (S.chartOpen.value) S.closeChart(); else { S.exitManual(); S.openChart(); }
+        if (S.chartOpen.value) S.closeChart(); else if (!modalOpen && !S.previewOpen.value) { S.exitManual(); S.openChart(); }
         return;
       }
       if ((e.ctrlKey || e.metaKey) && !inInput && (e.key.toLowerCase() === 'z' || e.key.toLowerCase() === 'y')) {
         e.preventDefault();
-        if (!S.batchRec.value) return;
+        if (!S.batchRec.value || modalOpen || onlyPreview || S.chartOpen.value) return;
         if (e.key.toLowerCase() === 'y' || e.shiftKey) S.redo(); else S.undo();
         return;
       }

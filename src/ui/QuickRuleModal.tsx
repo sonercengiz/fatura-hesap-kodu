@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import * as S from './state';
 import { COND_SHORT, beats, condLabel, fmtDateTr, isRange, keywordOf, ruleMatches, unitLabel, validateRule, type Cond, type CondKind, type Rule } from '../core/rules';
-import { TYPE_LABELS } from '../core/types';
+import { TYPE_LABELS, type Invoice } from '../core/types';
+import { parseTrNumber, fmtTrNumber } from '../core/num';
 
 /** Rozet: işaretlenebilir koşul; sayılı olanlarda yön (≥/≤) ve eşik, metinlilerde anahtar kelime düzenlenebilir */
 interface Chip {
@@ -12,21 +13,29 @@ interface Chip {
   dir?: 'min' | 'max';
   /** Kalem rozetleri hangi kaleme ait (gruplama için) */
   line?: number;
+  /** Sayılı rozetlerde kutudaki metin (kullanıcı yazarken biçimlenmez; sayıya `parseTrNumber` ile çevrilir) */
+  text?: string;
 }
 
-const num = (s: string): number | null => { const t = s.replace(/\./g, '').replace(',', '.').trim(); if (!t) return null; const n = Number(t); return Number.isFinite(n) ? n : null; };
-const fmtN = (n: number) => n.toLocaleString('tr-TR', { maximumFractionDigits: 3 });
+const fmtN = fmtTrNumber;
 
 /**
  * "Bu faturadan kural": seçili faturanın bütün bilgileri rozet olarak; kullanıcı işaretler, eşiği/kelimeyi düzeltir,
  * kodu yazar, kaydeder. Kural penceresine girmeden çok koşullu kural kurar; "Gelişmiş…" aynı taslakla büyük pencereyi açar.
  */
 export function QuickRuleModal() {
-  const inv = S.current.value;
   const origin = S.quickRule.value;
+  const live = S.current.value;
+  // Pencere açıldığı andaki fatura dondurulur: kaydet sonrası sıradaki faturaya geçilse de rozetler ve kalem indeksleri eski faturaya ait kalır
+  const frozen = useRef<{ origin: NonNullable<typeof origin>; inv: Invoice } | null>(null);
+  if (!origin) { frozen.current = null; return null; }
+  if (!frozen.current || frozen.current.origin !== origin) { if (!live) return null; frozen.current = { origin, inv: live }; }
+  return <QuickRuleBody key={`${frozen.current.inv.no}|${origin.lineIndex}`} inv={frozen.current.inv} origin={origin} />;
+}
+
+function QuickRuleBody({ inv, origin }: { inv: Invoice; origin: { lineIndex: number } }) {
   const batch = S.batchRec.value;
   const close = () => (S.quickRule.value = null);
-  if (!inv || !origin) return null;
   const assigned = S.assignments.value.get(inv.no) ?? '';
   const [scope, setScope] = useState<S.RuleScope>('firm');
   const [code, setCode] = useState(assigned);
@@ -55,7 +64,7 @@ export function QuickRuleModal() {
 
   const update = (id: string, f: (c: Chip) => Chip) => setChips((cs) => cs.map((c) => (c.id === id ? f(c) : c)));
   const toggle = (id: string) => update(id, (c) => ({ ...c, on: !c.on }));
-  const setThreshold = (id: string, v: number | null) => update(id, (c) => ({ ...c, cond: c.dir === 'max' ? { ...c.cond, min: null, max: v } : { ...c.cond, min: v, max: null } }));
+  const setThreshold = (id: string, text: string) => update(id, (c) => { const n = parseTrNumber(text); const v = n === null || Number.isNaN(n) ? null : n; return { ...c, text, cond: c.dir === 'max' ? { ...c.cond, min: null, max: v } : { ...c.cond, min: v, max: null } }; });
   const flipDir = (id: string) => update(id, (c) => { const v = c.dir === 'max' ? c.cond.max ?? null : c.cond.min ?? null; const dir = c.dir === 'max' ? 'min' : 'max'; return { ...c, dir, cond: dir === 'max' ? { ...c.cond, min: null, max: v } : { ...c.cond, min: v, max: null } }; });
 
   const conds = chips.filter((c) => c.on).map((c) => c.cond);
@@ -90,7 +99,7 @@ export function QuickRuleModal() {
           c.on ? (
             <>
               <button class="qchip-dir" title="Yönü değiştir: en az (≥) / en çok (≤)" onClick={(e) => { e.preventDefault(); flipDir(c.id); }}>{c.dir === 'max' ? '≤' : '≥'}</button>
-              <input class="qchip-num" inputMode="decimal" value={thr == null ? '' : fmtN(thr)} onKeyDown={stop} onInput={(e) => setThreshold(c.id, num((e.currentTarget as HTMLInputElement).value))} onChange={(e) => { const v = num((e.currentTarget as HTMLInputElement).value); setThreshold(c.id, v); }} title="Eşik (düzeltebilirsiniz)" />
+              <input class="qchip-num" inputMode="decimal" value={c.text ?? (thr == null ? '' : fmtN(thr))} onKeyDown={stop} onInput={(e) => setThreshold(c.id, (e.currentTarget as HTMLInputElement).value)} title="Eşik (düzeltebilirsiniz; virgül ondalık, nokta binlik: 3.000 = üç bin, 0,5 = yarım)" />
               <span class="qchip-unit">{unit}</span>
             </>
           ) : <span class="qchip-val">≥ {thr == null ? '?' : fmtN(thr)} {unit}</span>

@@ -3,6 +3,7 @@ import * as S from './state';
 import { COND_LABELS, COND_SHORT, PRIORITY_TEXT, VAT_PRESETS, beats, condLabel, isRange, ruleLabel, ruleMatches, toRate, type Cond, type CondKind, type Rule } from '../core/rules';
 import { TYPE_LABELS, type Invoice } from '../core/types';
 import { fmtAmount } from './InvoiceCard';
+import { parseTrNumber, fmtTrNumber } from '../core/num';
 
 const KINDS = Object.keys(COND_LABELS) as CondKind[];
 
@@ -19,19 +20,25 @@ function seedCond(kind: CondKind, inv: Invoice | null): Cond {
   }
 }
 
-const numOrNull = (s: string): number | null => { const t = s.replace(',', '.').trim(); if (!t) return null; const n = Number(t); return Number.isFinite(n) ? n : NaN; };
-const numStr = (n: number | null | undefined) => (n === null || n === undefined || Number.isNaN(n) ? '' : String(n));
+/** Aralık kutuları: kullanıcı yazarken metin bozulmasın diye metin ayrı tutulur; sayı `parseTrNumber` ile (virgül ondalık, nokta binlik) */
+function useNumText(value: number | null | undefined): [string, (t: string) => number | null] {
+  const [txt, setTxt] = useState(fmtTrNumber(value));
+  useEffect(() => { const cur = parseTrNumber(txt); const v = value ?? null; if ((cur === null || Number.isNaN(cur) ? null : cur) !== v) setTxt(fmtTrNumber(value)); }, [value]);
+  return [txt, (t: string) => { setTxt(t); return parseTrNumber(t); }];
+}
 
 function CondRow({ c, i, total, inv, onChange, onRemove, inputRef }: { c: Cond; i: number; total: number; inv: Invoice | null; onChange: (c: Cond) => void; onRemove: () => void; inputRef?: (el: HTMLInputElement | null) => void }) {
   const stop = (e: KeyboardEvent) => e.stopPropagation();
-  const vatPreset = c.kind === 'vat' && c.text !== undefined && VAT_PRESETS.includes(String(toRate(c.text) ?? ''));
-  const [vatOther, setVatOther] = useState(c.kind === 'vat' && !vatPreset);
+  // "Başka oran…": oran ön tanımlı listede değilse (boş dahil) türetilir; state tutulmaz ki düzenlemeye alınan kural (örn. %8) doğru görünsün
+  const vatOther = c.kind === 'vat' && !VAT_PRESETS.includes(String(toRate(c.text ?? '') ?? ''));
+  const [minTxt, setMin] = useNumText(c.min);
+  const [maxTxt, setMax] = useNumText(c.max);
   return (
     <div class="cond-row">
       <div class="row-inline" style="justify-content:flex-start; gap:6px">
         <span class="cond-and">{i === 0 ? 'Eğer' : 've'}</span>
         <div class="cond-kind" role="radiogroup" aria-label="Koşul türü">
-          {KINDS.map((k) => <button data-k={k} class={c.kind === k ? 'on' : ''} title={COND_LABELS[k]} onClick={() => { if (k === c.kind) return; setVatOther(false); onChange(seedCond(k, inv)); }}>{COND_SHORT[k]}</button>)}
+          {KINDS.map((k) => <button data-k={k} class={c.kind === k ? 'on' : ''} title={COND_LABELS[k]} onClick={() => { if (k === c.kind) return; onChange(seedCond(k, inv)); }}>{COND_SHORT[k]}</button>)}
         </div>
       </div>
       <div class="cond-inputs">
@@ -46,7 +53,7 @@ function CondRow({ c, i, total, inv, onChange, onRemove, inputRef }: { c: Cond; 
         )}
         {c.kind === 'vat' && (
           <>
-            <select class="cond-vat" value={vatOther ? '__other' : String(toRate(c.text) ?? '20')} onKeyDown={stop} onChange={(e) => { const v = (e.currentTarget as HTMLSelectElement).value; if (v === '__other') { setVatOther(true); onChange({ ...c, text: '' }); } else { setVatOther(false); onChange({ ...c, text: v }); } }}>
+            <select class="cond-vat" value={vatOther ? '__other' : String(toRate(c.text) ?? '20')} onKeyDown={stop} onChange={(e) => { const v = (e.currentTarget as HTMLSelectElement).value; onChange({ ...c, text: v === '__other' ? '' : v }); }}>
               {VAT_PRESETS.map((p) => <option value={p}>%{p}</option>)}
               <option value="__other">Başka oran…</option>
             </select>
@@ -64,9 +71,9 @@ function CondRow({ c, i, total, inv, onChange, onRemove, inputRef }: { c: Cond; 
         )}
         {isRange(c.kind) && (
           <>
-            <input ref={inputRef} class="cond-min" inputMode="decimal" placeholder="en az" value={numStr(c.min)} onKeyDown={stop} onInput={(e) => onChange({ ...c, min: numOrNull((e.currentTarget as HTMLInputElement).value) })} />
+            <input ref={inputRef} class="cond-min" inputMode="decimal" placeholder="en az" value={minTxt} onKeyDown={stop} onInput={(e) => onChange({ ...c, min: setMin((e.currentTarget as HTMLInputElement).value) })} title="Virgül ondalık, nokta binlik: 3.000 = üç bin, 0,5 = yarım" />
             <span class="unit">–</span>
-            <input class="cond-max" inputMode="decimal" placeholder="en çok" value={numStr(c.max)} onKeyDown={stop} onInput={(e) => onChange({ ...c, max: numOrNull((e.currentTarget as HTMLInputElement).value) })} />
+            <input class="cond-max" inputMode="decimal" placeholder="en çok" value={maxTxt} onKeyDown={stop} onInput={(e) => onChange({ ...c, max: setMax((e.currentTarget as HTMLInputElement).value) })} title="Virgül ondalık, nokta binlik: 3.000 = üç bin, 0,5 = yarım" />
             <span class="unit">{c.kind === 'qty' ? 'adet/kg… (birini boş bırakabilirsiniz)' : c.kind === 'amount' ? '₺, KDV dahil (birini boş bırakabilirsiniz)' : '₺, KDV hariç (birini boş bırakabilirsiniz)'}</span>
           </>
         )}

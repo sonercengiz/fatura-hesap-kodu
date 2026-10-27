@@ -22,7 +22,8 @@ export function ChartModal() {
 
   const onKey = (e: KeyboardEvent) => {
     e.stopPropagation();
-    if (e.key === 'ArrowDown') { e.preventDefault(); S.chartIndex.value = Math.min(idx + 1, results.length - 1); }
+    if ((e.ctrlKey || e.metaKey) && (e.key === '.' || e.code === 'Period')) { e.preventDefault(); S.closeChart(); return; } // Ctrl+. aç/kapa: kutu odaktayken de kapatır
+    if (e.key === 'ArrowDown') { e.preventDefault(); S.chartIndex.value = Math.max(0, Math.min(idx + 1, results.length - 1)); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); S.chartIndex.value = Math.max(idx - 1, 0); }
     else if (e.key === 'Enter') {
       e.preventDefault();
@@ -59,7 +60,7 @@ export function ChartModal() {
             </div>
           ))}
           {results.length === 0 && S.accounts.value.length === 0 && (
-            <div class="chart-empty">Liste boş. Ayarlar → Hesap kodu listesi'nden ekleyin ya da aşağıdan şimdi kaydedin.</div>
+            <div class="chart-empty">Liste boş. Ayarlar › Firma › Hesap kodu listesi'nden ekleyin ya da aşağıdan şimdi kaydedin.</div>
           )}
           {results.length === 0 && S.accounts.value.length > 0 && q && <div class="chart-empty">"{q}" listede yok.</div>}
         </div>
@@ -73,7 +74,7 @@ export function ChartModal() {
               </>
             ) : (
               <>
-                <span class="muted small">Enter: <b>{q}</b> kodunu listeye eklemeden ata</span>
+                <span class="muted small">{results[idx] ? <>Enter: <b>{results[idx].code}</b> ata · <kbd>Tab</kbd> ile <b>{q}</b> yazılır</> : <>Enter: <b>{q}</b> kodunu listeye eklemeden ata</>}</span>
                 <button class="tiny" onClick={() => setAdding(true)}>+ Listeye ekle</button>
               </>
             )}
