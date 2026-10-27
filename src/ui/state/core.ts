@@ -94,6 +94,8 @@ export const printJob = signal<PrintJob | null>(null);
 
 /** Kurallar penceresi açılırken forma önceden doldurulacak değerler */
 export const ruleDraft = signal<{ conds: Cond[]; code: string; scope?: RuleScope } | null>(null);
+/** Panelden açılan rozetli hızlı kural penceresi: null kapalı; lineIndex = ⚡'ya basılan kalem (yoksa -1) */
+export const quickRule = signal<{ lineIndex: number } | null>(null);
 
 /** Kural kapsamı: firma geneli (kalıcı) ya da yalnızca açık dönem */
 export type RuleScope = 'firm' | 'batch';

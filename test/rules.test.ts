@@ -59,6 +59,28 @@ describe('otomatik atama kuralları (çok koşullu)', () => {
     expect(ruleMatches(one('item', 'yumurta', 'x'), noLines)).toBe(true);
     expect(ruleMatches(mk([{ kind: 'qty', min: 1, max: 5 }], 'x'), noLines)).toBe(false);
   });
+  it('birim fiyat, kalem tutarı ve tarih: demirbaş sınırı ve dönem içi tarih', () => {
+    const ofis: RuleTarget = { supplierVkn: '1', supplierName: 'TEKNO A.Ş.', itemText: 'dizüstü bilgisayar | kablosuz fare', typeCode: 'SATIS', amount: 30000, vatRates: [20], isoDate: '2026-09-22',
+      lines: [{ name: 'dizüstü bilgisayar', qty: 1, unit: 'C62', vat: 20, price: 24000, amount: 24000 }, { name: 'kablosuz fare', qty: 2, unit: 'C62', vat: 20, price: 500, amount: 1000 }] };
+    const demirbas = mk([{ kind: 'price', min: 9900, max: null }], '255');
+    const gider = mk([{ kind: 'item', text: 'fare' }, { kind: 'price', min: null, max: 9899 }], '770');
+    expect(ruleMatches(demirbas, ofis)).toBe(true);
+    expect(ruleMatches(gider, ofis)).toBe(true);
+    expect(ruleMatches(mk([{ kind: 'item', text: 'bilgisayar' }, { kind: 'price', min: null, max: 9899 }], 'x'), ofis)).toBe(false); // fiyat aynı kalemde aranır
+    expect(ruleMatches(mk([{ kind: 'lineAmount', min: 20000, max: null }], 'x'), ofis)).toBe(true);
+    expect(ruleMatches(mk([{ kind: 'lineAmount', min: 2000, max: 5000 }], 'x'), ofis)).toBe(false);
+    expect(ruleMatches(mk([{ kind: 'date', from: '2026-09-22', to: '2026-09-22' }], 'x'), ofis)).toBe(true);
+    expect(ruleMatches(mk([{ kind: 'date', from: '2026-09-23' }], 'x'), ofis)).toBe(false);
+    expect(ruleMatches(mk([{ kind: 'date', to: '2026-09-30' }], 'x'), { ...ofis, isoDate: '' })).toBe(false);
+    expect(ruleMatches(mk([{ kind: 'price', min: 1, max: null }], 'x'), { ...ofis, lines: [{ name: 'x', qty: 1, unit: '', vat: null }] })).toBe(false); // eski kayıt: fiyat yok
+    expect(condLabel({ kind: 'price', min: 9900, max: null })).toBe('birim fiyat ≥ 9.900 ₺');
+    expect(condLabel({ kind: 'date', from: '2026-09-22', to: '2026-09-22' })).toBe('tarih 22.09.2026');
+    expect(condLabel({ kind: 'date', from: '2026-09-01', to: '2026-09-30' })).toBe('tarih 01.09.2026–30.09.2026');
+    expect(validateCond({ kind: 'date' })).toMatch(/başlangıç/);
+    expect(validateCond({ kind: 'date', from: '2026-10-01', to: '2026-09-01' })).toMatch(/sonra olamaz/);
+    expect(validateCond({ kind: 'date', from: '2026-09-22' })).toBeNull();
+    expect(ruleKey([{ kind: 'date', from: '2026-09-22', to: '' }])).toBe(ruleKey([{ kind: 'date', from: '2026-09-22' }]));
+  });
   it('VE: koşulların hepsi tutmalı (sayı sınırı yok)', () => {
     const r = mk([{ kind: 'name', text: 'abc kırtasiye' }, { kind: 'item', text: 'klasör' }, { kind: 'vat', text: '20' }, { kind: 'amount', min: 100, max: 50000 }], '543');
     const abc: RuleTarget = { supplierVkn: '1', supplierName: 'ABC KIRTASİYE A.Ş.', itemText: 'klasör geniş sırt', typeCode: 'SATIS', amount: 1632, vatRates: [20], lines: [{ name: 'klasör geniş sırt', qty: 24, unit: 'C62', vat: 20 }] };

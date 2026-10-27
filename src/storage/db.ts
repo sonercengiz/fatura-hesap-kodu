@@ -240,11 +240,12 @@ class AppDb extends Dexie {
         } catch { /* kalem bilgisi boş kalır */ }
       });
     });
-    // v10: kalemlere özgün ad (ekranda gösterim için)
-    this.version(10).stores({}).upgrade(async (tx) => {
+    // v10: kalemlere özgün ad (ekranda gösterim için); v11: birim fiyat ve kalem tutarı
+    this.version(10).stores({});
+    this.version(11).stores({}).upgrade(async (tx) => {
       if (typeof DOMParser === 'undefined') return;
       await tx.table('invoices').toCollection().modify((r: InvoiceRecord) => {
-        if (!r.xml || !r.lines || r.lines.length === 0 || r.lines[0].label !== undefined) return;
+        if (!r.xml || !r.lines || r.lines.length === 0 || r.lines[0].price !== undefined) return;
         try {
           const doc = new DOMParser().parseFromString(r.xml, 'application/xml');
           r.lines = linesOf(doc.documentElement);

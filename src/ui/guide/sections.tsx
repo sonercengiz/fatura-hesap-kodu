@@ -88,7 +88,7 @@ export const sections: Section[] = [
           <>Arama: numara, satıcı, tutar (<K k="Ctrl+F" />).</>,
           <>Liste: kod alan satır yuvanın rengini alır. Tıklayınca o fatura açılır.</>,
           <>Fatura sayısı; yanlış yüklenen faturayı <b>çıkar</b>, başka firmaya <b>taşı</b>.</>,
-          <>Kalemler: ad, miktar, KDV oranı. Yanındaki ⚡ o kalem ve miktarından kural taslağı açar (bkz. Kurallar).</>,
+          <>Kalemler: ad, miktar × birim fiyat = tutar, KDV oranı. Yanındaki ⚡ "Bu faturadan kural" penceresini o kalem işaretli açar (bkz. Kurallar).</>,
         ]} />
       </>
     ),
@@ -164,11 +164,11 @@ export const sections: Section[] = [
     body: (
       <>
         <p>Bir satıcı hep aynı kodu alıyorsa bunu bir kez söyleyin: sonraki aylarda o satıcının faturaları yüklenir yüklenmez kodu alır. Bu bir <T t="kural" />dır. Kurallarınızı bir kez yazdıktan sonra dosyaları bırakmanız yeter; kalan işi uygulama yapar.</p>
-        <Shot src="13-kural-yap.png" alt="Kural yap düğmesi" w="narrow" notes={[<>Kod verdiğiniz faturada <b>⚡ Kural yap</b>: satıcının VKN'si ve kodu hazır gelir; <K k="Enter" /> kaydeder ve bu dönemdeki uyan faturalara hemen uygular.</>]} />
-        <p>Tek bilgi her zaman yetmez: aynı satıcıdan farklı kodlara giden alışlar olabilir. Bu yüzden bir kural <b>bir ya da daha çok <T t="koşul" /></b>dan oluşur (sayı sınırı yok) ve hepsi birlikte tutmalıdır. Koşul türleri: satıcı VKN/TCKN, unvanda geçen metin, kalem adında geçen metin, KDV oranı, kalem miktarı aralığı, fatura tutarı aralığı, fatura tipi.</p>
+        <Shot src="13-kural-yap.png" alt="Kural yap düğmesi" w="narrow" notes={[<>Kod verdiğiniz faturada <b>⚡ Kural yap</b>: küçük "Bu faturadan kural" penceresi açılır; satıcının VKN'si işaretli, kod hazır gelir. <K k="Enter" /> kaydeder ve bu dönemdeki uyan faturalara hemen uygular.</>]} />
+        <p>Tek bilgi her zaman yetmez: aynı satıcıdan farklı kodlara giden alışlar olabilir. Bu yüzden bir kural <b>bir ya da daha çok <T t="koşul" /></b>dan oluşur (sayı sınırı yok) ve hepsi birlikte tutmalıdır. Koşul türleri: satıcı VKN/TCKN, unvanda geçen metin, kalem adında geçen metin, KDV oranı, kalem miktarı, birim fiyat ve kalem tutarı aralıkları, fatura tutarı aralığı, fatura tipi, fatura tarihi aralığı.</p>
         <Shot src="13-kurallar.png" alt="Kurallar penceresi" notes={[
           <><T t="kalıcı kural">Kalıcı</T>: her ay geçerli. <T t="dönem kuralı">Yalnızca bu dönem</T>: o ay için; kalıcının önüne geçer.</>,
-          <>Koşul satırları: "Eğer … ve …". Türü düğmelerden seçin (VKN · Unvan · Kalem · KDV · Miktar · Tutar · Tip), değeri yazın. Aralıklarda alt ya da üst sınırı boş bırakabilirsiniz (örn. "≥ 1000").</>,
+          <>Koşul satırları: "Eğer … ve …". Türü düğmelerden seçin (VKN · Unvan · Kalem · KDV · Miktar · Birim fiyat · Kalem tutarı · Tutar · Tip · Tarih), değeri yazın. Aralıklarda alt ya da üst sınırı boş bırakabilirsiniz (örn. "≥ 1000").</>,
           <><b>+ Koşul ekle</b>: istediğiniz kadar koşul; hepsi birlikte tutmalı. "Ya da" için ayrı bir kural yazın.</>,
           <>"o zaman hesap kodu" ve <b>Kaydet ve uygula</b>; <K k="Enter" /> da kaydeder.</>,
           <>Canlı önizleme: bu dönemde kaç faturaya uyduğu, ilk birkaçı ve başka bir kuralın önde kaldığı durumlar. Kaydetmeden önce kontrol edin.</>,
@@ -176,12 +176,17 @@ export const sections: Section[] = [
           <>Dönem kuralı bir kalıcı kuralın yerine geçiyorsa sessizce burada yazar.</>,
           <>Kuralları dosya olarak dışa aktarıp başka kullanıcıya verebilirsiniz.</>,
         ]} />
-        <Shot src="13b-kalemden-kural.png" alt="Kalemden kural" w="narrow" notes={[
-          <>Panelde faturanın kalemleri: ad, miktar, KDV. "Çuval almış, 3000 tane; satmak içindir" dediğiniz anda kalemin yanındaki <b>⚡</b>'ya basın.</>,
-          <>Pencere hazır taslakla açılır: kalem adı içerir "yumurta" + kalem miktarı en az 3000 + bu faturanın kodu. Eşiği (örn. 1000) ve kodu düzeltip kaydedin.</>,
+        <Shot src="13b-kalemden-kural.png" alt="Bu faturadan kural" notes={[
+          <>Panelde faturanın kalemleri: ad, miktar × birim fiyat = tutar, KDV. "Çuval almış, 3000 tane; satmak içindir" dediğiniz anda kalemin yanındaki <b>⚡</b>'ya basın.</>,
+          <>"Bu faturadan kural" penceresi: faturanın bütün bilgileri <T t="rozet" /> olarak. Satıcı (VKN, unvan) ve fatura (tarih, tip, KDV oranı, tutar) rozetleri.</>,
+          <>Her kalemin rozetleri: kalem adı (kelimeyi düzeltebilirsiniz), miktar, birim fiyat, kalem tutarı. ⚡ ile geldiğiniz kalemin adı ve miktarı işaretli gelir. Sayılı rozetlerde ≥ / ≤ yönü ve eşik düzenlenir (3.000 → 1.000).</>,
+          <>Özet satırı: kural neye dönüştü, bu dönemde kaç faturaya uyuyor, başka bir kural önde mi.</>,
+          <>Hesap kodu ve <b>Kaydet ve uygula</b> (<K k="Enter" />). Kalıcı / yalnızca bu dönem seçimi üstte.</>,
+          <><b>Gelişmiş…</b>: aynı taslakla büyük kural penceresi (iki sınırlı aralık, düzenleme, liste).</>,
         ]} />
+        <p>Böylece "VKN + kalem" ya da "unvan + KDV %10" gibi birleşik kurallar, kural penceresine hiç girmeden iki rozet işaretleyerek kurulur. Birim fiyat rozeti demirbaş sınırı için işe yarar: sınırın üstündeki alışlar 255'e, altındakiler gidere.</p>
         <p>Örnek: Lezzet Gıda'dan alınan <b>30'lu yumurta</b> ikramdır (770.09), <b>3000 yumurta</b> ise satış için alınmıştır (153). İki kural: kalem "yumurta" + miktar ≤ 999 → 770.09; kalem "yumurta" + miktar ≥ 1000 → 153. Miktar, aynı kuraldaki kalem adıyla aynı kalemde aranır. Benzer biçimde "unvan ABC Kırtasiye + kalem klasör → 543" ya da "KDV %10 → 153" yazılabilir.</p>
-        <p><b>Birden çok kural uyarsa</b> hangisi kazanır? Önce döneme özel olan, sonra daha çok koşullu (daha belirgin) olan, sonra VKN › unvan › kalem › tip › KDV › miktar › tutar sırası, sonra en son güncellenen. Yani "VKN 123… → 770" ile "VKN 123… + kalem klasör → 543" birlikte varsa klasörlü faturalar 543, diğerleri 770 alır.</p>
+        <p><b>Birden çok kural uyarsa</b> hangisi kazanır? Önce döneme özel olan, sonra daha çok koşullu (daha belirgin) olan, sonra VKN › unvan › kalem › tip › KDV › miktar › birim fiyat › kalem tutarı › tutar › tarih sırası, sonra en son güncellenen. Yani "VKN 123… → 770" ile "VKN 123… + kalem klasör → 543" birlikte varsa klasörlü faturalar 543, diğerleri 770 alır.</p>
         <Tip>Kuralla verilen kodlar "kural" etiketi alır ve gezerken atlanır. Bir faturada kural başka bir şey diyorsa panelde "Kural diyor ki" ipucu çıkar; <K k="Boşluk" /> kuralın kodunu verir. Bir kuralın kodunu ya da koşullarını değiştirirseniz bu dönemde o kuralla verilmiş kodlar da düzelir (Ctrl+Z geri alır).</Tip>
       </>
     ),

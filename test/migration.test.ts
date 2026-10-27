@@ -29,7 +29,7 @@ describe('veritabanı geçişi v3 → v9', () => {
   it('eski veriler varsayılan firmaya taşınır', async () => {
     const { db, DEFAULT_FIRM_ID } = await import('../src/storage/db');
     await db.open();
-    expect(db.verno).toBe(10);
+    expect(db.verno).toBe(11);
     const firms = await db.firms.toArray();
     expect(firms.length).toBe(1);
     expect(firms[0]).toMatchObject({ id: DEFAULT_FIRM_ID, name: 'Eski Firma', chartName: 'Liste X' });
@@ -72,7 +72,7 @@ describe('veritabanı geçişi v8 → v9: kurallar', () => {
     ]);
     v8.close();
     await db.open();
-    expect(db.verno).toBe(10);
+    expect(db.verno).toBe(11);
     const rules = (await db.rules.orderBy('id').toArray()) as unknown as Record<string, unknown>[];
     expect(rules.map((r) => r.id)).toEqual(['r1', 'r2']);
     expect(rules[0]).toMatchObject({ conds: [{ kind: 'vkn', text: '1234567801' }], code: '770.01', enabled: true, batchId: null });

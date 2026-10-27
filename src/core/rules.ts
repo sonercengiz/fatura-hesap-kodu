@@ -8,15 +8,18 @@
  */
 import { TYPE_LABELS } from './types';
 
-export type CondKind = 'vkn' | 'name' | 'item' | 'vat' | 'qty' | 'amount' | 'type';
+export type CondKind = 'vkn' | 'name' | 'item' | 'vat' | 'qty' | 'price' | 'lineAmount' | 'amount' | 'type' | 'date';
 
 export interface Cond {
   kind: CondKind;
   /** vkn: rakamlar; name/item: aranan metin; vat: oran (örn. "10"); type: fatura tipi kodu (SATIS, IADE…) */
   text?: string;
-  /** qty/amount: aralık; null ya da yok = o yönde sınırsız */
+  /** qty/price/lineAmount/amount: aralık; null ya da yok = o yönde sınırsız */
   min?: number | null;
   max?: number | null;
+  /** date: YYYY-AA-GG aralığı; boş = o yönde sınırsız */
+  from?: string;
+  to?: string;
 }
 
 export interface Rule {
@@ -37,15 +40,27 @@ export const COND_LABELS: Record<CondKind, string> = {
   item: 'Kalem adı içerir',
   vat: 'KDV oranı',
   qty: 'Kalem miktarı',
+  price: 'Birim fiyat (KDV hariç)',
+  lineAmount: 'Kalem tutarı (KDV hariç)',
   amount: 'Fatura tutarı (KDV dahil)',
   type: 'Fatura tipi',
+  date: 'Fatura tarihi',
 };
+
+/** Kısa adlar (düğme ve rozetler için) */
+export const COND_SHORT: Record<CondKind, string> = { vkn: 'VKN', name: 'Unvan', item: 'Kalem', vat: 'KDV', qty: 'Miktar', price: 'Birim fiyat', lineAmount: 'Kalem tutarı', amount: 'Tutar', type: 'Tip', date: 'Tarih' };
+
+/** Sayısal aralık koşulları (kalem düzeyinde olanlar ayrıca işaretli) */
+export const RANGE_KINDS: CondKind[] = ['qty', 'price', 'lineAmount', 'amount'];
+export const LINE_KINDS: CondKind[] = ['item', 'qty', 'price', 'lineAmount'];
+export const isRange = (k: CondKind) => RANGE_KINDS.includes(k);
+export const isLineKind = (k: CondKind) => LINE_KINDS.includes(k);
 
 /** Sık kullanılan KDV oranları (seçenek listesi için) */
 export const VAT_PRESETS = ['0', '1', '10', '20'];
 
 /** Kural öncelik sırası (küçük = güçlü): kesin kimlik önce, en sona tutar */
-const PRIORITY: Record<CondKind, number> = { vkn: 0, name: 1, item: 2, type: 3, vat: 4, qty: 5, amount: 6 };
+const PRIORITY: Record<CondKind, number> = { vkn: 0, name: 1, item: 2, type: 3, vat: 4, qty: 5, price: 6, lineAmount: 7, amount: 8, date: 9 };
 
 /**
  * Türkçe küçük harf, tek boşluk, kırpılmış; ayrıca ı → i (XML'lerde "ENERJI" gibi noktasız yazımlar
@@ -79,6 +94,8 @@ export interface RuleLine {
   qty: number | null;
   unit: string;
   vat: number | null;
+  price?: number | null;
+  amount?: number | null;
 }
 
 export interface RuleTarget {
@@ -93,18 +110,22 @@ export interface RuleTarget {
   /** Faturadaki KDV oranları (yüzde) */
   vatRates?: number[];
   lines?: RuleLine[];
+  /** YYYY-AA-GG; bilinmiyorsa boş */
+  isoDate?: string;
 }
 
 const inRange = (v: number | null | undefined, c: Cond) =>
   v !== null && v !== undefined && Number.isFinite(v) && (c.min === null || c.min === undefined || v >= c.min) && (c.max === null || c.max === undefined || v <= c.max);
 
+const lineValue = (l: RuleLine, k: CondKind) => (k === 'qty' ? l.qty : k === 'price' ? l.price : l.amount);
+
 /**
- * Kalem koşulları: her "kalem adı içerir" koşulu en az bir kalemde geçmeli; "miktar" koşulu,
- * kuralda kalem adı koşulu varsa o kalemlerden birinde, yoksa herhangi bir kalemde tutmalı.
+ * Kalem koşulları: her "kalem adı içerir" koşulu en az bir kalemde geçmeli; miktar / birim fiyat / kalem tutarı
+ * koşulları, kuralda kalem adı koşulu varsa o kalemlerden birinde, yoksa herhangi bir kalemde tutmalı.
  */
 function linesMatch(conds: Cond[], t: RuleTarget): boolean {
   const items = conds.filter((c) => c.kind === 'item').map(normCondText);
-  const qtys = conds.filter((c) => c.kind === 'qty');
+  const qtys = conds.filter((c) => c.kind === 'qty' || c.kind === 'price' || c.kind === 'lineAmount');
   if (items.length === 0 && qtys.length === 0) return true;
   const lines = (t.lines ?? []).map((l) => ({ ...l, name: normText(l.name) }));
   if (lines.length === 0) {
@@ -115,7 +136,7 @@ function linesMatch(conds: Cond[], t: RuleTarget): boolean {
   }
   for (const p of items) if (!p || !lines.some((l) => l.name.includes(p))) return false;
   for (const q of qtys) {
-    const ok = lines.some((l) => inRange(l.qty, q) && (items.length === 0 || items.some((p) => l.name.includes(p))));
+    const ok = lines.some((l) => inRange(lineValue(l, q.kind), q) && (items.length === 0 || items.some((p) => l.name.includes(p))));
     if (!ok) return false;
   }
   return true;
@@ -128,13 +149,14 @@ export function condMatches(c: Cond, t: RuleTarget): boolean {
     case 'type': { const p = normCondText(c); return !!p && (t.typeCode ?? '').toUpperCase() === p; }
     case 'vat': { const v = toRate(c.text); return v !== null && (t.vatRates ?? []).some((r) => Math.abs(r - v) < 0.005); }
     case 'amount': return inRange(t.amount, c);
-    case 'item': case 'qty': return linesMatch([c], t);
+    case 'date': { const d = t.isoDate ?? ''; return !!d && (!c.from || d >= c.from) && (!c.to || d <= c.to); }
+    case 'item': case 'qty': case 'price': case 'lineAmount': return linesMatch([c], t);
   }
 }
 
 export function ruleMatches(rule: Pick<Rule, 'conds'>, t: RuleTarget): boolean {
   if (!rule.conds.length) return false;
-  for (const c of rule.conds) if (c.kind !== 'item' && c.kind !== 'qty' && !condMatches(c, t)) return false;
+  for (const c of rule.conds) if (!isLineKind(c.kind) && !condMatches(c, t)) return false;
   return linesMatch(rule.conds, t);
 }
 
@@ -160,7 +182,7 @@ export function beats(a: Rule, b: Rule): boolean {
 }
 
 /** Öncelik açıklaması (arayüz için) */
-export const PRIORITY_TEXT = 'Birden çok kural uyarsa: önce döneme özel olan, sonra daha çok koşullu (daha belirgin) olan, sonra VKN › unvan › kalem › tip › KDV › miktar › tutar sırası, sonra en son güncellenen.';
+export const PRIORITY_TEXT = 'Birden çok kural uyarsa: önce döneme özel olan, sonra daha çok koşullu (daha belirgin) olan, sonra VKN › unvan › kalem › tip › KDV › miktar › birim fiyat › kalem tutarı › tutar › tarih sırası, sonra en son güncellenen.';
 
 /**
  * Uyan kurallardan en öncelikli olanı. `batchId` verilirse yalnızca kalıcılar ve o dönemin kuralları değerlendirilir;
@@ -181,6 +203,7 @@ export function matchPermanent(t: RuleTarget, rules: Rule[]): Rule | null {
 }
 
 const fmtNum = (n: number) => n.toLocaleString('tr-TR', { maximumFractionDigits: 2 });
+export const fmtDateTr = (iso: string) => (/^\d{4}-\d{2}-\d{2}/.test(iso) ? `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}` : iso);
 
 /** Aralık metni: "1–1000", "≥ 1000", "≤ 10000" */
 export function rangeText(c: Cond, suffix = ''): string {
@@ -198,7 +221,10 @@ export function condLabel(c: Cond): string {
     case 'item': return `kalem "${(c.text ?? '').trim()}"`;
     case 'vat': { const v = toRate(c.text); return `KDV %${v === null ? '?' : fmtNum(v)}`; }
     case 'qty': return `miktar ${rangeText(c)}`;
+    case 'price': return `birim fiyat ${rangeText(c, ' ₺')}`;
+    case 'lineAmount': return `kalem tutarı ${rangeText(c, ' ₺')}`;
     case 'amount': return `tutar ${rangeText(c, ' ₺')}`;
+    case 'date': return c.from && c.to ? (c.from === c.to ? `tarih ${fmtDateTr(c.from)}` : `tarih ${fmtDateTr(c.from)}–${fmtDateTr(c.to)}`) : c.from ? `tarih ≥ ${fmtDateTr(c.from)}` : c.to ? `tarih ≤ ${fmtDateTr(c.to)}` : 'tarih —';
     case 'type': return `tip ${TYPE_LABELS[normCondText(c)] ?? c.text ?? ''}`;
   }
 }
@@ -215,7 +241,14 @@ export function validateCond(c: Cond): string | null {
     case 'name': case 'item': return normText(c.text ?? '').length >= 3 ? null : `${COND_LABELS[c.kind]}: en az 3 karakter yazın.`;
     case 'vat': return toRate(c.text) === null ? 'KDV oranı 0–100 arası bir sayı olmalı (örn. 10).' : null;
     case 'type': return normCondText(c) ? null : 'Fatura tipi seçin.';
-    case 'qty': case 'amount': {
+    case 'date': {
+      const ok = (d?: string) => !d || /^\d{4}-\d{2}-\d{2}$/.test(d);
+      if (!c.from && !c.to) return 'Fatura tarihi: başlangıç ya da bitiş girin.';
+      if (!ok(c.from) || !ok(c.to)) return 'Fatura tarihi: geçerli tarih seçin.';
+      if (c.from && c.to && c.from > c.to) return 'Fatura tarihi: başlangıç bitişten sonra olamaz.';
+      return null;
+    }
+    case 'qty': case 'price': case 'lineAmount': case 'amount': {
       const lo = c.min ?? null, hi = c.max ?? null;
       if (lo === null && hi === null) return `${COND_LABELS[c.kind]}: alt ya da üst sınır girin.`;
       if ((lo !== null && !Number.isFinite(lo)) || (hi !== null && !Number.isFinite(hi))) return `${COND_LABELS[c.kind]}: sınırlar sayı olmalı.`;
@@ -237,7 +270,8 @@ export function validateRule(conds: Cond[], code: string): string | null {
 
 /** Koşulu kaydedilecek biçime getirir (metin kırpılmış, vkn rakam, sınırlar sayı ya da null) */
 export function cleanCond(c: Cond): Cond {
-  if (c.kind === 'qty' || c.kind === 'amount') {
+  if (c.kind === 'date') return { kind: 'date', from: (c.from ?? '').trim() || undefined, to: (c.to ?? '').trim() || undefined };
+  if (isRange(c.kind)) {
     const n = (v: number | null | undefined) => (v === null || v === undefined || !Number.isFinite(v) ? null : v);
     return { kind: c.kind, min: n(c.min), max: n(c.max) };
   }
@@ -245,7 +279,8 @@ export function cleanCond(c: Cond): Cond {
 }
 
 function condKey(c: Cond): string {
-  return c.kind === 'qty' || c.kind === 'amount' ? `${c.kind}:${c.min ?? ''}:${c.max ?? ''}` : `${c.kind}:${normCondText(c)}`;
+  if (c.kind === 'date') return `date:${c.from ?? ''}:${c.to ?? ''}`;
+  return isRange(c.kind) ? `${c.kind}:${c.min ?? ''}:${c.max ?? ''}` : `${c.kind}:${normCondText(c)}`;
 }
 
 /** Aynı kuralı tanımak için anahtar (koşul sırası önemsiz) */

@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import * as S from './state';
-import { COND_LABELS, PRIORITY_TEXT, VAT_PRESETS, beats, condLabel, ruleLabel, ruleMatches, toRate, type Cond, type CondKind, type Rule } from '../core/rules';
+import { COND_LABELS, COND_SHORT, PRIORITY_TEXT, VAT_PRESETS, beats, condLabel, isRange, ruleLabel, ruleMatches, toRate, type Cond, type CondKind, type Rule } from '../core/rules';
 import { TYPE_LABELS, type Invoice } from '../core/types';
 import { fmtAmount } from './InvoiceCard';
 
 const KINDS = Object.keys(COND_LABELS) as CondKind[];
-const KIND_SHORT: Record<CondKind, string> = { vkn: 'VKN', name: 'Unvan', item: 'Kalem', vat: 'KDV', qty: 'Miktar', amount: 'Tutar', type: 'Tip' };
 
 /** Seçili faturadan koşul için uygun başlangıç değeri */
 function seedCond(kind: CondKind, inv: Invoice | null): Cond {
@@ -14,7 +13,8 @@ function seedCond(kind: CondKind, inv: Invoice | null): Cond {
     case 'name': return { kind, text: inv?.supplierName ?? '' };
     case 'type': return { kind, text: inv?.typeCode || 'SATIS' };
     case 'vat': return { kind, text: inv?.vatRates.length ? String(inv.vatRates[0]) : '20' };
-    case 'qty': case 'amount': return { kind, min: null, max: null };
+    case 'qty': case 'price': case 'lineAmount': case 'amount': return { kind, min: null, max: null };
+    case 'date': return { kind, from: inv?.isoDate || undefined, to: inv?.isoDate || undefined };
     default: return { kind, text: '' };
   }
 }
@@ -31,7 +31,7 @@ function CondRow({ c, i, total, inv, onChange, onRemove, inputRef }: { c: Cond; 
       <div class="row-inline" style="justify-content:flex-start; gap:6px">
         <span class="cond-and">{i === 0 ? 'Eğer' : 've'}</span>
         <div class="cond-kind" role="radiogroup" aria-label="Koşul türü">
-          {KINDS.map((k) => <button data-k={k} class={c.kind === k ? 'on' : ''} title={COND_LABELS[k]} onClick={() => { if (k === c.kind) return; setVatOther(false); onChange(seedCond(k, inv)); }}>{KIND_SHORT[k]}</button>)}
+          {KINDS.map((k) => <button data-k={k} class={c.kind === k ? 'on' : ''} title={COND_LABELS[k]} onClick={() => { if (k === c.kind) return; setVatOther(false); onChange(seedCond(k, inv)); }}>{COND_SHORT[k]}</button>)}
         </div>
       </div>
       <div class="cond-inputs">
@@ -54,12 +54,20 @@ function CondRow({ c, i, total, inv, onChange, onRemove, inputRef }: { c: Cond; 
             <span class="unit">{inv?.vatRates.length ? `bu faturada: %${inv.vatRates.join(', %')}` : 'faturada bu oranlı KDV var'}</span>
           </>
         )}
-        {(c.kind === 'qty' || c.kind === 'amount') && (
+        {c.kind === 'date' && (
+          <>
+            <input ref={inputRef} type="date" class="cond-from" value={c.from ?? ''} onKeyDown={stop} onInput={(e) => onChange({ ...c, from: (e.currentTarget as HTMLInputElement).value || undefined })} />
+            <span class="unit">–</span>
+            <input type="date" class="cond-to" value={c.to ?? ''} onKeyDown={stop} onInput={(e) => onChange({ ...c, to: (e.currentTarget as HTMLInputElement).value || undefined })} />
+            <span class="unit">fatura tarihi (birini boş bırakabilirsiniz)</span>
+          </>
+        )}
+        {isRange(c.kind) && (
           <>
             <input ref={inputRef} class="cond-min" inputMode="decimal" placeholder="en az" value={numStr(c.min)} onKeyDown={stop} onInput={(e) => onChange({ ...c, min: numOrNull((e.currentTarget as HTMLInputElement).value) })} />
             <span class="unit">–</span>
             <input class="cond-max" inputMode="decimal" placeholder="en çok" value={numStr(c.max)} onKeyDown={stop} onInput={(e) => onChange({ ...c, max: numOrNull((e.currentTarget as HTMLInputElement).value) })} />
-            <span class="unit">{c.kind === 'qty' ? 'adet/kg… (birini boş bırakabilirsiniz)' : '₺, KDV dahil (birini boş bırakabilirsiniz)'}</span>
+            <span class="unit">{c.kind === 'qty' ? 'adet/kg… (birini boş bırakabilirsiniz)' : c.kind === 'amount' ? '₺, KDV dahil (birini boş bırakabilirsiniz)' : '₺, KDV hariç (birini boş bırakabilirsiniz)'}</span>
           </>
         )}
       </div>
@@ -109,7 +117,7 @@ export function RulesModal() {
   const hits = (r: Pick<Rule, 'conds'>) => invs.filter((i) => ruleMatches(r, i));
   // Canlı önizleme: taslak hangi faturalara uyar, kaçında başka bir kural önde olur
   const candidate: Rule = { id: editing ?? '__draft', firmId: '', batchId: scope === 'batch' ? batch?.id ?? null : null, conds, code: code || '?', enabled: true, createdAt: 0, updatedAt: Number.MAX_SAFE_INTEGER };
-  const previewOk = conds.every((c) => (c.kind === 'qty' || c.kind === 'amount') ? (c.min ?? null) !== null || (c.max ?? null) !== null : !!(c.text ?? '').trim());
+  const previewOk = conds.every((c) => isRange(c.kind) ? (c.min ?? null) !== null || (c.max ?? null) !== null : c.kind === 'date' ? !!(c.from || c.to) : !!(c.text ?? '').trim());
   const matched = previewOk ? hits(candidate) : [];
   const others = S.batchRules.value.filter((r) => r.id !== editing && r.enabled);
   const outranked = matched.filter((i) => others.some((o) => ruleMatches(o, i) && beats(o, candidate) && o.code !== candidate.code));
@@ -130,7 +138,7 @@ export function RulesModal() {
           <div class="muted small">
             Bir kural, koşulların <b>hepsi</b> tutunca faturaya kodu verir; uyan fatura <b>yüklenir yüklenmez</b> kodu alır ("kural" etiketi, Ctrl+Z ile geri alınır).
             Tek koşul da yeter (örn. yalnızca VKN); miktar ya da tutar aralığı gibi koşullarla aynı satıcıyı farklı kodlara ayırabilirsiniz.
-            <span title={PRIORITY_TEXT}> Öncelik: döneme özel › daha çok koşullu › VKN › unvan › kalem › tip › KDV › miktar › tutar.</span>{' '}
+            <span title={PRIORITY_TEXT}> Öncelik: döneme özel › daha çok koşullu › VKN › unvan › kalem › tip › KDV › miktar › birim fiyat › kalem tutarı › tutar › tarih.</span>{' '}
             <b>Kalıcı</b> kural firmanın her döneminde, <b>döneme özel</b> kural yalnızca o ayda geçerlidir. Kurallar yalnızca bu tarayıcıda saklanır; yedeğe girer, kalıcılar dosya olarak paylaşılabilir.
           </div>
           <div class="scope-seg" role="radiogroup" aria-label="Kural kapsamı">
@@ -152,7 +160,7 @@ export function RulesModal() {
             {err && <div class="issue">{err}</div>}
             {batch && previewOk && (
               <div class="rule-preview">
-                <div>Bu dönemde uyan fatura: <b>{matched.length}</b> / {invs.length}{outranked.length > 0 && <span class="pv-warn" title={PRIORITY_TEXT}> · {outranked.length} tanesinde başka bir kural önde kalır</span>}{matched.length === 0 && conds.some((c) => c.kind === 'qty' || c.kind === 'item') && invs.some((i) => i.lines.length === 0) && <span> · kalem bilgisi olmayan (listeden gelen) faturalar eşleşmez</span>}</div>
+                <div>Bu dönemde uyan fatura: <b>{matched.length}</b> / {invs.length}{outranked.length > 0 && <span class="pv-warn" title={PRIORITY_TEXT}> · {outranked.length} tanesinde başka bir kural önde kalır</span>}{matched.length === 0 && conds.some((c) => c.kind !== 'vkn' && c.kind !== 'name' && c.kind !== 'type' && c.kind !== 'date' && c.kind !== 'amount') && invs.some((i) => i.lines.length === 0) && <span> · kalem bilgisi olmayan (listeden gelen) faturalar eşleşmez</span>}</div>
                 {matched.slice(0, 4).map((i) => <div class="pv-row"><span>{i.no}</span><span>{i.supplierName}</span><span>{fmtAmount(i.amount, i.currency)}</span><span>{S.assignments.value.get(i.no) ? `kodu var: ${S.assignments.value.get(i.no)}` : 'kod bekliyor'}</span></div>)}
                 {matched.length > 4 && <div class="pv-row"><span>… {matched.length - 4} fatura daha</span></div>}
               </div>

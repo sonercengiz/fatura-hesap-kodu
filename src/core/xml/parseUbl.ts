@@ -49,6 +49,10 @@ export interface LineInfo {
   unit: string;
   /** Kalemin KDV oranı (yüzde); yoksa null */
   vat: number | null;
+  /** Birim fiyat (KDV hariç); eski kayıtlarda yok */
+  price?: number | null;
+  /** Kalem tutarı (KDV hariç, LineExtensionAmount); eski kayıtlarda yok */
+  amount?: number | null;
 }
 
 export interface UblLine {
@@ -255,6 +259,8 @@ export function linesOf(root: Element | null, max = 500): LineInfo[] {
       qty: toNum(text(qty)),
       unit: qty?.getAttribute('unitCode') ?? '',
       vat: vats.length ? vats[0] : null,
+      price: toNum(cbc(cac(ln, 'Price'), 'PriceAmount')),
+      amount: toNum(cbc(ln, 'LineExtensionAmount')),
     };
   });
 }

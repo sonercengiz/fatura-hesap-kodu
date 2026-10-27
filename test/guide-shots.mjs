@@ -151,9 +151,9 @@ await page.keyboard.press('Control+Home'); await wait(150);
 if (await page.locator('.rule-make').count()) { await annotate([{ sel: '.rule-make', n: 1 }]); await shot('13-kural-yap.png', { clip: await clipOf('.detail', 6) }); await clear(); }
 await page.locator('#search').fill('LZT2026000000002'); await page.keyboard.press('Enter'); await wait(200); await page.locator('#search').fill('');
 await annotate([{ sel: '.line-rule >> nth=1', n: 1 }]); await shot('__a.png', { clip: await clipOf('.detail', 6) }); await clear();
-await page.locator('.line-rule').nth(1).click(); await page.waitForSelector('.modal.rules'); await wait(200);
-await annotate([{ sel: '.rule-form', n: 2, pad: 2 }]); await shot('__b.png', { clip: await clipOf('.modal.rules', 12) }); await clear();
-await compose('13b-kalemden-kural.png', '__a.png', '__b.png', ['Panelde kalemler: 3.000 adet yumurtanın yanındaki ⚡', 'Açılan taslak: kalem "Yumurta" + miktar ≥ 3000; eşiği ve kodu siz tamamlarsınız']); unlinkSync(`${OUT}/__a.png`); unlinkSync(`${OUT}/__b.png`);
+await page.locator('.line-rule').nth(1).click(); await page.waitForSelector('.modal.quick-rule'); await wait(200);
+await annotate([{ sel: '.qgroup', n: 2, pad: 2 }, { sel: '.qgroup.qline >> nth=1', n: 3, pad: 2 }, { sel: '.qsummary', n: 4, pad: 2 }, { sel: '.modal.quick-rule .rule-then', n: 5, pad: 2 }, { sel: '.quick-advanced', n: 6 }]); await shot('__b.png', { clip: await clipOf('.modal.quick-rule', 12) }); await clear();
+await compose('13b-kalemden-kural.png', '__a.png', '__b.png', ['Panelde kalemler: 3.000 adet yumurtanın yanındaki ⚡', '"Bu faturadan kural": kalem "Yumurta" + miktar ≥ 3.000 işaretli geldi; eşiği, rozetleri ve kodu siz tamamlarsınız']); unlinkSync(`${OUT}/__a.png`); unlinkSync(`${OUT}/__b.png`);
 await esc(); await wait(150); await page.keyboard.press('Control+Home'); await wait(150);
 await page.locator('.toolbar button:has-text("Kurallar")').click(); await page.waitForSelector('.modal.rules');
 const kind = async (i, k) => page.locator('.cond-kind').nth(i).locator(`[data-k="${k}"]`).click();

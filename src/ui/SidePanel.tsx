@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'preact/hooks';
 import * as S from './state';
-import { ruleLabel, keywordOf, unitLabel } from '../core/rules';
+import { ruleLabel, unitLabel } from '../core/rules';
 import { askConfirm } from './dialog';
 import { fmtAmount } from './InvoiceCard';
 import { SORT_LABELS, type SortMode } from '../core/sort';
@@ -14,16 +14,17 @@ function Lines({ inv, code }: { inv: NonNullable<typeof S.current.value>; code: 
   const [all, setAll] = useState(false);
   const shown = all ? inv.lines : inv.lines.slice(0, MAX_LINES);
   const fmtQty = (q: number | null, u: string) => (q === null ? '' : `${q.toLocaleString('tr-TR', { maximumFractionDigits: 3 })} ${unitLabel(u)}`);
+  void code;
   return (
     <div class="lines">
       <div class="lines-head"><span>Kalemler ({inv.lines.length})</span><span class="muted small">⚡ kalemden kural</span></div>
-      {shown.map((l) => (
-        <div class="line-row" title={l.label ?? l.name}>
-          <span class="line-name">{l.label ?? l.name}</span>
-          <span class="line-qty">{fmtQty(l.qty, l.unit)}</span>
-          <span class="line-vat muted">{l.vat !== null ? `%${l.vat}` : ''}</span>
-          <button class="ghost tiny line-rule" title={`Bu kalem ve miktarı için kural yap: kalem "${keywordOf(l.label ?? l.name)}" + miktar ≥ ${l.qty ?? '?'} → ${code ?? 'kod'}`}
-            onClick={() => S.openRules({ conds: [{ kind: 'item', text: keywordOf(l.label ?? l.name) }, ...(l.qty !== null ? [{ kind: 'qty' as const, min: l.qty, max: null }] : [])], code: code ?? '' })}>⚡</button>
+      {shown.map((l, k) => (
+        <div class="line-row" title={`${l.label ?? l.name}${l.price != null ? ` · birim fiyat ${fmtAmount(l.price, inv.currency)} (KDV hariç)` : ''}`}>
+          <div class="line-main">
+            <span class="line-name">{l.label ?? l.name}</span>
+            <span class="line-sub muted">{fmtQty(l.qty, l.unit)}{l.price != null ? ` × ${fmtAmount(l.price, inv.currency)}` : ''}{l.amount != null ? ` = ${fmtAmount(l.amount, inv.currency)}` : ''}{l.vat !== null ? ` · KDV %${l.vat}` : ''}</span>
+          </div>
+          <button class="ghost tiny line-rule" title="Bu kalemden kural yap (kalem adı ve miktarı işaretli gelir)" onClick={() => (S.quickRule.value = { lineIndex: k })}>⚡</button>
         </div>
       ))}
       {inv.lines.length > MAX_LINES && <button class="ghost tiny" onClick={() => setAll(!all)}>{all ? 'Daha az göster' : `+ ${inv.lines.length - MAX_LINES} kalem daha`}</button>}
@@ -72,7 +73,7 @@ export function SidePanel() {
               <div class="muted small rule-note" title="Bu döneme özel kural, kalıcı kuralın önüne geçti">Dönem kuralı · kalıcı {perm.codes.join(', ')} yerine</div>
             );
             if (code && !r) return (
-              <button class="ghost tiny rule-make" onClick={() => S.openRules({ conds: [{ kind: 'vkn', text: inv.supplierVkn }], code })} title="Bu satıcının her faturası bu kodu alsın (kural)">⚡ Kural yap: {inv.supplierVkn} → {code}</button>
+              <button class="ghost tiny rule-make" onClick={() => (S.quickRule.value = { lineIndex: -1 })} title="Bu faturanın bilgilerinden kural yap (satıcı, tarih, KDV, kalemler…)">⚡ Kural yap: bu faturadan → {code}</button>
             );
             return null;
           })()}

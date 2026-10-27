@@ -27,9 +27,10 @@ await a.keyboard.press('/'); await a.keyboard.type('770.03'); await a.keyboard.p
 await a.keyboard.press('ArrowLeft'); await a.waitForTimeout(100);
 log('kural yap düğmesi:', await a.locator('.rule-make').innerText());
 // 2) Kural yap → pencere açılır, taslak dolu, Enter ile kaydet ve uygula
-await a.locator('.rule-make').click(); await a.waitForSelector('.modal.rules');
-log('taslak:', await a.locator('.cond-text').inputValue(), '→', await a.locator('.rule-code').inputValue(), '| uyan:', (await a.locator('.rule-preview').innerText()).split('\n')[0]);
+await a.locator('.rule-make').click(); await a.waitForSelector('.modal.quick-rule');
+log('hızlı kural:', (await a.locator('.qsummary').innerText()).replace(/\s+/g, ' '), '| kod:', await a.locator('.rule-code').inputValue());
 await a.locator('.rule-code').press('Enter'); await a.waitForTimeout(300);
+await a.locator('.toolbar button:has-text("Kurallar")').click(); await a.waitForSelector('.modal.rules');
 log('toast:', await a.locator('.toast').innerText(), '| kural satırı:', await a.locator('.rule-row').count(), '| liste etiketi kural:', await a.locator('.row .bulk-tag:has-text("kural")').count());
 // 3) Unvan kuralı: "ceptaş" → 770.04 ; kalem kuralı: "tarife" → 770.05 (Turkcell kalemleri) — VKN önceliği Turkcell'de geçerli kalmalı
 await a.locator('.cond-kind [data-k=\"name\"]').first().click(); await a.locator('.cond-text').fill('ceptaş'); await a.locator('.rule-code').fill('770.04'); await a.locator('.rule-code').press('Enter'); await a.waitForTimeout(300);

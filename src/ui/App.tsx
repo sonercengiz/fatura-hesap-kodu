@@ -10,6 +10,7 @@ import { SettingsModal } from './SettingsModal';
 import { GuideModal } from './GuideModal';
 import { ChartModal } from './ChartModal';
 import { RulesModal } from './RulesModal';
+import { QuickRuleModal } from './QuickRuleModal';
 import { ListView } from './ListView';
 import { PrintModal } from './PrintModal';
 import { PrintRoot } from './PrintRoot';
@@ -101,6 +102,7 @@ export function App() {
         if (e.key === 'Escape' || e.key === 'Enter') S.importReport.value = null;
         return;
       }
+      if (S.quickRule.value) { if (e.key === 'Escape') S.quickRule.value = null; return; }
       if (S.moveOpen.value || S.templateOpen.value || S.accountsOpen.value) {
         if (e.key === 'Escape') { S.moveOpen.value = false; S.templateOpen.value = false; S.accountsOpen.value = false; }
         return;
@@ -279,6 +281,7 @@ export function App() {
       {S.guideOpen.value && <GuideModal />}
       {S.chartOpen.value && <ChartModal />}
       {S.rulesOpen.value && <RulesModal />}
+      {S.quickRule.value && <QuickRuleModal />}
       {S.printOpen.value && <PrintModal />}
       {S.importReport.value && <ImportReportModal />}
       {S.moveOpen.value && <MoveModal />}

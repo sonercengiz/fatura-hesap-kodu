@@ -71,13 +71,13 @@ log('v1 dosya:', await page.locator('.toast').innerText(), '| satır:', (await r
 await page.keyboard.press('Escape'); await page.locator('.filter-select').selectOption('manual').catch(() => {});
 await page.locator('.filter-select').selectOption('all'); await page.keyboard.press('Home');
 await page.keyboard.press('/'); await page.keyboard.type('153'); await page.keyboard.press('Enter'); await page.waitForTimeout(200);
-if (await page.locator('.rule-make').count()) { await page.locator('.rule-make').click(); await page.waitForSelector('.modal.rules'); log('kural yap taslağı:', await page.locator('.cond-kind').nth(0).locator('button.on').getAttribute('data-k'), await page.locator('.cond-text').nth(0).inputValue(), '→', await page.locator('.rule-code').inputValue()); await page.keyboard.press('Escape'); } else log('kural yap düğmesi yok (fatura zaten kurala uyuyor)');
+if (await page.locator('.rule-make').count()) { await page.locator('.rule-make').click(); await page.waitForSelector('.modal.quick-rule'); log('kural yap (hızlı):', (await page.locator('.qsummary').innerText()).replace(/\s+/g, ' '), '→', await page.locator('.rule-code').inputValue()); await page.locator('.quick-advanced').click(); await page.waitForSelector('.modal.rules'); log('gelişmiş taslak:', await page.locator('.cond-kind').nth(0).locator('button.on').getAttribute('data-k'), await page.locator('.cond-text').nth(0).inputValue(), '→', await page.locator('.rule-code').inputValue()); await page.keyboard.press('Escape'); } else log('kural yap düğmesi yok (fatura zaten kurala uyuyor)');
 // 9b) panelde kalemler ve kalemden kural: ENERJİSA faturası (841,6 kWh)
 await page.locator('#search').fill('enerj'); await page.keyboard.press('Enter'); await page.waitForTimeout(200); await page.locator('#search').fill('');
 log('kalemler:', (await page.locator('.line-row').allInnerTexts()).map((t) => t.replace(/\s+/g, ' ').trim()).slice(0, 3).join(' || '));
-await page.locator('.line-rule').first().click(); await page.waitForSelector('.modal.rules');
-log('kalemden kural taslağı:', (await page.locator('.cond-row').allInnerTexts()).map((t) => t.replace(/\s+/g, ' ').trim()).join(' || '), '| metin:', await page.locator('.cond-text').first().inputValue(), '| en az:', await page.locator('.cond-min').inputValue(), '| önizleme:', await preview());
-await page.keyboard.press('Escape');
+await page.locator('.line-rule').first().click(); await page.waitForSelector('.modal.quick-rule');
+log('kalemden hızlı kural:', (await page.locator('.qsummary').innerText()).replace(/\s+/g, ' '), '| işaretli rozet:', await page.locator('.qchip.on').count());
+await page.keyboard.press('Escape'); await page.waitForTimeout(100);
 // 10) yenile → kurallar kalıcı, koşul çipleri
 await page.reload(); await page.waitForSelector('.inv-frame'); await open();
 log('yenileme sonrası:', (await rows()).length, 'kural |', (await page.locator('.cond-chip').allInnerTexts()).join(' / '));
