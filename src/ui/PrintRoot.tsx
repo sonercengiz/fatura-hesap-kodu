@@ -15,18 +15,23 @@ export function PrintRoot() {
   const [ready, setReady] = useState(0);
   const printed = useRef(false);
 
+  const part = job ? job.parts[job.part] : [];
+  const offset = job ? job.parts.slice(0, job.part).reduce((n, p) => n + p.length, 0) : 0;
+  const multi = !!job && job.parts.length > 1;
+
   useEffect(() => {
     if (!job) return;
     let cancelled = false;
     printed.current = false;
     setReady(0);
+    setHtmls(new Map());
     (async () => {
       const m = new Map<string, string>();
-      for (const inv of job.items) {
+      for (const inv of part) {
         const v = await S.getInvoiceView(inv.no);
         if (cancelled) return;
         m.set(inv.no, v?.html ?? '');
-        S.busy.value = `Yazdırma hazırlanıyor ${m.size}/${job.items.length}`;
+        S.busy.value = `${multi ? `Parça ${job.part + 1}/${job.parts.length}: ` : ''}yazdırma hazırlanıyor ${m.size}/${part.length}`;
       }
       setHtmls(m);
     })();
@@ -34,10 +39,10 @@ export function PrintRoot() {
   }, [job]);
 
   useEffect(() => {
-    if (!job || htmls.size < job.items.length || ready < job.items.length || printed.current) return;
+    if (!job || htmls.size < part.length || ready < part.length || printed.current) return;
     printed.current = true;
     S.busy.value = null;
-    const done = () => { window.removeEventListener('afterprint', done); S.finishPrint(); };
+    const done = () => { window.removeEventListener('afterprint', done); S.nextPrintPart(); };
     window.addEventListener('afterprint', done);
     // Yazı tipleri ve çizim otursun
     setTimeout(() => { try { window.print(); } catch { done(); } }, 150);
@@ -60,9 +65,18 @@ export function PrintRoot() {
     setReady((n) => n + 1);
   };
   const codes = S.assignments.value;
+  const total = job.items.length;
   return (
+    <>
+    {multi && (
+      <div class="print-parts-bar">
+        <span>Parçalı yazdırma · parça <b>{job.part + 1}/{job.parts.length}</b> · faturalar {offset + 1}–{offset + part.length} / {total}</span>
+        <span class="muted small">Her parça için yazdırma penceresi açılır; sonraki parça kendiliğinden gelir.</span>
+        <button class="tiny" onClick={() => S.finishPrint()}>Durdur</button>
+      </div>
+    )}
     <div class="print-root" aria-hidden>
-      {job.opts.summary && (
+      {job.opts.summary && job.part === 0 && (
         <section class="print-summary print-item">
           <h2>{S.firm.value.name} · {S.batchRec.value?.name}</h2>
           <div class="muted">{job.items.length} fatura · {new Date().toLocaleDateString('tr-TR')}</div>
@@ -74,11 +88,11 @@ export function PrintRoot() {
           </table>
         </section>
       )}
-      {job.items.map((i, k) => (
+      {part.map((i, k) => (
         <section class={`print-item ${job.opts.pageBreak ? 'brk' : ''}`}>
           {job.opts.strip && (
             <div class="print-strip">
-              <span>{k + 1} / {job.items.length}</span>
+              <span>{offset + k + 1} / {total}</span>
               <span>{i.no}</span>
               <span>{i.date}</span>
               <span class="print-strip-name">{i.supplierName}</span>
@@ -92,5 +106,6 @@ export function PrintRoot() {
         </section>
       ))}
     </div>
+    </>
   );
 }

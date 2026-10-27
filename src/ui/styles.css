@@ -382,3 +382,7 @@ tr.iss-chart td.code-col { color: var(--warn); text-decoration: underline wavy v
 .report-list { max-height: 40vh; }
 .report-row { gap: 12px; } .report-file { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .report-reason { color: var(--warn); font-size: 12px; white-space: nowrap; } .report-reason.mono { color: var(--muted); font-family: ui-monospace, Menlo, monospace; }
+
+.print-parts-bar { position: fixed; left: 50%; top: 56px; transform: translateX(-50%); z-index: 31; display: flex; gap: 12px; align-items: center; background: var(--panel); color: var(--ink); border: 1px solid var(--accent); border-radius: 999px; padding: 6px 14px; box-shadow: 0 6px 24px rgba(0,0,0,.18); }
+.inline-select { padding: 1px 4px; font-size: 13px; margin: 0 2px; }
+@media print { .print-parts-bar { display: none !important; } }

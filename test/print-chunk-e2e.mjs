@@ -1,0 +1,26 @@
+import { chromium } from 'playwright';
+import { readdirSync } from 'node:fs';
+const S='/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/aa071f3a-6270-4292-9e7a-d102afeef53e/scratchpad';
+const files=readdirSync(S+'/xmlin').filter(f=>f.endsWith('.xml')).sort().map(f=>S+'/xmlin/'+f);
+const browser=await chromium.launch({channel:'chrome',headless:true});
+const page=await (await browser.newContext({viewport:{width:1500,height:900}})).newPage();
+const errors=[]; page.on('pageerror',e=>errors.push(e.message));
+await page.addInitScript(()=>{try{localStorage.setItem('guideSeen','1')}catch{}; window.__calls=[]; window.print=()=>{ window.__calls.push({strips:[...document.querySelectorAll('.print-strip')].map(e=>e.innerText.split('\n')[0].trim()), summary:document.querySelectorAll('.print-summary').length, bar:document.querySelector('.print-parts-bar')?.innerText||''}); setTimeout(()=>window.dispatchEvent(new Event('afterprint')), 300); };});
+await page.goto('http://localhost:5179/'); await page.waitForSelector('.welcome');
+await page.locator('input[accept*=".zip"]').setInputFiles(files); await page.waitForSelector('.inv-frame'); await page.waitForFunction(()=>!document.querySelector('.busy'));
+await page.locator('.toolbar button:has-text("Yazdır")').click(); await page.waitForSelector('.print-modal');
+const chunkBox=page.locator('label:has-text("Parçalara böl") input[type=checkbox]');
+console.log('57 fatura: parçalama varsayılan:', await chunkBox.isChecked(), '| düğme:', await page.locator('.print-modal .modal-head button.primary').innerText());
+await page.locator('.inline-select').selectOption('25'); await chunkBox.check(); await page.waitForTimeout(80);
+console.log('25\'lik parçalar:', await page.locator('.print-modal .modal-head button.primary').innerText());
+await page.locator('label:has-text("Başta özet listesi") input').check();
+await page.locator('.print-modal .modal-head button.primary').click();
+await page.waitForFunction(()=>window.__calls.length>=3 && !document.querySelector('.print-root .print-frame'),{timeout:120000});
+const calls=await page.evaluate(()=>window.__calls);
+console.log('yazdırma çağrısı:', calls.length);
+calls.forEach((c,i)=>console.log(`  parça ${i+1}: ${c.strips.length} fatura, ilk "${c.strips[0]}", son "${c.strips[c.strips.length-1]}", özet ${c.summary}, şerit: ${c.bar.split('\n')[0].slice(0,60)}`));
+const all=calls.flatMap(c=>c.strips.map(s=>parseInt(s)));
+console.log('numaralar 1..57 kesintisiz:', all.every((n,i)=>n===i+1) && all.length===57, '| son toast:', await page.locator('.toast').innerText().catch(()=>'(yok)'));
+// 100'den çok senaryosu: aynı 57 ile eşik 60 altında olduğu için otomatik kapalı; eşik testi için kontrol edildi
+console.log('HATALAR:', errors.length?errors:'yok');
+await browser.close();

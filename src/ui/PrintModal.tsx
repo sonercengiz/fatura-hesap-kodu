@@ -16,6 +16,9 @@ export function PrintModal() {
   const [pageBreak, setPageBreak] = useState(true);
   const [strip, setStrip] = useState(true);
   const [summary, setSummary] = useState(false);
+  const CHUNK_SUGGEST = 60;
+  const [chunkOn, setChunkOn] = useState<boolean | null>(null); // null = otomatik (eşik üstünde açık)
+  const [chunkSize, setChunkSize] = useState(50);
   const [manual, setManual] = useState<string[] | null>(null); // elle sürüklenmiş sıra (fatura no listesi)
   const [pfilter, setPfilter] = useState<FilterMode>('all');
   const [psearch, setPsearch] = useState('');
@@ -57,6 +60,7 @@ export function PrintModal() {
   };
   const toPrint = items.filter((i) => !excluded.has(i.no));
   const noView = toPrint.filter((i) => !i.hasView).length;
+  const useChunks = (chunkOn ?? toPrint.length > CHUNK_SUGGEST) && toPrint.length > chunkSize;
   const toggle = (no: string) => { const s = new Set(excluded); if (s.has(no)) s.delete(no); else s.add(no); setExcluded(s); };
   const [hoverNo, setHoverNo] = useState<string | null>(null);
   const [preview, setPreview] = useState<{ no: string; html: string } | null>(null);
@@ -76,7 +80,7 @@ export function PrintModal() {
           <b>Yazdırma planı</b>
           <span class="muted">{toPrint.length}{toPrint.length !== items.length ? ` / ${items.length}` : ''} fatura{noView ? ` · ${noView} görselsiz (özet basılır)` : ''}</span>
           <div class="spacer" />
-          <button class="primary" disabled={toPrint.length === 0} onClick={() => S.startPrint(toPrint, { pageBreak, strip, summary })}>Yazdır ({toPrint.length}) <kbd>Enter</kbd></button>
+          <button class="primary" disabled={toPrint.length === 0} onClick={() => S.startPrint(toPrint, { pageBreak, strip, summary, chunk: useChunks ? chunkSize : 0 })}>Yazdır ({toPrint.length}{useChunks ? ` · ${Math.ceil(toPrint.length / chunkSize)} parça` : ''}) <kbd>Enter</kbd></button>
           <button class="ghost" onClick={() => S.closePrint()}>Kapat <kbd>Esc</kbd></button>
         </div>
         <div class="print-body">
@@ -131,7 +135,11 @@ export function PrintModal() {
               <label class="radio"><input type="checkbox" checked={pageBreak} onChange={(e) => setPageBreak((e.currentTarget as HTMLInputElement).checked)} /><span>Her fatura yeni sayfada</span></label>
               <label class="radio"><input type="checkbox" checked={strip} onChange={(e) => setStrip((e.currentTarget as HTMLInputElement).checked)} /><span>Üstte bilgi şeridi (sıra · fatura no · tarih · hesap kodu)</span></label>
               <label class="radio"><input type="checkbox" checked={summary} onChange={(e) => setSummary((e.currentTarget as HTMLInputElement).checked)} /><span>Başta özet listesi (bir sayfa tablo)</span></label>
-              <div class="muted small">Yazdırma penceresinde "PDF olarak kaydet" seçilirse tek dosya üretilir. Faturalar resmî görünümleriyle, sayfa genişliğine sığacak şekilde basılır.</div>
+              <label class="radio"><input type="checkbox" checked={useChunks} disabled={toPrint.length <= chunkSize && !useChunks} onChange={(e) => setChunkOn((e.currentTarget as HTMLInputElement).checked)} /><span>Parçalara böl: her parça
+                <select class="inline-select" value={chunkSize} onChange={(e) => setChunkSize(Number((e.currentTarget as HTMLSelectElement).value))} onKeyDown={(e) => e.stopPropagation()}>{[25, 50, 100].map((n) => <option value={n}>{n}</option>)}</select> fatura
+                {useChunks && <> → <b>{Math.ceil(toPrint.length / chunkSize)} parça</b>, sırayla kendiliğinden</>}</span></label>
+              {toPrint.length > CHUNK_SUGGEST && <div class="muted small">{toPrint.length} faturayı tek seferde basmak eski bilgisayarları zorlayabilir; bu yüzden parçalı yazdırma kendiliğinden açıldı. Her parça için yazdırma penceresi açılır, sonraki parça otomatik hazırlanır; numaralar kesintisiz devam eder.</div>}
+              <div class="muted small">Yazdırma penceresinde "PDF olarak kaydet" seçilirse (parça başına) tek dosya üretilir. Faturalar resmî görünümleriyle, sayfa genişliğine sığacak şekilde basılır.</div>
             </fieldset>
           </div>
           <div class="print-list">
