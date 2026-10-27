@@ -108,7 +108,7 @@ function ProgressCard() {
       <div class="status progress-card complete" title="Bu partideki tüm faturalar hesap kodu aldı">
         <span class="status-label">Tamamlandı</span>
         <b class="status-code">{done}/{total}</b>
-        <span class="status-sub">{S.dirty.value ? <><kbd>F2</kbd> kaydet · <kbd>F1</kbd> Excel</> : <><kbd>F1</kbd> Excel üret</>}</span>
+        <span class="status-sub"><kbd>F1</kbd> Excel üret</span>
       </div>
     );
   }

@@ -186,7 +186,7 @@ export function SettingsModal() {
               <div><kbd>/</kbd> <kbd>Enter</kbd> <kbd>0–9</kbd> manuel kod girişi · <kbd>Esc</kbd> vazgeç</div>
               <div><kbd>Backspace</kbd> atamayı kaldır · <kbd>Ctrl+F</kbd> ara</div>
               <div><kbd>Ctrl+.</kbd> hesap kodu listesinde ara ve ata · <kbd>Ctrl+Z</kbd> geri al · <kbd>Ctrl+Y</kbd> yinele</div>
-              <div><kbd>F2</kbd> kaydet · <kbd>F5</kbd> önizle · <kbd>F1</kbd> Excel üret · <kbd>Ctrl+P</kbd> faturayı yazdır · <kbd>Ctrl+Shift+P</kbd> yazdırma planı</div>
+              <div><kbd>F5</kbd> önizle · <kbd>F1</kbd> Excel üret · <kbd>Ctrl+P</kbd> faturayı yazdır · <kbd>Ctrl+Shift+P</kbd> yazdırma planı</div>
             </div>
           </fieldset>
         </div>

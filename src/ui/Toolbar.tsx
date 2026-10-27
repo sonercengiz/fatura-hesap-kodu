@@ -55,12 +55,11 @@ export function Toolbar() {
         <div class="progress" title="Atanan / toplam">
           <b>{S.assignedCount.value}</b>/{n} atandı
           {issues > 0 && <span class="warn"> · dikkat: {issues}</span>}
-          {S.dirty.value ? <span class="dirty"> · kaydedilmedi</span> : b.savedAt ? <span class="saved"> · kayıtlı</span> : null}
+          <span class="saved" title="Her atama anında bu tarayıcıya kaydedilir; ayrıca kaydetmeniz gerekmez"> · ✓ anında kaydedilir</span>
         </div>
       )}
       <button class={`ghost layout-btn ${S.settings.value.layout === 'list' ? 'on' : ''}`} onClick={() => S.setLayout(S.settings.value.layout === 'list' ? 'hybrid' : 'list')} disabled={!b} title={S.settings.value.layout === 'list' ? 'Hibrit görünüme geç (fatura görseli + panel)' : 'Liste görünümüne geç (yalnızca tablo)'}>{S.settings.value.layout === 'list' ? '▣ Hibrit' : '☰ Liste'}</button>
       <button class="ghost" onClick={() => S.undo()} disabled={!S.undoStack.value.length} title={S.undoStack.value.length ? `Geri al: ${S.undoStack.value[S.undoStack.value.length - 1].label} (Ctrl+Z)` : 'Geri alınacak işlem yok'}>↶</button>
-      <button onClick={() => S.save()} disabled={!b} title="F2">Kaydet <kbd>F2</kbd></button>
       <button onClick={() => (S.previewOpen.value = true)} disabled={!b} title="F5">Önizle <kbd>F5</kbd></button>
       <button class="primary" onClick={() => S.exportExcel()} disabled={!b || n === 0} title="F1">Excel üret <kbd>F1</kbd></button>
       <button class="ghost" onClick={() => S.openPrint()} disabled={!b || n === 0} title="Yazdırma planı: faturaları istediğiniz sırada yazdırın ya da PDF kaydedin (Ctrl+Shift+P)">🖨 Yazdır</button>

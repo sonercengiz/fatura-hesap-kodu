@@ -28,7 +28,6 @@ export const assignments = signal<Map<string, string>>(new Map());
 export const currentIndex = signal(0);
 export const mode = signal<'nav' | 'manual'>('nav');
 export const manualText = signal('');
-export const dirty = signal(false);
 export const history = signal<HistoryEntry[]>([]);
 export const recentCodes = signal<string[]>([]);
 export const toast = signal<string | null>(null);
@@ -370,7 +369,6 @@ export async function openBatch(id: string) {
     undoStack.value = [];
     redoStack.value = [];
     recentCodes.value = asg.sort((a, b) => a.at - b.at).slice(-10).map((a) => a.code);
-    dirty.value = false;
     mode.value = 'nav';
     searchText.value = '';
   });
@@ -724,7 +722,6 @@ async function applyChanges(changes: Change[]): Promise<Change[]> {
     assignments.value = m;
     bulkNos.value = bn;
     ruleNos.value = rn;
-    dirty.value = true;
   });
   if (puts.length) await db.assignments.bulkPut(puts);
   if (dels.length) await db.assignments.bulkDelete(dels);
@@ -790,17 +787,6 @@ export async function redo() {
   showToast(`Yinelendi: ${e.label}`);
 }
 
-export async function save() {
-  const b = batchRec.value;
-  if (!b) return;
-  const now = Date.now();
-  await db.batches.update(b.id, { savedAt: now, updatedAt: now });
-  batchRec.value = { ...b, savedAt: now, updatedAt: now };
-  dirty.value = false;
-  await refreshBatchList();
-  showToast(`Kaydedildi · ${assignedCount.value}/${invoices.value.length} atandı`);
-}
-
 export function outputContext(): RowContext {
   const codes = new Map<string, string>();
   for (const [no, c] of assignments.value) if (c) codes.set(no, c);
@@ -821,7 +807,6 @@ export async function setOutputTemplate(t: OutputTemplate) {
 export async function exportExcel() {
   const b = batchRec.value;
   if (!b) return;
-  if (dirty.value) await save();
   const bytes = buildTemplateWorkbook(outputOrder.value, settings.value.outputTemplate, outputContext());
   const name = buildFileName(firm.value.name, outputOrder.value);
   const blob = new Blob([bytes as unknown as ArrayBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });

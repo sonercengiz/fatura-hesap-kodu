@@ -42,11 +42,10 @@ export function App() {
       // Yalnızca yazı girişleri tuşları yutar; onay kutusu / radyo odaklıyken kısayollar ve Esc çalışmaya devam eder
       const inInput = !!t && ((t.tagName === 'INPUT' && !/^(checkbox|radio|button)$/.test((t as HTMLInputElement).type)) || t.tagName === 'TEXTAREA' || t.isContentEditable);
 
-      if (e.key === 'F1' || e.key === 'F2' || e.key === 'F5') {
+      if (e.key === 'F1' || e.key === 'F5') {
         e.preventDefault();
         if (!S.batchRec.value) return;
         if (e.key === 'F1') S.exportExcel();
-        else if (e.key === 'F2') S.save();
         else S.previewOpen.value = !S.previewOpen.value;
         return;
       }
@@ -206,16 +205,8 @@ export function App() {
       }
     };
     window.addEventListener('keydown', onKey);
-    const onUnload = (e: BeforeUnloadEvent) => {
-      if (S.dirty.value) {
-        e.preventDefault();
-        e.returnValue = '';
-      }
-    };
-    window.addEventListener('beforeunload', onUnload);
     return () => {
       window.removeEventListener('keydown', onKey);
-      window.removeEventListener('beforeunload', onUnload);
     };
   }, []);
 
