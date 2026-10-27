@@ -1,11 +1,35 @@
 import { useEffect, useRef } from 'preact/hooks';
 import * as S from './state';
-import { ruleLabel } from '../core/rules';
+import { ruleLabel, keywordOf, unitLabel } from '../core/rules';
 import { askConfirm } from './dialog';
 import { fmtAmount } from './InvoiceCard';
 import { SORT_LABELS, type SortMode } from '../core/sort';
 import type { FilterMode } from '../core/types';
 import { useState } from 'preact/hooks';
+
+const MAX_LINES = 8;
+
+/** Seçili faturanın kalemleri: ad, miktar, KDV; her kalemden "miktara göre kural" taslağı */
+function Lines({ inv, code }: { inv: NonNullable<typeof S.current.value>; code: string | undefined }) {
+  const [all, setAll] = useState(false);
+  const shown = all ? inv.lines : inv.lines.slice(0, MAX_LINES);
+  const fmtQty = (q: number | null, u: string) => (q === null ? '' : `${q.toLocaleString('tr-TR', { maximumFractionDigits: 3 })} ${unitLabel(u)}`);
+  return (
+    <div class="lines">
+      <div class="lines-head"><span>Kalemler ({inv.lines.length})</span><span class="muted small">⚡ kalemden kural</span></div>
+      {shown.map((l) => (
+        <div class="line-row" title={l.label ?? l.name}>
+          <span class="line-name">{l.label ?? l.name}</span>
+          <span class="line-qty">{fmtQty(l.qty, l.unit)}</span>
+          <span class="line-vat muted">{l.vat !== null ? `%${l.vat}` : ''}</span>
+          <button class="ghost tiny line-rule" title={`Bu kalem ve miktarı için kural yap: kalem "${keywordOf(l.label ?? l.name)}" + miktar ≥ ${l.qty ?? '?'} → ${code ?? 'kod'}`}
+            onClick={() => S.openRules({ conds: [{ kind: 'item', text: keywordOf(l.label ?? l.name) }, ...(l.qty !== null ? [{ kind: 'qty' as const, min: l.qty, max: null }] : [])], code: code ?? '' })}>⚡</button>
+        </div>
+      ))}
+      {inv.lines.length > MAX_LINES && <button class="ghost tiny" onClick={() => setAll(!all)}>{all ? 'Daha az göster' : `+ ${inv.lines.length - MAX_LINES} kalem daha`}</button>}
+    </div>
+  );
+}
 
 export function SidePanel() {
   const inv = S.current.value;
@@ -60,6 +84,7 @@ export function SidePanel() {
           {code && S.accounts.value.length > 0 && S.accountMap.value.has(code) && (
             <div class="detail-row"><span>Hesap adı</span><b>{S.accountMap.value.get(code)}</b></div>
           )}
+          {inv.lines.length > 0 && <Lines inv={inv} code={code} />}
           {S.issuesFor(inv).filter((k) => k !== 'no-code').map((k) => (
             <div class="issue">{S.ISSUE_LABEL[k]}</div>
           ))}

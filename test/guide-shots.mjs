@@ -85,7 +85,7 @@ await annotate([{ sel: '.firm-select', n: 1 }, { sel: '.batch-select', n: 2 }, {
 await shot('03-ustcubuk.png', { clip: await clipOf('.toolbar', 6, { height: 72 }) }); await clear();
 
 // ---------- 2. Panel ve alt çubuk ----------
-await annotate([{ sel: '.detail', n: 1, pad: -4, pos: 'in' }, { sel: '.detail-code', n: 2, pos: 'tr' }, { sel: '.list-controls', n: 3 }, { sel: '#search', n: 4 }, { sel: '.list', n: 5, pad: -6, pos: 'in' }, { sel: '.files', n: 6 }]);
+await annotate([{ sel: '.detail', n: 1, pad: -4, pos: 'in' }, { sel: '.detail-code', n: 2, pos: 'tr' }, { sel: '.list-controls', n: 3 }, { sel: '#search', n: 4 }, { sel: '.list', n: 5, pad: -6, pos: 'in' }, { sel: '.files', n: 6 }, { sel: '.lines', n: 7 }]);
 await shot('06-panel.png', { clip: await clipOf('.side', 6) }); await clear();
 await annotate([{ sel: '.slots', n: 1, pad: 2 }, { sel: '.status.empty', n: 2 }, { sel: '.progress-card', n: 3 }, { sel: '.manual-box', n: 4 }]);
 await shot('07-kisayol.png', { clip: await clipOf('.bar', 4) }); await clear();
@@ -149,8 +149,14 @@ await shot('12b-ctrl-nokta.png', { clip: await clipOf('.chart-pop', 16) }); awai
 await page.locator('#search').fill('ay telekom'); await page.keyboard.press('Enter'); await wait(150); await page.locator('#search').fill('');
 await page.keyboard.press('Control+Home'); await wait(150);
 if (await page.locator('.rule-make').count()) { await annotate([{ sel: '.rule-make', n: 1 }]); await shot('13-kural-yap.png', { clip: await clipOf('.detail', 6) }); await clear(); }
+await page.locator('#search').fill('LZT2026000000002'); await page.keyboard.press('Enter'); await wait(200); await page.locator('#search').fill('');
+await annotate([{ sel: '.line-rule >> nth=1', n: 1 }]); await shot('__a.png', { clip: await clipOf('.detail', 6) }); await clear();
+await page.locator('.line-rule').nth(1).click(); await page.waitForSelector('.modal.rules'); await wait(200);
+await annotate([{ sel: '.rule-form', n: 2, pad: 2 }]); await shot('__b.png', { clip: await clipOf('.modal.rules', 12) }); await clear();
+await compose('13b-kalemden-kural.png', '__a.png', '__b.png', ['Panelde kalemler: 3.000 adet yumurtanın yanındaki ⚡', 'Açılan taslak: kalem "Yumurta" + miktar ≥ 3000; eşiği ve kodu siz tamamlarsınız']); unlinkSync(`${OUT}/__a.png`); unlinkSync(`${OUT}/__b.png`);
+await esc(); await wait(150); await page.keyboard.press('Control+Home'); await wait(150);
 await page.locator('.toolbar button:has-text("Kurallar")').click(); await page.waitForSelector('.modal.rules');
-const kind = async (i, k) => page.locator('.cond-kind').nth(i).selectOption(k);
+const kind = async (i, k) => page.locator('.cond-kind').nth(i).locator(`[data-k="${k}"]`).click();
 // kalıcı: unvan "hızlı kargo" → 760.02
 await kind(0, 'name'); await page.locator('.cond-text').first().fill('hızlı kargo'); await page.locator('.rule-code').fill('760.02'); await page.locator('.rule-code').press('Enter'); await wait(300); await noToast();
 // döneme özel: VKN 5670000005 → 770.09 (kalıcının yerine geçer; not görünür)

@@ -268,6 +268,16 @@ export function upgradeRule(raw: unknown): (Omit<Rule, 'id' | 'firmId' | 'batchI
   return { ...rest, conds, code: r.code.trim(), enabled: r.enabled !== false };
 }
 
+/** UBL birim kodu → ekran (bilinmeyen kod olduğu gibi) */
+export const UNIT_LABELS: Record<string, string> = { C62: 'adet', EA: 'adet', NIU: 'adet', PCE: 'adet', KGM: 'kg', GRM: 'g', LTR: 'lt', MLT: 'ml', MTR: 'm', MTK: 'm²', MTQ: 'm³', KWH: 'kWh', HUR: 'saat', DAY: 'gün', MON: 'ay', ANN: 'yıl', SET: 'takım', PR: 'çift', BX: 'kutu', PK: 'paket', CT: 'koli', TNE: 'ton', KMT: 'km', MIN: 'dk', ADET: 'adet' };
+export const unitLabel = (u: string) => UNIT_LABELS[u.toUpperCase()] ?? u;
+
+/** Kalem adından kural için önerilen anahtar kelime: en az 3 harfli ilk sözcük (kullanıcı düzeltir) */
+export function keywordOf(label: string): string {
+  const words = label.replace(/[()[\]"'.,;:/\\-]+/g, ' ').split(/\s+/).filter(Boolean);
+  return words.find((w) => /\p{L}{3,}/u.test(w)) ?? words[0] ?? label;
+}
+
 /** Kural dosyası (.json) biçimi: yalnızca kalıcı kurallar, firma adıyla; başka kullanıcıya verilebilir */
 export interface RulesFile {
   app: 'fatura-hesap-kodu';

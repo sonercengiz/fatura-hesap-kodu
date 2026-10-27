@@ -15,7 +15,7 @@ await page.locator('input[accept*=".zip"]').setInputFiles(files); await page.wai
 log('yüklendi:', await page.locator('.progress').innerText());
 const open = async () => { await page.locator('.toolbar button:has-text("Kurallar")').click(); await page.waitForSelector('.modal.rules'); };
 const preview = async () => (await page.locator('.rule-preview').innerText().catch(() => '(önizleme yok)')).split('\n')[0];
-const setKind = async (i, k) => page.locator('.cond-kind').nth(i).selectOption(k);
+const setKind = async (i, k) => page.locator('.cond-kind').nth(i).locator(`[data-k="${k}"]`).click();
 const rows = async () => (await page.locator('.rule-row').allInnerTexts()).map((t) => t.replace(/\s+/g, ' ').trim());
 await open();
 // 1) unvan "turkcell" + KDV %20 → 770.03
@@ -71,7 +71,13 @@ log('v1 dosya:', await page.locator('.toast').innerText(), '| satır:', (await r
 await page.keyboard.press('Escape'); await page.locator('.filter-select').selectOption('manual').catch(() => {});
 await page.locator('.filter-select').selectOption('all'); await page.keyboard.press('Home');
 await page.keyboard.press('/'); await page.keyboard.type('153'); await page.keyboard.press('Enter'); await page.waitForTimeout(200);
-if (await page.locator('.rule-make').count()) { await page.locator('.rule-make').click(); await page.waitForSelector('.modal.rules'); log('kural yap taslağı:', await page.locator('.cond-kind').nth(0).inputValue(), await page.locator('.cond-text').nth(0).inputValue(), '→', await page.locator('.rule-code').inputValue()); await page.keyboard.press('Escape'); } else log('kural yap düğmesi yok (fatura zaten kurala uyuyor)');
+if (await page.locator('.rule-make').count()) { await page.locator('.rule-make').click(); await page.waitForSelector('.modal.rules'); log('kural yap taslağı:', await page.locator('.cond-kind').nth(0).locator('button.on').getAttribute('data-k'), await page.locator('.cond-text').nth(0).inputValue(), '→', await page.locator('.rule-code').inputValue()); await page.keyboard.press('Escape'); } else log('kural yap düğmesi yok (fatura zaten kurala uyuyor)');
+// 9b) panelde kalemler ve kalemden kural: ENERJİSA faturası (841,6 kWh)
+await page.locator('#search').fill('enerj'); await page.keyboard.press('Enter'); await page.waitForTimeout(200); await page.locator('#search').fill('');
+log('kalemler:', (await page.locator('.line-row').allInnerTexts()).map((t) => t.replace(/\s+/g, ' ').trim()).slice(0, 3).join(' || '));
+await page.locator('.line-rule').first().click(); await page.waitForSelector('.modal.rules');
+log('kalemden kural taslağı:', (await page.locator('.cond-row').allInnerTexts()).map((t) => t.replace(/\s+/g, ' ').trim()).join(' || '), '| metin:', await page.locator('.cond-text').first().inputValue(), '| en az:', await page.locator('.cond-min').inputValue(), '| önizleme:', await preview());
+await page.keyboard.press('Escape');
 // 10) yenile → kurallar kalıcı, koşul çipleri
 await page.reload(); await page.waitForSelector('.inv-frame'); await open();
 log('yenileme sonrası:', (await rows()).length, 'kural |', (await page.locator('.cond-chip').allInnerTexts()).join(' / '));

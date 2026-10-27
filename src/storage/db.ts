@@ -240,6 +240,18 @@ class AppDb extends Dexie {
         } catch { /* kalem bilgisi boş kalır */ }
       });
     });
+    // v10: kalemlere özgün ad (ekranda gösterim için)
+    this.version(10).stores({}).upgrade(async (tx) => {
+      if (typeof DOMParser === 'undefined') return;
+      await tx.table('invoices').toCollection().modify((r: InvoiceRecord) => {
+        if (!r.xml || !r.lines || r.lines.length === 0 || r.lines[0].label !== undefined) return;
+        try {
+          const doc = new DOMParser().parseFromString(r.xml, 'application/xml');
+          r.lines = linesOf(doc.documentElement);
+          r.vatRates = vatRatesOf(doc.documentElement);
+        } catch { /* olduğu gibi kalır */ }
+      });
+    });
   }
 }
 

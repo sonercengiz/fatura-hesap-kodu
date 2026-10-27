@@ -41,8 +41,10 @@ export interface UblInvoice {
 
 /** Kural eşleştirmesi için kalem özeti */
 export interface LineInfo {
-  /** Kalem adı (Name, yoksa Description), küçük harf, tek boşluk */
+  /** Kalem adı (Name, yoksa Description), küçük harf, tek boşluk (eşleştirme için) */
   name: string;
+  /** Kalem adı özgün yazımıyla (ekran için); eski kayıtlarda yok */
+  label?: string;
   qty: number | null;
   unit: string;
   /** Kalemin KDV oranı (yüzde); yoksa null */
@@ -246,8 +248,10 @@ export function linesOf(root: Element | null, max = 500): LineInfo[] {
     const item = cac(ln, 'Item');
     const qty = child(ln, NS.cbc, 'InvoicedQuantity');
     const vats = kdvPercents(children(ln, NS.cac, 'TaxTotal'));
+    const label = (cbc(item, 'Name') || cbc(item, 'Description')).replace(/\s+/g, ' ').trim();
     return {
-      name: (cbc(item, 'Name') || cbc(item, 'Description')).toLocaleLowerCase('tr').replace(/\s+/g, ' ').trim(),
+      name: label.toLocaleLowerCase('tr'),
+      label,
       qty: toNum(text(qty)),
       unit: qty?.getAttribute('unitCode') ?? '',
       vat: vats.length ? vats[0] : null,

@@ -5,6 +5,7 @@ import { TYPE_LABELS, type Invoice } from '../core/types';
 import { fmtAmount } from './InvoiceCard';
 
 const KINDS = Object.keys(COND_LABELS) as CondKind[];
+const KIND_SHORT: Record<CondKind, string> = { vkn: 'VKN', name: 'Unvan', item: 'Kalem', vat: 'KDV', qty: 'Miktar', amount: 'Tutar', type: 'Tip' };
 
 /** Seçili faturadan koşul için uygun başlangıç değeri */
 function seedCond(kind: CondKind, inv: Invoice | null): Cond {
@@ -29,9 +30,9 @@ function CondRow({ c, i, total, inv, onChange, onRemove, inputRef }: { c: Cond; 
     <div class="cond-row">
       <div class="row-inline" style="justify-content:flex-start; gap:6px">
         <span class="cond-and">{i === 0 ? 'Eğer' : 've'}</span>
-        <select class="cond-kind" value={c.kind} onKeyDown={stop} onChange={(e) => { const k = (e.currentTarget as HTMLSelectElement).value as CondKind; setVatOther(false); onChange(seedCond(k, inv)); }} title="Koşul türü">
-          {KINDS.map((k) => <option value={k}>{COND_LABELS[k]}</option>)}
-        </select>
+        <div class="cond-kind" role="radiogroup" aria-label="Koşul türü">
+          {KINDS.map((k) => <button data-k={k} class={c.kind === k ? 'on' : ''} title={COND_LABELS[k]} onClick={() => { if (k === c.kind) return; setVatOther(false); onChange(seedCond(k, inv)); }}>{KIND_SHORT[k]}</button>)}
+        </div>
       </div>
       <div class="cond-inputs">
         {(c.kind === 'vkn' || c.kind === 'name' || c.kind === 'item') && (

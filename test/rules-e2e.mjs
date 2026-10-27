@@ -32,9 +32,9 @@ log('taslak:', await a.locator('.cond-text').inputValue(), '→', await a.locato
 await a.locator('.rule-code').press('Enter'); await a.waitForTimeout(300);
 log('toast:', await a.locator('.toast').innerText(), '| kural satırı:', await a.locator('.rule-row').count(), '| liste etiketi kural:', await a.locator('.row .bulk-tag:has-text("kural")').count());
 // 3) Unvan kuralı: "ceptaş" → 770.04 ; kalem kuralı: "tarife" → 770.05 (Turkcell kalemleri) — VKN önceliği Turkcell'de geçerli kalmalı
-await a.locator('.cond-kind').selectOption('name'); await a.locator('.cond-text').fill('ceptaş'); await a.locator('.rule-code').fill('770.04'); await a.locator('.rule-code').press('Enter'); await a.waitForTimeout(300);
+await a.locator('.cond-kind [data-k=\"name\"]').first().click(); await a.locator('.cond-text').fill('ceptaş'); await a.locator('.rule-code').fill('770.04'); await a.locator('.rule-code').press('Enter'); await a.waitForTimeout(300);
 log('unvan kuralı:', await a.locator('.toast').innerText());
-await a.locator('.cond-kind').selectOption('item'); await a.locator('.cond-text').fill('tarife'); await a.locator('.rule-code').fill('770.05'); await a.locator('.rule-code').press('Enter'); await a.waitForTimeout(300);
+await a.locator('.cond-kind [data-k=\"item\"]').first().click(); await a.locator('.cond-text').fill('tarife'); await a.locator('.rule-code').fill('770.05'); await a.locator('.rule-code').press('Enter'); await a.waitForTimeout(300);
 log('kalem kuralı:', await a.locator('.toast').innerText(), '| kurallar:', (await a.locator('.rule-row').allInnerTexts()).map((t) => t.replace(/\s+/g, ' ')).join(' || '));
 await a.keyboard.press('Escape'); await a.waitForTimeout(100);
 log('durum:', await a.locator('.progress').innerText());

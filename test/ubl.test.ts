@@ -44,8 +44,8 @@ describe('UBL-TR XML ayrıştırma', () => {
   it('kurallar için kalem özeti ve KDV oranları', () => {
     const u = parseUbl(read('ubl-sirket.xml'));
     expect(u.lines).toEqual([
-      { name: 'kalem defteri', qty: 10, unit: 'C62', vat: 20 },
-      { name: 'tükenmez kalem', qty: 50, unit: 'C62', vat: 20 },
+      { name: 'kalem defteri', label: 'Kalem defteri', qty: 10, unit: 'C62', vat: 20 },
+      { name: 'tükenmez kalem', label: 'Tükenmez kalem', qty: 50, unit: 'C62', vat: 20 },
     ]);
     expect(u.vatRates).toEqual([20]);
   });
