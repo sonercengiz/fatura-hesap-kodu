@@ -16,7 +16,7 @@ for (const c of ['770.01', '770.01', '770.01']) { await a.keyboard.press('/'); a
 await a.locator('.slot').nth(0).hover(); await a.locator('.slot').nth(0).locator('.slot-icon.edit').click(); await a.keyboard.type('770.01'); await a.keyboard.press('Enter'); await a.waitForTimeout(150);
 await a.locator('button[title="Ayarlar"]').click();
 await a.locator('input[placeholder="ABC LTD"]').fill('Alfa AŞ');
-await a.locator('.acc-text').fill('770.01 Kırtasiye'); await a.locator('button:has-text("Listeye ekle")').click(); await a.waitForTimeout(150);
+await a.locator('button:has-text("Hesap kodu listesi")').click(); await a.locator('.acc-text').fill('770.01 Kırtasiye'); await a.locator('button:has-text("Listeye ekle")').click(); await a.waitForTimeout(150);
 await a.keyboard.press('Escape');
 console.log('A firması: slot Q =', (await a.locator('.slot').nth(0).innerText()).replace(/\n/g,' '), '| parti:', await a.locator('.batch-select option:checked').innerText(), '| liste kodu:', await a.locator('.firm-select option:checked').innerText());
 // Yeni firma (prompt → "Beta Ltd")
@@ -34,7 +34,7 @@ console.log('Alfa geri: slot Q =', (await a.locator('.slot').nth(0).innerText())
 const [dl0] = await Promise.all([a.waitForEvent('download'), a.keyboard.press('F1')]);
 console.log('çıktı adı:', dl0.suggestedFilename());
 // Dışa aktar
-await a.locator('button[title="Ayarlar"]').click();
+await a.locator('button[title="Ayarlar"]').click(); await a.locator('.settings-tabs button:has-text("Yedek")').click();
 const [dl] = await Promise.all([a.waitForEvent('download'), a.locator('button:has-text("Dışa aktar (.json)")').click()]);
 const out = `${SCR}/ws2.json`; await dl.saveAs(out);
 const j = JSON.parse(readFileSync(out, 'utf8'));
@@ -47,7 +47,7 @@ console.log('reload sonrası firma:', await a.locator('.firm-select option:check
 // --- Temiz profil B: v2 yedeği içe aktar, sonra eski v1 yedeği içe aktar
 const b = await mk();
 await b.waitForSelector('.firm-select');
-await b.locator('button[title="Ayarlar"]').click();
+await b.locator('button[title="Ayarlar"]').click(); await b.locator('.settings-tabs button:has-text("Yedek")').click();
 await b.locator('input[accept=".json,application/json"]').setInputFiles(out); await b.waitForTimeout(800);
 console.log('B içe aktarma toast:', await b.locator('.toast').innerText().catch(() => '-'));
 await b.keyboard.press('Escape');
@@ -57,13 +57,13 @@ await b.locator('.firm-select').selectOption(betaId); await b.waitForTimeout(400
 console.log('B Beta: slot W =', (await b.locator('.slot').nth(1).innerText()).replace(/\n/g,' '), '| atandı:', await b.locator('.progress').innerText());
 const legacy = `${SCR}/ws.json`;
 if (existsSync(legacy)) {
-  await b.locator('button[title="Ayarlar"]').click();
+  await b.locator('button[title="Ayarlar"]').click(); await b.locator('.settings-tabs button:has-text("Yedek")').click();
   await b.locator('input[accept=".json,application/json"]').setInputFiles(legacy); await b.waitForTimeout(800);
   console.log('B eski (v1) yedek:', await b.locator('.toast').innerText().catch(() => '-'), '| firma sayısı:', (await b.locator('.firm-select option').count()) - 1);
   await b.keyboard.press('Escape');
 }
 // Firma silme (Beta) → Alfa'ya döner
-await b.locator('button[title="Ayarlar"]').click();
+await b.locator('button[title="Ayarlar"]').click(); await b.locator('.settings-tabs button:has-text("Firma")').click();
 await b.locator('button:has-text("Firmayı sil")').click(); await b.locator('.modal.dialog button.danger').click(); await b.waitForTimeout(500);
 console.log('silme sonrası firmalar:', (await b.locator('.firm-select option').allInnerTexts()).join(' | '));
 console.log('HATALAR:', errors.length ? errors : 'yok');

@@ -401,3 +401,13 @@ tr.iss-chart td.code-col { color: var(--warn); text-decoration: underline wavy v
 .dialog-backdrop { z-index: 40; }
 .modal.dialog { width: min(440px, 92vw); }
 .dialog-msg { line-height: 1.5; }
+
+/* ---- Ayarlar (sekmeli) ---- */
+.modal.settings { width: min(820px, 94vw); height: min(640px, 90vh); }
+.settings-body { display: grid; grid-template-columns: 150px 1fr; min-height: 0; flex: 1; }
+.settings-tabs { display: flex; flex-direction: column; gap: 2px; padding: 10px 8px; border-right: 1px solid var(--line); }
+.settings-tabs button { text-align: left; border: 0; background: transparent; padding: 8px 12px; border-radius: 8px; }
+.settings-tabs button.on { background: var(--s0); color: var(--s0i); font-weight: 600; }
+.settings-pane { overflow: auto; }
+.settings-links { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+@media (max-width: 700px) { .settings-body { grid-template-columns: 1fr; } .settings-tabs { flex-direction: row; flex-wrap: wrap; border-right: none; border-bottom: 1px solid var(--line); } }

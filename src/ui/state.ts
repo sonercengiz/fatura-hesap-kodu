@@ -33,6 +33,9 @@ export const recentCodes = signal<string[]>([]);
 export const toast = signal<string | null>(null);
 export const previewOpen = signal(false);
 export const settingsOpen = signal(false);
+/** Ayarlar'da son açık sekme ve hesap kodu listesi penceresi */
+export const settingsTab = signal<'firm' | 'batch' | 'output' | 'view' | 'backup' | 'keys'>('firm');
+export const accountsOpen = signal(false);
 export const guideOpen = signal(false);
 /** Alt çubukta düzenlenen kısayol yuvası ve yazılan metin (global tuş yakalayıcı da kullanır) */
 export const editingSlot = signal<number | null>(null);

@@ -54,7 +54,7 @@ await page.keyboard.press('Escape');
 const eylul = await page.locator('.batch-select option:has-text("Eylül")').getAttribute('value');
 await page.locator('.batch-select').selectOption(eylul); await page.waitForTimeout(400);
 await page.locator('.toolbar button:has-text("Kurallar")').click(); await page.waitForSelector('.modal.rules'); await page.screenshot({ path: `${S}/shots/scope-eylul.png` }); await page.keyboard.press('Escape');
-await page.locator('button[title="Ayarlar"]').click(); await page.locator('button:has-text("Dönemi sil")').click(); await page.locator('.modal.dialog button.danger').click(); await page.waitForTimeout(500);
+await page.locator('button[title="Ayarlar"]').click(); await page.locator('.settings-tabs button:has-text("Dönem")').click(); await page.locator('button:has-text("Dönemi sil")').click(); await page.locator('.modal.dialog button.danger').click(); await page.waitForTimeout(500);
 await page.locator('.toolbar button:has-text("Kurallar")').click(); await page.waitForSelector('.modal.rules');
 log('Eylül silindi → kalan kural:', (await page.locator('.rule-row').allInnerTexts()).map((t) => t.replace(/\s+/g, ' ')).join(' || '), '| toplam (diğer parti notu var mı):', await page.locator('.form > .muted.small').last().innerText());
 log('HATALAR:', errors.length ? errors : 'yok');

@@ -116,14 +116,13 @@ await page.waitForTimeout(300);
 log('çıkarma:', before, '→', await page.locator('.list .row').count());
 
 // 9) Yeni parti + 3 XML; parti listesi
-await page.locator('.batch-select').selectOption('__new');
-await page.waitForTimeout(300);
+await page.locator('.batch-select').selectOption('__new'); await page.waitForSelector('.modal.dialog input'); await page.locator('.modal.dialog input').fill('Deneme Ltd'); await page.keyboard.press('Enter'); await page.waitForTimeout(300);
 await page.locator('input[accept*=".zip"]').setInputFiles(files.slice(10, 13));
 await page.waitForFunction(() => !document.querySelector('.busy'));
 log('yeni parti:', await page.locator('.batch-select option:checked').innerText(), '| satır', await page.locator('.list .row').count(), '| toplam parti', (await page.locator('.batch-select option').count()) - 1);
 
 // 10) Çalışma alanı dışa aktar ve boyut
-await page.locator('button[title="Ayarlar"]').click();
+await page.locator('button[title="Ayarlar"]').click(); await page.locator('.settings-tabs button:has-text("Yedek")').click();
 const [dl2] = await Promise.all([page.waitForEvent('download'), page.locator('button', { hasText: 'Dışa aktar (.json)' }).click()]);
 const out2 = `${S}/${dl2.suggestedFilename()}`; await dl2.saveAs(out2);
 const ws2 = JSON.parse(readFileSync(out2, 'utf8'));

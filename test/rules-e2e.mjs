@@ -62,7 +62,7 @@ const [dl] = await Promise.all([a.waitForEvent('download'), a.locator('button:ha
 const rulesFile = `${S}/${dl.suggestedFilename()}`; await dl.saveAs(rulesFile);
 log('kural dosyası:', dl.suggestedFilename(), JSON.parse(readFileSync(rulesFile, 'utf8')).rules.length, 'kural');
 await a.keyboard.press('Escape');
-await a.locator('button[title="Ayarlar"]').click();
+await a.locator('button[title="Ayarlar"]').click(); await a.locator('.settings-tabs button:has-text("Yedek")').click();
 const [dl2] = await Promise.all([a.waitForEvent('download'), a.locator('button:has-text("Dışa aktar (.json)")').click()]);
 const ws = `${S}/ws-rules.json`; await dl2.saveAs(ws);
 log('yedekte kural:', JSON.parse(readFileSync(ws, 'utf8')).rules.length);
@@ -80,7 +80,7 @@ await b.locator(inp).setInputFiles(turkcell.slice(0, 3)); await b.waitForFunctio
 log('B yükleme:', await b.locator('.toast').innerText(), '|', await b.locator('.progress').innerText());
 // 10) Temiz profil C: çalışma alanı yedeği → kurallar gelir
 const c = await mk(); await c.waitForSelector('.welcome');
-await c.locator('button[title="Ayarlar"]').click();
+await c.locator('button[title="Ayarlar"]').click(); await c.locator('.settings-tabs button:has-text("Yedek")').click();
 await c.locator('input[accept=".json,application/json"]').setInputFiles(ws); await c.waitForTimeout(800);
 log('C yedek:', await c.locator('.toast').innerText());
 await c.keyboard.press('Escape');

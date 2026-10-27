@@ -18,6 +18,7 @@ import { MoveModal } from './MoveModal';
 import { TemplateModal } from './TemplateModal';
 import { filesFromDataTransfer } from './dnd';
 import { DialogModal } from './DialogModal';
+import { AccountsModal } from './AccountsModal';
 import { dialog } from './dialog';
 
 export function App() {
@@ -100,8 +101,8 @@ export function App() {
         if (e.key === 'Escape' || e.key === 'Enter') S.importReport.value = null;
         return;
       }
-      if (S.moveOpen.value || S.templateOpen.value) {
-        if (e.key === 'Escape') { S.moveOpen.value = false; S.templateOpen.value = false; }
+      if (S.moveOpen.value || S.templateOpen.value || S.accountsOpen.value) {
+        if (e.key === 'Escape') { S.moveOpen.value = false; S.templateOpen.value = false; S.accountsOpen.value = false; }
         return;
       }
       if (S.previewOpen.value || S.settingsOpen.value || S.guideOpen.value || S.rulesOpen.value) {
@@ -282,6 +283,7 @@ export function App() {
       {S.importReport.value && <ImportReportModal />}
       {S.moveOpen.value && <MoveModal />}
       {S.templateOpen.value && <TemplateModal />}
+      {S.accountsOpen.value && <AccountsModal />}
       {dialog.value && <DialogModal />}
       <PrintRoot />
       {S.busy.value && <div class="busy">{S.busy.value}</div>}

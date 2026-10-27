@@ -14,7 +14,7 @@ await page.waitForSelector('.inv-frame');
 const no = () => page.locator('.detail-row b').first().innerText();
 const code = () => page.locator('.detail-code b').innerText();
 // Liste yükle (metinle)
-await page.locator('button[title="Ayarlar"]').click();
+await page.locator('button[title="Ayarlar"]').click(); await page.locator('button:has-text("Hesap kodu listesi")').click();
 await page.locator('.acc-text').fill('770.01 Kırtasiye giderleri\n770.02 Temizlik giderleri\n760.02 Kargo ve nakliye\n153 Ticari mallar\n191 İndirilecek KDV');
 await page.locator('button:has-text("Listeye ekle")').click();
 await page.waitForTimeout(200);
@@ -61,7 +61,7 @@ console.log('toplu geri alındı → toplu satır:', await page.locator('.row.bu
 await page.keyboard.press('Control+Home');
 console.log('ipucu satırı:', await page.locator('button.hint').innerText().catch(() => '(yok)'));
 // export json'da accounts var mı
-await page.locator('button[title="Ayarlar"]').click();
+await page.locator('button[title="Ayarlar"]').click(); await page.locator('.settings-tabs button:has-text("Yedek")').click();
 const [dl] = await Promise.all([page.waitForEvent('download'), page.locator('button:has-text("Dışa aktar (.json)")').click()]);
 const p = `${SCR}/ws.json`; await dl.saveAs(p);
 const j = JSON.parse((await import('node:fs')).readFileSync(p, 'utf8'));
