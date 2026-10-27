@@ -423,3 +423,11 @@ tr.iss-chart td.code-col { color: var(--warn); text-decoration: underline wavy v
 .g-try b { display: block; margin-bottom: 4px; } .g-try ol { margin: 0; padding-left: 20px; } .g-try li { margin: 3px 0; }
 .guide-toc-group { margin: 10px 10px 2px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
 .guide-toc-group:first-child { margin-top: 2px; }
+/* Rehber: yatay taşma olmasın; tablolarda satır kaydırma */
+.guide-body { overflow-x: hidden; }
+.guide-body table { white-space: normal; }
+.g-table { table-layout: fixed; } .g-table td { white-space: normal; overflow-wrap: anywhere; }
+.g-table td:first-child { white-space: normal; width: 34%; }
+.keys-table td:last-child { white-space: normal; }
+.g-term-pop { left: auto; right: 0; }
+.g-fig img, .g-flow, .g-try, .g-tip, .g-warn { max-width: 100%; box-sizing: border-box; }
