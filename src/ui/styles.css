@@ -413,3 +413,13 @@ tr.iss-chart td.code-col { color: var(--warn); text-decoration: underline wavy v
 @media (max-width: 700px) { .settings-body { grid-template-columns: 1fr; } .settings-tabs { flex-direction: row; flex-wrap: wrap; border-right: none; border-bottom: 1px solid var(--line); } }
 
 .store-list { max-height: 30vh; } .store-row { gap: 10px; } .store-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---- Rehber: terim balonları, deneyin kutusu, içindekiler grupları ---- */
+.g-term { position: relative; border-bottom: 1px dotted var(--accent); cursor: help; outline: none; }
+.g-term-pop { display: none; position: absolute; left: 0; bottom: calc(100% + 6px); z-index: 5; width: 320px; max-width: 70vw; background: var(--ink); color: var(--bg); padding: 8px 10px; border-radius: 8px; font-size: 12.5px; line-height: 1.45; font-weight: 400; box-shadow: 0 6px 20px rgba(0,0,0,.25); }
+.g-term:hover .g-term-pop, .g-term:focus .g-term-pop { display: block; }
+:root[data-theme="dark"] .g-term-pop { background: #e6e8ec; color: #26282c; }
+.g-try { margin: 12px 0; padding: 10px 14px; border-radius: 10px; background: var(--s2); color: var(--s2i); }
+.g-try b { display: block; margin-bottom: 4px; } .g-try ol { margin: 0; padding-left: 20px; } .g-try li { margin: 3px 0; }
+.guide-toc-group { margin: 10px 10px 2px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.guide-toc-group:first-child { margin-top: 2px; }

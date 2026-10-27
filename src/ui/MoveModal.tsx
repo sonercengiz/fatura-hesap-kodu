@@ -40,7 +40,7 @@ export function MoveModal() {
             <>
               <fieldset>
                 <legend>Ne taşınsın</legend>
-                <label class="radio"><input type="radio" name="mscope" checked={scope === 'batch'} onChange={() => setScope('batch')} /><span>"{b.name}" partisinin tamamı ({S.invoices.value.length} fatura, atamaları ve döneme özel kurallarıyla)</span></label>
+                <label class="radio"><input type="radio" name="mscope" checked={scope === 'batch'} onChange={() => setScope('batch')} /><span>"{b.name}" döneminin tamamı ({S.invoices.value.length} fatura, atamaları ve döneme özel kurallarıyla)</span></label>
                 <label class="radio"><input type="radio" name="mscope" checked={scope === 'selected'} disabled={sel.size === 0} onChange={() => setScope('selected')} /><span>Seçili faturalar ({sel.size}) atamalarıyla</span></label>
                 {sel.size === 0 && <div class="muted small">Belirli faturaları taşımak için önce listeden seçin (☑ Seç, Shift/Ctrl+tık).</div>}
               </fieldset>

@@ -5,7 +5,7 @@ export function fmtAmount(n: number | null, cur: string) {
   return `${n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${cur}`;
 }
 
-/** XML'i olmayan (eski Excel partisinden gelen) faturalar için büyük puntolu kart. */
+/** XML'i olmayan (eski Excel döneminden gelen) faturalar için büyük puntolu kart. */
 export function InvoiceCard({ inv }: { inv: Invoice }) {
   return (
     <div class="card">

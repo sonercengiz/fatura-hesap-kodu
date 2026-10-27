@@ -21,7 +21,7 @@ export function SettingsModal() {
   const mb = (n: number | null) => (n == null ? '?' : `${(n / 1048576).toFixed(n < 10 * 1048576 ? 1 : 0)} MB`);
   return (
     <div class="modal-backdrop" onClick={close}>
-      <div class="modal settings" onClick={(e) => e.stopPropagation()}>
+      <div class="modal settings" onClick={(e) => e.stopPropagation()} onKeyDownCapture={(e) => { if (e.key === 'Escape') { e.stopPropagation(); e.preventDefault(); close(); } }}>
         <div class="modal-head">
           <b>Ayarlar</b>
           <span class="muted">{S.firm.value.name}</span>

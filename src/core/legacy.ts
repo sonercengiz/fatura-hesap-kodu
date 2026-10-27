@@ -1,6 +1,6 @@
 import type { CellValue } from './types';
 
-/** Eski (Excel tabanlı) partilerin sayfa yapısı; yalnızca v6 geçişi ve eski yedekler için. */
+/** Eski (Excel tabanlı) dönemlerin sayfa yapısı; yalnızca v6 geçişi ve eski yedekler için. */
 export interface EdmSheet {
   sheetName: string;
   headers: string[];

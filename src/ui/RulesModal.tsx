@@ -56,7 +56,7 @@ export function RulesModal() {
         <div class="form">
           <div class="muted small">
             Bu firmada tekrar eden satıcılar için kod sabitleyin: belirteç uyan her fatura <b>yüklenir yüklenmez</b> o kodu alır ("kural" etiketi, Ctrl+Z ile geri alınır).
-            Öncelik: VKN/TCKN › unvan › kalem adı. <b>Kalıcı</b> kural firmanın her partisinde, <b>döneme özel</b> kural yalnızca o ayda geçerlidir ve kalıcının önüne geçer. Kurallar yalnızca bu tarayıcıda saklanır; yedeğe girer, kalıcılar dosya olarak paylaşılabilir.
+            Öncelik: VKN/TCKN › unvan › kalem adı. <b>Kalıcı</b> kural firmanın her döneminde, <b>döneme özel</b> kural yalnızca o ayda geçerlidir ve kalıcının önüne geçer. Kurallar yalnızca bu tarayıcıda saklanır; yedeğe girer, kalıcılar dosya olarak paylaşılabilir.
           </div>
           <div class="scope-seg" role="radiogroup" aria-label="Kural kapsamı">
             <button class={scope === 'firm' ? 'on' : ''} onClick={() => setScope('firm')} title="Firmanın bütün dönemlerinde geçerli">Kalıcı · {S.firm.value.name}</button>
@@ -86,7 +86,7 @@ export function RulesModal() {
               return (
               <div class={`acc-row rule-row ${r.enabled ? '' : 'off'} ${r.batchId ? 'scoped' : ''}`}>
                 <input type="checkbox" checked={r.enabled} title={r.enabled ? 'Kuralı kapat' : 'Kuralı aç'} onChange={(e) => S.updateRule(r.id, { enabled: (e.currentTarget as HTMLInputElement).checked })} />
-                <span class="rule-kind">{r.batchId ? <span class="bulk-tag scope-tag" title={`Yalnızca ${batch?.name ?? 'bu dönem'} partisinde geçerli`}>bu dönem</span> : null}{RULE_KIND_LABELS[r.kind]}</span>
+                <span class="rule-kind">{r.batchId ? <span class="bulk-tag scope-tag" title={`Yalnızca ${batch?.name ?? 'bu dönem'} döneminde geçerli`}>bu dönem</span> : null}{RULE_KIND_LABELS[r.kind]}</span>
                 <span class="rule-pat" title={r.pattern}>{r.pattern}{ov && ov.count > 0 && <span class="override-note" title={`Bu dönemde ${ov.count} faturada kalıcı kuralın (${ov.codes.join(', ')}) yerine geçiyor`}> · kalıcı {ov.codes.join(', ')} yerine</span>}</span>
                 <span class="muted small rule-hits" title="Bu dönemde uyan fatura">{S.batchRec.value ? `${hits(r)} fatura` : ''}</span>
                 <input class="acc-name rule-code-edit" value={r.code} title="Hesap kodu" onKeyDown={(e) => e.stopPropagation()} onChange={(e) => { const v = (e.currentTarget as HTMLInputElement).value.trim(); if (v) S.updateRule(r.id, { code: v }); }} />

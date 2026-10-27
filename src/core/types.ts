@@ -2,7 +2,7 @@ import { DEFAULT_OUTPUT_TEMPLATE, type OutputTemplate } from './excel/template';
 
 export type CellValue = string | number | boolean | null;
 
-/** Ekranda ve çıktıda kullanılan fatura özeti; XML'den (eski partilerde Excel satırından) türetilir. */
+/** Ekranda ve çıktıda kullanılan fatura özeti; XML'den (eski dönemlerde Excel satırından) türetilir. */
 export interface Invoice {
   no: string;
   /** Döneme ekleniş sırası (0 tabanlı) */

@@ -1,18 +1,18 @@
+// Rehber görsellerini HAYALİ demo veriyle üretir. Önce: node test/demo/make-demo.mjs <demo klasörü>; uygulama 5179'da açık olmalı.
 import { chromium } from 'playwright';
-import { readdirSync, rmSync, mkdirSync } from 'node:fs';
+import { readdirSync, rmSync, mkdirSync, writeFileSync, unlinkSync } from 'node:fs';
 
 const URL = 'http://localhost:5179/';
-const SCR = '/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/04627602-e09f-44db-bd85-15ef9828baa0/scratchpad';
-const OUT = '/Users/sonercengiz/Documents/scc/fatura-hesap-kodu/public/guide';
-const XLSX_PATH = `${SCR}/demo/EDM Gelen Faturalar Ekim 2026.xlsx`;
-const PDF_DIR = `${SCR}/demo/pdfs`;
+const DEMO = process.env.DEMO_DIR || '/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/aa071f3a-6270-4292-9e7a-d102afeef53e/scratchpad/demo';
+const OUT = process.env.OUT_DIR || '/Users/sonercengiz/Documents/scc/fatura-hesap-kodu/public/guide';
 rmSync(OUT, { recursive: true, force: true }); mkdirSync(OUT, { recursive: true });
+const XMLS = readdirSync(`${DEMO}/xml`).filter((f) => f.endsWith('.xml') && !f.startsWith('IRS')).sort().map((f) => `${DEMO}/xml/${f}`);
+const W = 1440, H = 840;
 
 const browser = await chromium.launch({ channel: 'chrome', headless: true });
-const ctx = await browser.newContext({ viewport: { width: 1440, height: 840 }, deviceScaleFactor: 1.5 });
+const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1.5 });
 const page = await ctx.newPage();
 await page.addInitScript(() => { try { localStorage.setItem('guideSeen', '1'); } catch {} });
-page.on('dialog', (d) => d.accept('Örnek Ltd'));
 
 async function annotate(items) {
   const boxes = [];
@@ -43,166 +43,160 @@ async function annotate(items) {
 }
 const clear = () => page.evaluate(() => document.querySelectorAll('.__c').forEach((e) => e.remove()));
 const shot = (name, opts = {}) => page.screenshot({ path: `${OUT}/${name}`, ...opts });
-const clipOf = async (sel, pad = 8, extra = {}) => { const b = await page.locator(sel).first().boundingBox(); return { x: Math.max(0, b.x - pad), y: Math.max(0, b.y - pad), width: Math.min(1440 - Math.max(0, b.x - pad), b.width + pad * 2), height: Math.min(840 - Math.max(0, b.y - pad), b.height + pad * 2), ...extra }; };
+const clipOf = async (sel, pad = 8, extra = {}) => { const b = await page.locator(sel).first().boundingBox(); return { x: Math.max(0, b.x - pad), y: Math.max(0, b.y - pad), width: Math.min(W - Math.max(0, b.x - pad), b.width + pad * 2), height: Math.min(H - Math.max(0, b.y - pad), b.height + pad * 2), ...extra }; };
 const noToast = () => page.locator('.toast').waitFor({ state: 'hidden', timeout: 6000 }).catch(() => {});
 const wait = (ms) => page.waitForTimeout(ms);
-import { writeFileSync, unlinkSync } from 'node:fs';
-/** İki görseli yan yana "Önce → Sonra" olarak birleştirir */
+const busyDone = () => page.waitForFunction(() => !document.querySelector('.busy'));
+const esc = async () => { await page.keyboard.press('Escape'); await wait(150); };
 async function compose(outName, left, right, labels = ['Önce', 'Sonra']) {
   const html = `<!doctype html><meta charset="utf-8"><body style="margin:0;background:#fff;font:600 16px system-ui"><div style="display:flex;flex-direction:column;gap:10px;padding:12px;width:1416px">
   <figure style="margin:0"><div style="margin:0 0 6px;color:#6b7280">${labels[0]}</div><img src="${left}" style="width:100%;display:block;border:1px solid #e3e6ea;border-radius:8px"></figure>
   <div style="text-align:center;font-size:34px;line-height:1;color:#2f6fed">↓</div>
   <figure style="margin:0"><div style="margin:0 0 6px;color:#6b7280">${labels[1]}</div><img src="${right}" style="width:100%;display:block;border:1px solid #e3e6ea;border-radius:8px"></figure></div></body>`;
   const f = `${OUT}/__c.html`; writeFileSync(f, html);
-  const p2 = await ctx.newPage(); await p2.setViewportSize({ width: 1440, height: 1400 }); await p2.goto('file://' + f); await p2.waitForTimeout(300);
-  const b = await p2.locator('body > div').boundingBox(); await p2.screenshot({ path: `${OUT}/${outName}`, clip: { x: 0, y: 0, width: 1440, height: Math.ceil(b.height + 24) } });
+  const p2 = await ctx.newPage(); await p2.setViewportSize({ width: W, height: 1400 }); await p2.goto('file://' + f); await p2.waitForTimeout(300);
+  const b = await p2.locator('body > div').boundingBox(); await p2.screenshot({ path: `${OUT}/${outName}`, clip: { x: 0, y: 0, width: W, height: Math.ceil(b.height + 24) } });
   await p2.close(); unlinkSync(f);
 }
+const up = 'input[accept*=".zip"]';
+const manual = async (code) => { await page.keyboard.press('/'); await page.waitForSelector('.manual-input'); await page.keyboard.type(code); await page.keyboard.press('Enter'); await wait(150); };
+const nameDialog = async (text) => { await page.waitForSelector('.modal.dialog input'); await page.locator('.modal.dialog input').fill(text); await page.keyboard.press('Enter'); await wait(300); };
 
-await page.goto(URL);
-await page.waitForSelector('text=EDM fatura listesini yükleyin');
-await annotate([{ sel: 'button:has-text("Excel yükle")', n: 1, pos: 'bl' }, { sel: '.welcome', n: 2, pad: -8, pos: 'in' }]);
-await shot('01-karsilama.png');
-await clear();
+// ---------- 0. Karşılama ----------
+await page.goto(URL); await page.waitForSelector('.welcome');
+// firma adı
+await page.locator('button[title="Ayarlar"]').click(); await page.locator('input[placeholder="ABC LTD"]').fill('Deneme Yayıncılık'); await esc();
+await annotate([{ sel: '.toolbar button:has-text("Yükle")', n: 1, pad: 6 }, { sel: 'main.welcome', n: 2, pad: -20, pos: 'in' }]);
+await shot('01-karsilama.png'); await clear();
+await annotate([{ sel: '.firm-select', n: 1 }, { sel: '.batch-select', n: 2 }]);
+await shot('05-firma-donem.png', { clip: await clipOf('.toolbar', 6, { width: 760 }) }); await clear();
+await page.locator('.firm-select').selectOption('__new'); await page.waitForSelector('.modal.dialog'); await page.locator('.modal.dialog input').fill('Deneme Yayıncılık');
+await shot('05b-yeni-firma.png', { clip: await clipOf('.modal.dialog', 24) }); await esc();
 
-// --- veri hazırlığı
-await page.locator('input[accept=".xlsx,.xls"]').setInputFiles(XLSX_PATH);
-await page.waitForSelector('.card-no');
-await page.locator('button[title="Ayarlar"]').click();
-await page.locator('input[placeholder="ABC LTD"]').fill('Örnek Ltd');
-await page.locator('.acc-text').fill('770.01 Kırtasiye giderleri\n770.02 Temizlik giderleri\n770.03 Elektrik giderleri\n770.04 Haberleşme giderleri\n760.02 Kargo ve nakliye\n153 Ticari mallar\n191 İndirilecek KDV\n320.01 Satıcılar');
-await page.locator('button:has-text("Listeye ekle")').click();
-await wait(200);
-await page.keyboard.press('Escape'); await noToast();
-// geçmiş: 760.02 x3, 770.01 x3, 153, 770.03
-for (const c of ['760.02', '760.02', '760.02', '770.01', '770.01', '770.01', '153', '770.03']) { await page.keyboard.press('/'); await page.waitForSelector('.manual-input'); await page.keyboard.type(c); await page.keyboard.press('Enter'); await wait(100); }
-// 15 yedek şeridi (yedek hiç alınmadı, atama var)
-await page.waitForSelector('.backup-hint'); await noToast();
-await annotate([{ sel: '.backup-hint', n: 1, pad: -2, pos: 'tr' }]);
-await shot('15-yedek-serit.png', { clip: { x: 0, y: 0, width: 1440, height: 100 } }); await clear();
-await page.locator('.backup-hint button:has-text("Bugün değil")').click(); await wait(100);
-// Q ← 760.02 (hayaletten), E ← 153 (✎), A ← 770.03 (✎); W,S,D boş (hayalet 770.01)
-await page.locator('.slot').nth(0).hover(); await page.locator('.slot').nth(0).locator('.slot-icon.edit').click(); await page.keyboard.type('770.01'); await page.keyboard.press('Enter'); await wait(150);
-for (const [i, c] of [[2, '153'], [3, '770.03']]) { await page.locator('.slot').nth(i).hover(); await page.locator('.slot').nth(i).locator('.slot-icon.edit').click(); await page.keyboard.type(c); await page.keyboard.press('Enter'); await wait(150); }
-await page.mouse.move(700, 300); await noToast();
-await page.keyboard.press('Control+Home'); await wait(200);
-
-// 00 firma menüsü (açık menü çizilemez; menü + yeni firma vurgusu)
-await annotate([{ sel: '.firm-select', n: 1, pos: 'bl' }]);
-await shot('00-firma.png', { clip: { x: 0, y: 0, width: 760, height: 70 } }); await clear();
-await page.locator('button[title="Ayarlar"]').click(); await page.waitForSelector('.form'); await wait(150);
-await shot('00-firma-ayar.png', { clip: await clipOf('fieldset:has(legend:has-text("Firma:"))', 10) });
-await page.keyboard.press('Escape'); await wait(100);
-
-// 02 ekran (kart görünümü, PDF yokken)
-await annotate([{ sel: '.toolbar', n: 1, pad: -2, pos: 'in' }, { sel: '.viewer', n: 2, pad: -2, pos: 'in' }, { sel: '.side', n: 3, pad: -2, pos: 'in' }, { sel: '.bar', n: 4, pad: -2, pos: 'in' }]);
+// ---------- 1. Yükleme + ekran ----------
+await page.locator(up).setInputFiles([...XMLS, `${DEMO}/xml/IRS2026000000001 - irsaliye.xml`, `${DEMO}/bozuk-fatura.xml`]);
+await page.waitForSelector('.modal:has-text("Yükleme sonucu")'); await wait(200);
+await shot('04-yukleme-sonucu.png', { clip: await clipOf('.modal:has-text("Yükleme sonucu")', 24) }); await esc();
+await page.waitForSelector('.inv-frame'); await busyDone(); await noToast();
+await page.waitForFunction(() => document.querySelector('.inv-frame')?.contentDocument?.body?.innerText?.length > 50);
+await annotate([{ sel: '.toolbar', n: 1, pad: 2 }, { sel: '.viewer', n: 2, pad: -6, pos: 'in' }, { sel: '.side', n: 3, pad: -6, pos: 'in' }, { sel: '.bar', n: 4, pad: 2 }]);
 await shot('02-ekran.png'); await clear();
+await annotate([{ sel: '.firm-select', n: 1 }, { sel: '.batch-select', n: 2 }, { sel: '.toolbar button:has-text("Yükle")', n: 3 }, { sel: '.progress', n: 4 }, { sel: '.layout-btn', n: 5 }, { sel: '.toolbar button:has-text("Önizle")', n: 6 }, { sel: '.toolbar button:has-text("Excel üret")', n: 7 }, { sel: '.toolbar button:has-text("Yazdır")', n: 8 }, { sel: '.toolbar button:has-text("Kurallar")', n: 9 }, { sel: '.toolbar button:has-text("Rehber")', n: 10 }, { sel: '.theme-btn', n: 11 }, { sel: 'button[title="Ayarlar"]', n: 12 }]);
+await shot('03-ustcubuk.png', { clip: await clipOf('.toolbar', 6, { height: 72 }) }); await clear();
 
-// 03 üst çubuk
-await annotate([
-  { sel: '.firm-select', n: 1, pos: 'bl' }, { sel: '.batch-select', n: 2, pos: 'bl' }, { sel: 'button:has-text("Excel yükle")', n: 3, pos: 'bl' }, { sel: 'button:has-text("PDF ekle")', n: 4, pos: 'bl' }, { sel: 'button:has-text("Klasör ekle")', n: 5, pos: 'bl' },
-  { sel: '.progress', n: 6, pos: 'bl' }, { sel: 'button:has-text("↶")', n: 7, pos: 'bl' }, { sel: 'button[title="F2"]', n: 8, pos: 'bl' }, { sel: 'button[title="F5"]', n: 9, pos: 'bl' },
-  { sel: 'button[title="F1"]', n: 10, pos: 'bl' }, { sel: 'button[title="Kullanım rehberi"]', n: 11, pos: 'bl' }, { sel: '.theme-btn', n: 12, pos: 'bl' }, { sel: 'button[title="Ayarlar"]', n: 13, pos: 'bl' },
-]);
-await shot('03-ustcubuk.png', { clip: { x: 0, y: 0, width: 1440, height: 70 } }); await clear();
+// ---------- 2. Panel ve alt çubuk ----------
+await annotate([{ sel: '.detail', n: 1, pad: -4, pos: 'in' }, { sel: '.detail-code', n: 2, pos: 'tr' }, { sel: '.list-controls', n: 3 }, { sel: '#search', n: 4 }, { sel: '.list', n: 5, pad: -6, pos: 'in' }, { sel: '.files', n: 6 }]);
+await shot('06-panel.png', { clip: await clipOf('.side', 6) }); await clear();
+await annotate([{ sel: '.slots', n: 1, pad: 2 }, { sel: '.status.empty', n: 2 }, { sel: '.progress-card', n: 3 }, { sel: '.manual-box', n: 4 }]);
+await shot('07-kisayol.png', { clip: await clipOf('.bar', 4) }); await clear();
+// yuvaya kod yaz: Q = 770.03
+await page.locator('.slot').nth(0).hover(); await page.locator('.slot').nth(0).locator('.slot-icon.edit').click(); await wait(100);
+await page.keyboard.type('770.03');
+await annotate([{ sel: '.slot.editing', n: 1 }]);
+await shot('07a-yuva-yaz.png', { clip: await clipOf('.bar', 4) }); await clear();
+await page.keyboard.press('Enter'); await wait(200); await noToast();
+// önce/sonra: Q ile atama
+await page.keyboard.press('Home'); await wait(150);
+await shot('__before.png', { clip: await clipOf('.bar', 4) });
+await page.keyboard.press('q'); await wait(250); await page.keyboard.press('ArrowLeft'); await wait(250); await noToast();
+await annotate([{ sel: '.status.done', n: 1 }, { sel: '.side .row.done', n: 2 }]);
+await shot('__after.png', { clip: await clipOf('.bar', 4) }); await clear();
+await compose('07b-atama.png', '__before.png', '__after.png', ['Q tuşuna basmadan önce', 'Q tuşuna bastıktan sonra: kart renklendi, kod yazıldı, sıradaki faturaya geçildi']);
+unlinkSync(`${OUT}/__before.png`); unlinkSync(`${OUT}/__after.png`);
+// manuel giriş
+await page.keyboard.press('ArrowRight'); await wait(100);
+await page.keyboard.press('/'); await page.waitForSelector('.manual-input'); await page.keyboard.type('77'); await wait(150);
+await annotate([{ sel: '.manual-input', n: 1 }, { sel: '.sugg', n: 2 }]);
+await shot('08-manuel.png', { clip: await clipOf('.bar', 4) }); await clear(); await esc();
+// satıcı ipucu: Telekom 2 kez ata, sonra diğer Telekom'a git
+await page.locator('#search').fill('ay telekom'); await page.keyboard.press('Enter'); await wait(150);
+await manual('770.03'); await manual('770.03'); await wait(100);
+await page.locator('#search').fill(''); await wait(100);
+await page.locator('#search').fill('ay telekom'); await page.keyboard.press('Enter'); await wait(150);
+await page.keyboard.press('Tab'); await wait(200);
+if (await page.locator('button.hint').count()) { await annotate([{ sel: 'button.hint', n: 1 }]); await shot('08b-ipucu.png', { clip: await clipOf('.detail', 6) }); await clear(); }
+await page.locator('#search').fill(''); await wait(100);
+// Tab ile atanmamışa atlama görseli: ilerleme kartı
+await annotate([{ sel: '.progress-card', n: 1 }]);
+await shot('09-ilerleme.png', { clip: await clipOf('.bar', 4) }); await clear();
 
-// 04 pdf
-const pdfs = readdirSync(PDF_DIR).map((f) => `${PDF_DIR}/${f}`);
-await page.locator('input[accept=".pdf,application/pdf"]').setInputFiles(pdfs);
-await page.waitForSelector('.files'); await noToast();
-await page.keyboard.press('Control+Home'); await page.waitForSelector('canvas.pdf-page'); await wait(400);
-await annotate([{ sel: '.pdf-scroller', n: 1, pad: -6, pos: 'in' }, { sel: '.detail-row:has(b[title])', n: 2, pos: 'tl' }, { sel: '.files', n: 3, pos: 'tl' }]);
-await shot('04-pdf.png'); await clear();
+// ---------- 3. Liste görünümü ----------
+await page.locator('.layout-btn').click(); await page.waitForSelector('.listview'); await wait(200);
+await page.locator('.cols-btn').click(); await page.waitForSelector('.cols-pop');
+await annotate([{ sel: '.lv-head', n: 1, pad: 2 }, { sel: '.cols-pop', n: 2 }, { sel: 'tr.current', n: 3, pad: 0 }, { sel: 'tr.current td.lv-code', n: 4, pos: 'tr' }]);
+await shot('10-liste.png'); await clear(); await page.mouse.click(700, 500); await wait(100);
+// toplu seçim
+await page.locator('.bulk-toggle').click(); await page.locator('button:has-text("Bu satıcıyı seç")').click(); await wait(150);
+await page.locator('.bulk-input').fill('770.03');
+await annotate([{ sel: '.bulk-toggle', n: 1 }, { sel: '.bulk-bar', n: 2 }, { sel: 'tr.row.selected', n: 3, pad: 0 }]);
+await shot('11-toplu.png', { clip: { x: 0, y: 48, width: W, height: 520 } }); await clear();
+await page.locator('.bulk-bar button:has-text("seçili")').click(); await wait(100); await page.locator('.bulk-toggle').click(); await wait(100);
+await page.locator('.layout-btn').click(); await page.waitForSelector('.inv-frame'); await wait(200);
 
-// 05 bağlama penceresi
-await page.locator('.unmatched button:has-text("bağla")').click();
-await page.waitForSelector('.modal:has-text("faturaya bağla")'); await wait(150);
-await shot('05-baglama.png', { clip: await clipOf('.modal:has-text("faturaya bağla")', 12) });
-await page.keyboard.press('Escape'); await wait(150);
+// ---------- 4. Hesap kodu listesi ----------
+await page.locator('button[title="Ayarlar"]').click(); await page.locator('.settings-tabs button:has-text("Firma")').click();
+await page.locator('button:has-text("Hesap kodu listesi")').click(); await page.waitForSelector('.acc-text');
+await page.locator('.acc-text').fill('153 Ticari mallar\n740.01 Hizmet üretim: temizlik\n760.02 Pazarlama: kargo ve nakliye\n770.01 Genel yönetim: kırtasiye\n770.02 Genel yönetim: elektrik\n770.03 Genel yönetim: haberleşme\n770.05 Genel yönetim: danışmanlık\n770.09 Genel yönetim: mutfak ve ikram');
+await page.locator('button:has-text("Listeye ekle")').click(); await wait(250); await noToast();
+await annotate([{ sel: 'button:has-text("Excel / CSV\'den yükle")', n: 1 }, { sel: '.acc-text', n: 2 }, { sel: '.acc-list', n: 3 }]);
+await shot('12-hesap-listesi.png', { clip: await clipOf('.modal', 16) }); await clear(); await esc();
+await page.keyboard.press('Control+Period'); await page.waitForSelector('.chart-pop'); await page.keyboard.type('kargo'); await wait(150);
+await annotate([{ sel: '.chart-input', n: 1 }, { sel: '.chart-row.active', n: 2 }]);
+await shot('12b-ctrl-nokta.png', { clip: await clipOf('.chart-pop', 16) }); await clear(); await esc();
 
-// 06 panel (sıra/filtre/arama/liste)
-await page.keyboard.press('Control+Home');
-await annotate([{ sel: '.sort-select', n: 1, pos: 'tl' }, { sel: '.filter-select', n: 2, pos: 'tr' }, { sel: '.list', n: 3, pad: -4, pos: 'in' }]);
-await shot('06-panel.png', { clip: await clipOf('.side', 4) }); await clear();
+// ---------- 5. Kurallar ----------
+// panelde kural yap düğmesi (telekom atanmış bir faturada)
+await page.locator('#search').fill('ay telekom'); await page.keyboard.press('Enter'); await wait(150); await page.locator('#search').fill('');
+await page.keyboard.press('Control+Home'); await wait(150);
+if (await page.locator('.rule-make').count()) { await annotate([{ sel: '.rule-make', n: 1 }]); await shot('13-kural-yap.png', { clip: await clipOf('.detail', 6) }); await clear(); }
+await page.locator('.toolbar button:has-text("Kurallar")').click(); await page.waitForSelector('.modal.rules');
+await page.locator('.modal.rules select').first().selectOption('name'); await page.locator('.rule-pattern').fill('hızlı kargo'); await page.locator('.rule-code').fill('760.02'); await page.locator('.rule-code').press('Enter'); await wait(300); await noToast();
+await page.locator('.scope-seg button').nth(1).click();
+await page.locator('.modal.rules select').first().selectOption('vkn'); await page.locator('.rule-pattern').fill('5670000005'); await page.locator('.rule-code').fill('770.09'); await page.locator('.rule-code').press('Enter'); await wait(300); await noToast();
+await page.locator('.scope-seg button').nth(0).click();
+await page.locator('.modal.rules select').first().selectOption('vkn'); await page.locator('.rule-pattern').fill('2340000002'); await page.locator('.rule-code').fill('740.01');
+await annotate([{ sel: '.scope-seg', n: 1 }, { sel: '.rule-form', n: 2, pad: 2 }, { sel: '.rule-list', n: 3 }, { sel: '.override-note', n: 4, pos: 'tr' }, { sel: 'button:has-text("Kuralları dışa aktar")', n: 5 }]);
+await shot('13-kurallar.png', { clip: await clipOf('.modal.rules', 12) }); await clear();
+await page.locator('.rule-code').press('Enter'); await wait(300); await esc(); await noToast();
 
-// 07 kısayol çubuğu: S yuvası düzenleme modunda
-await page.locator('.slot').nth(4).hover(); await page.locator('.slot').nth(4).locator('.slot-icon.edit').click(); await page.keyboard.type('770.0'); await wait(100);
-await annotate([{ sel: '.slot.slot-0', n: 1, pos: 'tl' }, { sel: '.slot.slot-1', n: 2, pos: 'tl' }, { sel: '.slot.slot-4', n: 3, pos: 'bl' }]);
-await shot('07-kisayol.png', { clip: { x: 0, y: 840 - 128, width: 1440, height: 128 } }); await clear();
-await page.keyboard.press('Escape'); await wait(100);
+// ---------- 6. Önizleme, şablon ----------
+await page.keyboard.press('F5'); await page.waitForSelector('.modal.wide'); await wait(200);
+await annotate([{ sel: '.legend', n: 1 }, { sel: 'th.code-col', n: 2 }, { sel: 'tr.iss-code', n: 3, pad: 0, pos: 'bl' }, { sel: 'button:has-text("Şablonu düzenle")', n: 4 }]);
+await shot('14-onizleme.png'); await clear();
+await page.locator('button:has-text("Şablonu düzenle")').click(); await page.waitForSelector('.tpl-modal'); await wait(200);
+await annotate([{ sel: '.tpl-row.is-code', n: 1 }, { sel: '.tpl-add', n: 2 }, { sel: '.tpl-side select', n: 3 }, { sel: '.tpl-preview', n: 4 }, { sel: 'button:has-text("EDM varsayılanına dön")', n: 5 }]);
+await shot('15-sablon.png'); await clear(); await esc();
 
-// 07b önce/sonra: kodsuz faturaya git, önce çek, Q bas, sonra çek
-await page.locator('.search').fill('MVK2026000001050'); await page.keyboard.press('Enter'); await wait(200); await page.locator('.search').fill(''); await page.keyboard.press('Escape'); await wait(200); await page.keyboard.press('Backspace'); await wait(300);
-await page.waitForSelector('canvas.pdf-page'); await wait(300);
-await shot('__a.png', { clip: { x: 0, y: 56, width: 1440, height: 600 } });
-await page.keyboard.press('q'); await wait(400); await page.waitForSelector('canvas.pdf-page'); await wait(300); await noToast();
-await page.locator('.row:has-text("MVK2026000001050")').scrollIntoViewIfNeeded(); await wait(150);
-await annotate([{ sel: '.row:has-text("MVK2026000001050")', n: 1, pos: 'tl', pad: 0 }, { sel: '.row.current', n: 2, pos: 'tl', pad: 0 }]);
-await shot('__b.png', { clip: { x: 0, y: 56, width: 1440, height: 600 } }); await clear();
-await compose('07b-atama.png', `${OUT}/__a.png`, `${OUT}/__b.png`, ['Önce: seçili fatura kodsuz', 'Q tuşuna basıldı → (1) fatura 770.01 aldı ve listede Q rengine büründü, (2) sonraki fatura açıldı']);
-unlinkSync(`${OUT}/__a.png`); unlinkSync(`${OUT}/__b.png`);
+// ---------- 7. Yazdırma ----------
+await page.locator('.toolbar button:has-text("Yazdır")').click(); await page.waitForSelector('.print-modal'); await page.waitForSelector('.print-preview-frame'); await wait(300);
+await page.locator('label:has-text("Tümü (") input').check(); await wait(200);
+await page.locator('.print-row').nth(2).hover(); await wait(300);
+await annotate([{ sel: '.print-opts fieldset:has-text("Hangi faturalar")', n: 1 }, { sel: '.print-opts fieldset:has-text("Süz")', n: 2 }, { sel: '.print-opts fieldset:has-text("Sıra")', n: 3 }, { sel: '.print-opts fieldset:has-text("Sayfa")', n: 4 }, { sel: '.print-list', n: 5, pad: -4, pos: 'in' }, { sel: '.print-preview', n: 6, pad: -4, pos: 'in' }, { sel: '.print-modal .modal-head button.primary', n: 7 }]);
+await shot('16-yazdir.png'); await clear(); await esc();
 
-// 08 manuel giriş
-await page.keyboard.press('Control+End'); await page.keyboard.press('/'); await page.waitForSelector('.manual-input'); await page.keyboard.type('77'); await wait(150);
-await annotate([{ sel: '.manual-input', n: 1, pos: 'tl' }, { sel: '.sugg', n: 2, pos: 'bl' }]);
-await shot('08-manuel.png', { clip: { x: 0, y: 840 - 128, width: 1440, height: 128 } }); await clear();
-await page.keyboard.press('Escape');
-// 08b ipucu: 2. satıcının 2. faturasına git (MVK ...1050 idx 7), kod yok → ipucu 760.02
-await page.locator('.search').fill('MVK2026000001050'); await page.keyboard.press('Enter'); await wait(200); await page.locator('.search').fill(''); await wait(150);
-await annotate([{ sel: 'button.hint', n: 1, pos: 'tl' }]);
-await shot('08b-ipucu.png', { clip: await clipOf('.detail', 4) }); await clear();
+// ---------- 8. Ayarlar, yedek, taşıma ----------
+await page.locator('button[title="Ayarlar"]').click(); await page.locator('.settings-tabs button:has-text("Firma")').click(); await wait(150);
+await annotate([{ sel: '.settings-tabs', n: 1, pad: 2 }, { sel: '.shortcut-grid', n: 2 }, { sel: '.settings-links', n: 3 }]);
+await shot('17-ayarlar.png', { clip: await clipOf('.modal.settings', 12) }); await clear();
+await page.locator('.settings-tabs button:has-text("Yedek")').click(); await page.waitForSelector('.store-row'); await wait(150);
+await annotate([{ sel: 'button:has-text("Dışa aktar (.json)")', n: 1 }, { sel: 'button:has-text("İçe aktar")', n: 2 }, { sel: 'fieldset:has-text("Depolama")', n: 3, pad: 2 }]);
+await shot('18-yedek.png', { clip: await clipOf('.modal.settings', 12) }); await clear();
+await page.locator('.settings-tabs button:has-text("Dönem")').click(); await wait(150);
+await shot('18b-donem.png', { clip: await clipOf('.modal.settings', 12) }); await esc();
+// taşıma penceresi için ikinci firma
+await page.locator('.firm-select').selectOption('__new'); await nameDialog('Örnek Kırtasiye Ltd.');
+const first = await page.locator('.firm-select option:has-text("Deneme")').getAttribute('value'); await page.locator('.firm-select').selectOption(first); await wait(400); await page.waitForSelector('.inv-frame');
+await page.locator('.files button:has-text("taşı")').click(); await page.waitForSelector('.modal:has-text("Başka firmaya taşı")');
+await shot('19-tasi.png', { clip: await clipOf('.modal:has-text("Başka firmaya taşı")', 16) }); await esc();
 
-// 09 liste ayarı + Ctrl+. penceresi
-await page.locator('button[title="Ayarlar"]').click(); await page.waitForSelector('.form'); await wait(150);
-await page.locator('fieldset:has(legend:has-text("Hesap kodu listesi"))').scrollIntoViewIfNeeded(); await wait(150);
-await shot('09-liste-ayar.png', { clip: await clipOf('fieldset:has(legend:has-text("Hesap kodu listesi"))', 10) });
-await page.keyboard.press('Escape'); await wait(100);
-await page.keyboard.press('Control+Period'); await page.waitForSelector('.chart-pop'); await page.keyboard.type('gider'); await wait(150);
-await annotate([{ sel: '.chart-input', n: 1, pos: 'tl' }, { sel: '.chart-list', n: 2, pad: -2, pos: 'bl' }]);
-await shot('09-liste.png', { clip: await clipOf('.chart-pop', 14) }); await clear();
-await page.keyboard.press('Escape'); await wait(100);
-
-// 10 toplu
-await page.locator('.bulk-toggle').click(); await wait(100);
-await page.locator('button:has-text("Bu satıcıyı seç")').click(); await wait(100);
-await page.locator('.bulk-input').fill('760.0'); await wait(100);
-await annotate([{ sel: '.bulk-bar .bulk-row', n: 1, pos: 'tl' }, { sel: '.bulk-input', n: 2, pos: 'tl' }, { sel: '.row.selected', n: 3, pos: 'tl' }]);
-await shot('10-toplu.png', { clip: await clipOf('.side', 4) }); await clear();
-await page.locator('.bulk-input').fill('760.02'); await page.keyboard.press('Enter'); await wait(300); await noToast();
-await page.locator('.bulk-toggle').click(); await wait(150);
-await annotate([{ sel: '.row.bulk', n: 1, pos: 'tl' }]);
-await shot('10b-toplu-sonuc.png', { clip: await clipOf('.list', 4) }); await clear();
-
-// 11 geri al
-await page.keyboard.press('Control+z'); await wait(200);
-await annotate([{ sel: 'button:has-text("↶")', n: 1, pos: 'bl' }, { sel: '.toast', n: 2, pos: 'tl' }]);
-await shot('11-geri-al.png', { clip: { x: 0, y: 0, width: 1440, height: 840 } }); await clear(); await noToast();
-await page.keyboard.press('Control+y'); await wait(200); await noToast();
-
-// 12 önizleme
-await page.keyboard.press('F5'); await page.waitForSelector('.modal.wide'); await wait(300);
-await annotate([{ sel: 'th.code-col', n: 1, pos: 'bl' }, { sel: '.legend', n: 2, pos: 'bl' }, { sel: 'tr.iss-code', n: 3, pos: 'tl' }]);
-await shot('12-onizleme.png'); await clear();
-await page.keyboard.press('Escape');
-
-// 13 ayarlar (üst kısım) + 14 yedek
-await page.locator('button[title="Ayarlar"]').click(); await page.waitForSelector('.form'); await wait(150);
-await shot('13-ayarlar.png', { clip: await clipOf('.modal', 10) });
-await page.locator('fieldset:has(legend:has-text("Yedekleme"))').scrollIntoViewIfNeeded(); await wait(150);
-await shot('14-yedek.png', { clip: await clipOf('fieldset:has(legend:has-text("Yedekleme"))', 10) });
-await page.keyboard.press('Escape');
-
-// 16 koyu tema
-await page.locator('.theme-btn').click(); await wait(300); await page.keyboard.press('Control+Home'); await wait(300);
-await shot('16-koyu.png');
-await page.locator('.theme-btn').click(); await wait(200);
-
-// Rehber önizleme
-await page.locator('button[title="Kullanım rehberi"]').click(); await page.waitForSelector('.modal.guide'); await wait(600);
-await page.screenshot({ path: `${SCR}/guide-preview.png` });
-await page.locator('.guide-toc a:has-text("Kısayollar")').click(); await wait(700);
-await page.screenshot({ path: `${SCR}/guide-preview-2.png` });
-await page.locator('.guide-toc a:has-text("Excel üret")').click(); await wait(700);
-await page.screenshot({ path: `${SCR}/guide-preview-3.png` });
-console.log('bitti:', readdirSync(OUT).join(' '));
+// ---------- 9. Tamamlandı ve koyu tema ----------
+await page.locator('.toolbar button:has-text("Kurallar")').click(); await page.waitForSelector('.modal.rules'); await esc();
+// kalanları toplu ata
+await page.locator('.bulk-toggle').click(); await page.locator('.filter-select').selectOption('unassigned'); await wait(100); await page.locator('button:has-text("Görünenleri seç")').click();
+await page.locator('.bulk-input').fill('770.01'); await page.keyboard.press('Enter'); await wait(300); await page.locator('.filter-select').selectOption('all'); await page.locator('.bulk-toggle').click(); await noToast();
+await annotate([{ sel: '.progress-card.complete', n: 1 }]);
+await shot('20-tamamlandi.png', { clip: await clipOf('.bar', 4) }); await clear();
+await page.locator('.theme-btn').click(); await wait(300); await page.keyboard.press('Home'); await wait(200);
+await shot('21-koyu.png'); await page.locator('.theme-btn').click(); await wait(200);
+console.log('görseller:', readdirSync(OUT).length, 'dosya →', OUT);
 await browser.close();
