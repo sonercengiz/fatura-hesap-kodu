@@ -38,6 +38,6 @@ console.log('A2 metin mi:', ws['A2']?.t, ws['A2']?.v, '| Geliş Zamanı yok:', !
 const firstNo=readFileSync(files[0],'utf8').match(/<cbc:ID>([^<]+)/)[1];
 console.log('yükleme sırası: ilk satır', aoa[1][aoa[0].indexOf('Fatura No')], '==', firstNo, aoa[1][aoa[0].indexOf('Fatura No')]===firstNo);
 await page.reload(); await page.waitForSelector('.inv-frame');
-await page.locator('button[title="Ayarlar"]').click(); console.log('ayarlar özeti:', (await page.locator('fieldset:has-text("Çıktı Excel şablonu") .muted').innerText()).slice(0,80));
+await page.locator('button[title="Ayarlar"]').click(); await page.locator('.settings-tabs button:has-text("Çıktı")').click(); console.log('ayarlar özeti:', (await page.locator('.settings-pane .muted').first().innerText()).slice(0,80));
 console.log('HATALAR:', errors.length?errors:'yok');
 await browser.close();
