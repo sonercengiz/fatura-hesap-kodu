@@ -1,12 +1,11 @@
 import { useEffect, useRef } from 'preact/hooks';
 import * as S from './state';
-import { codeColumnAt } from '../core/excel/writeOutput';
 
 export function PreviewModal() {
   const rows = S.outputRows();
   const invs = S.outputOrder.value;
   const byRow = new Map(invs.map((i, k) => [k, i]));
-  const at = codeColumnAt(S.settings.value.codeColumnIndex);
+  const at = S.outputCodeAt.value;
   const box = useRef<HTMLDivElement>(null);
   const counts = { 'no-code': 0, 'not-in-chart': 0, type: 0, 'no-view': 0 } as Record<S.IssueKind, number>;
   const rowIssues = rows.slice(1).map((_, i) => {
@@ -26,7 +25,8 @@ export function PreviewModal() {
       <div class="modal wide" onClick={(e) => e.stopPropagation()}>
         <div class="modal-head">
           <b>Çıktı önizlemesi</b>
-          <span class="muted">{rows.length - 1} satır · {rows[0]?.length ?? 0} sütun · Hesap Kodu {colName(at)} sütununda · tarih sırası</span>
+          <span class="muted">{rows.length - 1} satır · {rows[0]?.length ?? 0} sütun · Hesap Kodu {colName(at)} sütununda</span>
+          <button class="ghost tiny" onClick={() => { S.previewOpen.value = false; S.templateOpen.value = true; }} title="Çıktı sütunlarını ve sırasını düzenle">Şablonu düzenle</button>
           <div class="spacer" />
           <span class="legend">
             {(Object.keys(counts) as S.IssueKind[]).filter((k) => counts[k] > 0).map((k) => (

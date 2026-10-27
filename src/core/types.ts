@@ -1,3 +1,5 @@
+import { DEFAULT_OUTPUT_TEMPLATE, type OutputTemplate } from './excel/template';
+
 export type CellValue = string | number | boolean | null;
 
 /** Ekranda ve çıktıda kullanılan fatura özeti; XML'den (eski partilerde Excel satırından) türetilir. */
@@ -62,12 +64,12 @@ export type ListColumnId = (typeof LIST_COLUMNS)[number]['id'];
 export const DEFAULT_LIST_COLUMNS: ListColumnId[] = ['no', 'date', 'supplier', 'vkn', 'type', 'amount', 'code', 'account', 'issues'];
 
 export interface Settings {
+  /** Çıktı Excel şablonu: sütunlar, başlıklar, satır sırası, sayfa adı */
+  outputTemplate: OutputTemplate;
   /** Ana ekran: hibrit (görsel + panel) ya da yalın liste */
   layout: Layout;
   /** Liste görünümünde gösterilen sütunlar */
   listColumns: ListColumnId[];
-  codeColumnIndex: number; // 1 tabanlı; varsayılan 3
-  codeHeader: string; // varsayılan "Hesap Kodu"
   viewMode: ViewMode;
   marginPx: number;
   theme: 'light' | 'dark';
@@ -77,10 +79,9 @@ export interface Settings {
 export const DEFAULT_SHORTCUT_KEYS = ['q', 'w', 'e', 'a', 's', 'd'] as const;
 
 export const DEFAULT_SETTINGS: Settings = {
+  outputTemplate: DEFAULT_OUTPUT_TEMPLATE,
   layout: 'hybrid',
   listColumns: DEFAULT_LIST_COLUMNS,
-  codeColumnIndex: 3,
-  codeHeader: 'Hesap Kodu',
   viewMode: 'top',
   marginPx: 0,
   theme: 'light',

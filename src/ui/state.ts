@@ -1,6 +1,7 @@
 import { signal, computed, batch as sbatch } from '@preact/signals';
 import { DEFAULT_SETTINGS, DEFAULT_SHORTCUT_KEYS, LIST_COLUMNS, typeLabel, profileLabel, toDisplayDate, type Settings, type Invoice, type FilterMode, type ListColumnId } from '../core/types';
-import { buildOutputWorkbook, buildFileName, buildOutputRows } from '../core/excel/writeOutput';
+import { buildTemplateWorkbook, buildFileName } from '../core/excel/writeOutput';
+import { buildTemplateRows, normalizeTemplate, edmTemplate, codeColumnIndexOf, type OutputTemplate, type RowContext } from '../core/excel/template';
 import { parseUbl, decodeBytes, dominantMonth, UblParseError } from '../core/xml/parseUbl';
 import { sha256 } from '../core/hash';
 import { sheetToInvoices, type EdmSheet } from '../core/legacy';
@@ -48,6 +49,8 @@ export const rules = signal<Rule[]>([]);
 export const rulesOpen = signal(false);
 /** Yazdırma planı penceresi ve çalışan yazdırma işi */
 export const printOpen = signal(false);
+/** Çıktı Excel şablonu penceresi */
+export const templateOpen = signal(false);
 /** Yükleme sonucu penceresi (okunamayan dosya varsa kendiliğinden açılır) ve son yükleme özeti */
 export const importReport = signal<ImportReport | null>(null);
 export const lastImportReport = signal<ImportReport | null>(null);
@@ -119,8 +122,17 @@ export function toInvoice(r: InvoiceRecord): Invoice {
 const rawInvoices = computed<Invoice[]>(() => invoiceRecs.value.map(toInvoice));
 /** Ekran listesi sırası. */
 export const invoices = computed<Invoice[]>(() => sortInvoices(rawInvoices.value, settings.value.sortMode));
-/** Çıktı dosyası sırası: her zaman tarih + satıcı bloğu + fatura no (ekran sırasından bağımsız, kararlı). */
-export const outputOrder = computed<Invoice[]>(() => sortInvoices(rawInvoices.value, 'date-supplier'));
+/** Çıktı dosyası sırası: şablondaki satır sırası (ekran sırasından bağımsız, kararlı). */
+export const outputOrder = computed<Invoice[]>(() => {
+  const o = settings.value.outputTemplate.rowOrder;
+  if (o === 'added') return sortInvoices(rawInvoices.value, 'added');
+  if (o === 'date-supplier') return sortInvoices(rawInvoices.value, 'date-supplier');
+  // tarih, sonra fatura no
+  return sortInvoices(rawInvoices.value, 'date-supplier').slice().sort((a, b) => (dateKeyOf(a) - dateKeyOf(b)) || (a.no < b.no ? -1 : a.no > b.no ? 1 : 0));
+});
+const dateKeyOf = (i: Invoice) => Number(i.isoDate.replace(/-/g, '')) || 0;
+/** Çıktıda Hesap Kodu sütununun 0 tabanlı konumu */
+export const outputCodeAt = computed(() => codeColumnIndexOf(settings.value.outputTemplate));
 export const current = computed<Invoice | null>(() => invoices.value[currentIndex.value] ?? null);
 export const recByNo = computed(() => new Map(invoiceRecs.value.map((r) => [r.no, r])));
 /** Kısayol yuvaları: yalnızca kullanıcının kaydettiği kodlar; kendiliğinden değişmez. */
@@ -249,6 +261,9 @@ export async function getInvoiceView(no: string): Promise<InvoiceView | null> {
 
 export async function init() {
   settings.value = await loadSettings(DEFAULT_SETTINGS);
+  // Eski ayarlar (sütun konumu + başlık) → şablon
+  const legacy = ((await db.settings.get('settings'))?.value ?? {}) as { codeColumnIndex?: number; codeHeader?: string; outputTemplate?: unknown };
+  settings.value = { ...settings.value, outputTemplate: legacy.outputTemplate ? normalizeTemplate(legacy.outputTemplate as OutputTemplate) : edmTemplate(legacy.codeColumnIndex ?? 3, legacy.codeHeader ?? 'Hesap Kodu') };
   if (!(settings.value.sortMode in SORT_LABELS)) settings.value = { ...settings.value, sortMode: 'date-supplier' };
   if (!Array.isArray(settings.value.listColumns) || !settings.value.listColumns.includes('code')) settings.value = { ...settings.value, listColumns: DEFAULT_SETTINGS.listColumns };
   lastExportAt.value = ((await db.settings.get('lastExportAt'))?.value as number | undefined) ?? null;
@@ -786,22 +801,28 @@ export async function save() {
   showToast(`Kaydedildi · ${assignedCount.value}/${invoices.value.length} atandı`);
 }
 
-function outputOptions() {
+export function outputContext(): RowContext {
   const codes = new Map<string, string>();
   for (const [no, c] of assignments.value) if (c) codes.set(no, c);
-  return { codeColumnIndex: settings.value.codeColumnIndex, codeHeader: settings.value.codeHeader, codes };
+  const sources = new Map<string, 'manual' | 'bulk' | 'rule'>();
+  for (const no of codes.keys()) sources.set(no, bulkNos.value.has(no) ? 'bulk' : ruleNos.value.has(no) ? 'rule' : 'manual');
+  return { codes, accountNames: accountMap.value, sources, firmName: firm.value.name, batchName: batchRec.value?.name ?? '' };
 }
 
 export function outputRows() {
   if (!batchRec.value) return [];
-  return buildOutputRows(outputOrder.value, outputOptions());
+  return buildTemplateRows(outputOrder.value, settings.value.outputTemplate, outputContext());
+}
+
+export async function setOutputTemplate(t: OutputTemplate) {
+  await updateSettings({ outputTemplate: normalizeTemplate(t) });
 }
 
 export async function exportExcel() {
   const b = batchRec.value;
   if (!b) return;
   if (dirty.value) await save();
-  const bytes = buildOutputWorkbook(outputOrder.value, outputOptions());
+  const bytes = buildTemplateWorkbook(outputOrder.value, settings.value.outputTemplate, outputContext());
   const name = buildFileName(firm.value.name, outputOrder.value);
   const blob = new Blob([bytes as unknown as ArrayBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   const url = URL.createObjectURL(blob);

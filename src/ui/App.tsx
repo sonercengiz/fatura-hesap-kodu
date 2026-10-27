@@ -15,6 +15,7 @@ import { PrintModal } from './PrintModal';
 import { PrintRoot } from './PrintRoot';
 import { ImportReportModal } from './ImportReportModal';
 import { MoveModal } from './MoveModal';
+import { TemplateModal } from './TemplateModal';
 
 export function App() {
   const [drag, setDrag] = useState(false);
@@ -96,8 +97,8 @@ export function App() {
         if (e.key === 'Escape' || e.key === 'Enter') S.importReport.value = null;
         return;
       }
-      if (S.moveOpen.value) {
-        if (e.key === 'Escape') S.moveOpen.value = false;
+      if (S.moveOpen.value || S.templateOpen.value) {
+        if (e.key === 'Escape') { S.moveOpen.value = false; S.templateOpen.value = false; }
         return;
       }
       if (S.previewOpen.value || S.settingsOpen.value || S.guideOpen.value || S.rulesOpen.value) {
@@ -285,6 +286,7 @@ export function App() {
       {S.printOpen.value && <PrintModal />}
       {S.importReport.value && <ImportReportModal />}
       {S.moveOpen.value && <MoveModal />}
+      {S.templateOpen.value && <TemplateModal />}
       <PrintRoot />
       {S.busy.value && <div class="busy">{S.busy.value}</div>}
       {S.toast.value && <div class="toast">{S.toast.value}</div>}

@@ -1,31 +1,9 @@
 import * as XLSX from 'xlsx';
 import type { CellValue, Invoice } from '../types';
+import { buildTemplateRows, textColumns, type OutputTemplate, type RowContext } from './template';
 
-/** EDM "Gelen Faturalar" Excel'inin sütun düzeni (A–T). GMS.NET'e verilen dosya bu başlıkları aynen taşır. */
-export const EDM_HEADERS = [
-  'Fatura No',
-  'Fatura Tarihi',
-  'Geliş Zamanı',
-  'Fatura Tipi',
-  'Fatura Türü',
-  'Gönderen VKN/TCKN',
-  'Gönderen Unvan/Ad Soyad',
-  'Tutar',
-  'Döviz Cinsi',
-  'Durum',
-  'Yanıt Durumu',
-  'Yerele Aktarım Durumu',
-  'Zarf No',
-  'KEP İtiraz Durumu',
-  'Gib Portal Fatura Iptal Durumu',
-  'Resmi Yazı İtiraz Durumu',
-  'Gib Portal Fatura İtiraz Durumu',
-  'Şube',
-  'Hash',
-  'Etiket',
-] as const;
-
-export const EDM_SHEET_NAME = 'Sheet0';
+export { EDM_HEADERS, EDM_SHEET_NAME } from './edm';
+import { EDM_HEADERS, EDM_SHEET_NAME } from './edm';
 
 /**
  * Bir faturanın EDM satırı. XML'de karşılığı olmayan sütunlar (geliş zamanı, durumlar, zarf no, hash) boş kalır;
@@ -111,6 +89,23 @@ export function dominantMonthKey(invoices: Pick<Invoice, 'isoDate'>[]): { mm: st
   if (!best) return null;
   const [yyyy, mm] = best.split('-');
   return { mm, yyyy };
+}
+
+/** Şablona göre çalışma kitabı: metin sütunları (hesap kodu, VKN, ETTN) metin tipinde kalır */
+export function buildTemplateWorkbook(invoices: Invoice[], t: OutputTemplate, ctx: RowContext): Uint8Array {
+  const aoa = buildTemplateRows(invoices, t, ctx);
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  const textCols = textColumns(t);
+  for (let r = 1; r < aoa.length; r++) {
+    for (const c of textCols) {
+      const addr = XLSX.utils.encode_cell({ r, c });
+      const v = aoa[r][c];
+      ws[addr] = { t: 's', v: v == null ? '' : String(v) };
+    }
+  }
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, t.sheetName || EDM_SHEET_NAME);
+  return XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as Uint8Array;
 }
 
 /** "AY YIL FİRMA_ADI FATURA.xlsx" — aylık işlendiği için gün yok; ay = faturaların baskın ayı, yoksa verilen tarih */

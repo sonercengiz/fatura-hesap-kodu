@@ -2,7 +2,7 @@ import { useRef, useState } from 'preact/hooks';
 import { parseAccountSheet, parseAccountText } from '../core/chart';
 import * as S from './state';
 import type { ViewMode, Layout } from '../core/types';
-import { EDM_HEADERS } from '../core/excel/writeOutput';
+import { isEdmDefault } from '../core/excel/template';
 
 export function SettingsModal() {
   const s = S.settings.value;
@@ -11,7 +11,6 @@ export function SettingsModal() {
   const [accText, setAccText] = useState('');
   const [accFilter, setAccFilter] = useState('');
   const accList = S.accounts.value.filter((a) => !accFilter || a.code.includes(accFilter) || a.name.toLocaleLowerCase('tr').includes(accFilter.toLocaleLowerCase('tr')));
-  const width = EDM_HEADERS.length;
   return (
     <div class="modal-backdrop" onClick={() => (S.settingsOpen.value = false)}>
       <div class="modal" onClick={(e) => e.stopPropagation()}>
@@ -36,20 +35,13 @@ export function SettingsModal() {
               </span>
             </div>
           </fieldset>
-          <div class="two">
-            <label>
-              <span>Hesap Kodu sütunu (1 = en başa)</span>
-              <input type="number" min={1} max={width + 1} value={s.codeColumnIndex} onInput={(e) => {
-                const v = Number((e.currentTarget as HTMLInputElement).value);
-                if (v >= 1) S.updateSettings({ codeColumnIndex: Math.min(v, width + 1) });
-              }} />
-            </label>
-            <label>
-              <span>Sütun başlığı</span>
-              <input value={s.codeHeader} onInput={(e) => S.updateSettings({ codeHeader: (e.currentTarget as HTMLInputElement).value || 'Hesap Kodu' })} />
-            </label>
-          </div>
-          <div class="muted small">Çıktı, EDM fatura listesi düzenindedir (20 sütun); Hesap Kodu araya eklenir, diğer sütunlar sağa kayar. Varsayılan 3 (C sütunu).</div>
+          <fieldset>
+            <legend>Çıktı Excel şablonu</legend>
+            <div class="row-inline">
+              <span class="muted">{s.outputTemplate.columns.length} sütun · Hesap Kodu {String.fromCharCode(65 + Math.min(S.outputCodeAt.value, 25))} sütununda · {isEdmDefault(s.outputTemplate) ? 'EDM düzeni (varsayılan)' : 'özelleştirilmiş'}. Sütunlar, başlıklar, satır sırası ve sayfa adı GMS içe aktarma şablonunuza göre ayarlanır.</span>
+              <button onClick={() => { S.settingsOpen.value = false; S.templateOpen.value = true; }}>Şablonu düzenle</button>
+            </div>
+          </fieldset>
 
           <fieldset>
             <legend>Kısayollar — {S.firm.value.name} (yalnızca kaydedilen kodlar; kendiliğinden değişmez)</legend>
