@@ -76,6 +76,8 @@ export interface Settings {
   marginPx: number;
   theme: 'light' | 'dark';
   sortMode: SortMode;
+  /** Kod verince sıradaki faturaya kendiliğinden geç (varsayılan kapalı: kullanıcı atamayı görüp kendisi geçer) */
+  autoAdvance: boolean;
 }
 
 export const DEFAULT_SHORTCUT_KEYS = ['q', 'w', 'e', 'a', 's', 'd'] as const;
@@ -88,6 +90,7 @@ export const DEFAULT_SETTINGS: Settings = {
   marginPx: 0,
   theme: 'light',
   sortMode: 'date-supplier',
+  autoAdvance: false,
 };
 
 /** UBL-TR InvoiceTypeCode → EDM listesindeki "Fatura Tipi" etiketi */

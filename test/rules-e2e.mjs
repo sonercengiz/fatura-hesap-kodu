@@ -1,7 +1,7 @@
 // Kurallar: panelden kural yap → anında uygulanır; yeni XML yüklenince otomatik; unvan ve kalem kuralı; filtre; geri al; yedek ve kural dosyası ile taşıma
 import { chromium } from 'playwright';
 import { readdirSync, readFileSync } from 'node:fs';
-const S = '/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/aa071f3a-6270-4292-9e7a-d102afeef53e/scratchpad';
+const S = process.env.SCRATCH || '/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/d64e6ff3-d5c6-481a-957e-cc3c595811d5/scratchpad';
 const XML_DIR = process.env.XML_DIR || `${S}/xmlin`;
 const files = readdirSync(XML_DIR).filter((f) => f.endsWith('.xml')).sort().map((f) => `${XML_DIR}/${f}`);
 const turkcell = files.filter((f) => /8770013406/.test(f)); // 12 fatura

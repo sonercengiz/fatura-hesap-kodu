@@ -1,6 +1,6 @@
 import { chromium } from 'playwright';
 import { readdirSync } from 'node:fs';
-const XML_DIR = process.env.XML_DIR || `/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/aa071f3a-6270-4292-9e7a-d102afeef53e/scratchpad/xmlin`; // gerçek e-Fatura XML'leri (depoya girmez)
+const XML_DIR = process.env.XML_DIR || `/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/d64e6ff3-d5c6-481a-957e-cc3c595811d5/scratchpad/xmlin`; // gerçek e-Fatura XML'leri (depoya girmez)
 const XMLS = readdirSync(XML_DIR).filter((f) => f.endsWith('.xml')).sort().map((f) => `${XML_DIR}/${f}`);
 const OUT = '/Users/sonercengiz/Documents/scc/fatura-hesap-kodu/public/guide';
 const browser = await chromium.launch({ channel: 'chrome', headless: true });

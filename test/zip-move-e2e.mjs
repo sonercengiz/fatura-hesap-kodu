@@ -1,7 +1,8 @@
 import { chromium } from 'playwright';
+import { enableAutoAdvance } from './e2e-helpers.mjs';
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { zipSync } from 'fflate';
-const S='/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/aa071f3a-6270-4292-9e7a-d102afeef53e/scratchpad';
+const S=process.env.SCRATCH || '/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/d64e6ff3-d5c6-481a-957e-cc3c595811d5/scratchpad';
 const files=readdirSync(S+'/xmlin').filter(f=>f.endsWith('.xml')).sort();
 // ZIP: 6 xml + klasör içinde 2 xml + iç içe zip (2 xml) + bir txt + __MACOSX çöpü
 const ent={};
@@ -22,6 +23,7 @@ console.log('zip sonucu toast:', await page.locator('.toast').innerText().catch(
 console.log('parti:', await page.locator('.batch-select option:checked').innerText(), '|', await page.locator('.progress').innerText());
 // birkaç atama, parti kuralı
 await page.locator('.slot').nth(0).hover(); await page.locator('.slot').nth(0).locator('.slot-icon.edit').click(); await page.keyboard.type('770.01'); await page.keyboard.press('Enter'); await page.waitForTimeout(100);
+await enableAutoAdvance(page); // testler hızlı çalışma (kendiliğinden geçiş) varsayar
 await page.keyboard.press('q'); await page.waitForTimeout(150); await page.keyboard.press('q'); await page.waitForTimeout(150);
 // yeni firma Beta (prompt) → geri Firma 1'e dön
 await page.locator('.firm-select').selectOption('__new'); await page.waitForSelector('.modal.dialog input'); await page.locator('.modal.dialog input').fill('Beta Ltd'); await page.keyboard.press('Enter'); await page.waitForTimeout(400);

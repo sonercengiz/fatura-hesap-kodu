@@ -3,7 +3,7 @@ import { chromium } from 'playwright';
 import { readdirSync, rmSync, mkdirSync, writeFileSync, unlinkSync } from 'node:fs';
 
 const URL = 'http://localhost:5179/';
-const DEMO = process.env.DEMO_DIR || '/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/aa071f3a-6270-4292-9e7a-d102afeef53e/scratchpad/demo';
+const DEMO = process.env.DEMO_DIR || '/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/d64e6ff3-d5c6-481a-957e-cc3c595811d5/scratchpad/demo';
 const OUT = process.env.OUT_DIR || '/Users/sonercengiz/Documents/scc/fatura-hesap-kodu/public/guide';
 rmSync(OUT, { recursive: true, force: true }); mkdirSync(OUT, { recursive: true });
 const XMLS = readdirSync(`${DEMO}/xml`).filter((f) => f.endsWith('.xml') && !f.startsWith('IRS')).sort().map((f) => `${DEMO}/xml/${f}`);
@@ -98,10 +98,10 @@ await page.keyboard.press('Enter'); await wait(200); await noToast();
 // önce/sonra: Q ile atama
 await page.keyboard.press('Home'); await wait(150);
 await shot('__before.png', { clip: await clipOf('.bar', 4) });
-await page.keyboard.press('q'); await wait(250); await page.keyboard.press('ArrowLeft'); await wait(250); await noToast();
+await page.keyboard.press('q'); await wait(250); await noToast(); // varsayılan: faturada kalır
 await annotate([{ sel: '.status.done', n: 1 }, { sel: '.side .row.done', n: 2 }]);
 await shot('__after.png', { clip: await clipOf('.bar', 4) }); await clear();
-await compose('07b-atama.png', '__before.png', '__after.png', ['Q tuşuna basmadan önce', 'Q tuşuna bastıktan sonra: kart renklendi, kod yazıldı, sıradaki faturaya geçildi']);
+await compose('07b-atama.png', '__before.png', '__after.png', ['Q tuşuna basmadan önce', 'Q tuşuna bastıktan sonra: kart renklendi, kod yazıldı; fatura ekranda kaldı']);
 unlinkSync(`${OUT}/__before.png`); unlinkSync(`${OUT}/__after.png`);
 // manuel giriş
 await page.keyboard.press('ArrowRight'); await wait(100);

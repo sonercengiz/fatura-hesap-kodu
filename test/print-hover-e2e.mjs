@@ -1,6 +1,6 @@
 import { chromium } from 'playwright';
 import { readdirSync } from 'node:fs';
-const S='/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/aa071f3a-6270-4292-9e7a-d102afeef53e/scratchpad';
+const S=process.env.SCRATCH || '/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/d64e6ff3-d5c6-481a-957e-cc3c595811d5/scratchpad';
 const files=readdirSync(S+'/xmlin').filter(f=>f.endsWith('.xml')).sort().map(f=>S+'/xmlin/'+f).slice(0,20);
 const browser=await chromium.launch({channel:'chrome',headless:true});
 const page=await (await browser.newContext({viewport:{width:1500,height:900}})).newPage();

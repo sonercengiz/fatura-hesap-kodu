@@ -116,6 +116,13 @@ export function SettingsModal() {
                     </label>
                   ))}
                 </fieldset>
+                <fieldset>
+                  <legend>Kod verdikten sonra</legend>
+                  {([[false, 'Faturada kal: kodun verildiğini görün, → ya da Tab ile siz geçin'], [true, 'Sıradaki faturaya kendiliğinden geç (hızlı çalışma)']] as [boolean, string][]).map(([v, label]) => (
+                    <label class="radio"><input type="radio" name="autoAdvance" checked={s.autoAdvance === v} onChange={() => S.updateSettings({ autoAdvance: v })} /><span>{label}</span></label>
+                  ))}
+                  <div class="muted small">Kısayol tuşları (Q W E A S D), Boşluk ve elle giriş için geçerlidir. Yanlış kodu <kbd>Ctrl+Z</kbd> geri alır.</div>
+                </fieldset>
                 <label class="radio">
                   <input type="checkbox" checked={s.theme === 'dark'} onChange={(e) => S.updateSettings({ theme: (e.currentTarget as HTMLInputElement).checked ? 'dark' : 'light' })} />
                   <span>Koyu tema (üst çubuktaki ☾/☀ ile de değişir)</span>
@@ -160,7 +167,7 @@ export function SettingsModal() {
             {tab === 'keys' && (
               <div class="keys">
                 <div><kbd>←</kbd><kbd>→</kbd> önceki / sonraki fatura · <kbd>Tab</kbd> / <kbd>Shift+Tab</kbd> (ya da <kbd>Shift+ok</kbd>) sonraki / önceki <b>atanmamış</b> fatura · <kbd>Ctrl+ok</kbd> toplu/kural atananlar dahil</div>
-                <div><kbd>Q</kbd><kbd>W</kbd><kbd>E</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> kısayolla ata, sonrakine geç · <kbd>Boşluk</kbd> kural ya da satıcıya önce verilen kod</div>
+                <div><kbd>Q</kbd><kbd>W</kbd><kbd>E</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> kısayolla ata{s.autoAdvance ? ', sonrakine geç' : ''} · <kbd>Boşluk</kbd> kural ya da satıcıya önce verilen kod</div>
                 <div><kbd>/</kbd> <kbd>Enter</kbd> <kbd>0–9</kbd> manuel kod girişi · <kbd>Esc</kbd> vazgeç · <kbd>Backspace</kbd> atamayı kaldır</div>
                 <div><kbd>Ctrl+F</kbd> ara · <kbd>Ctrl+.</kbd> hesap kodu listesinde ara ve ata · <kbd>Ctrl+Z</kbd> geri al · <kbd>Ctrl+Y</kbd> yinele</div>
                 <div><kbd>F5</kbd> önizle · <kbd>F1</kbd> Excel üret · <kbd>Ctrl+P</kbd> faturayı yazdır · <kbd>Ctrl+Shift+P</kbd> yazdırma planı</div>

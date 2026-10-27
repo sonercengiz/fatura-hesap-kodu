@@ -1,6 +1,7 @@
 import { chromium } from 'playwright';
+import { enableAutoAdvance } from './e2e-helpers.mjs';
 import { readdirSync } from 'node:fs';
-const S='/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/aa071f3a-6270-4292-9e7a-d102afeef53e/scratchpad';
+const S=process.env.SCRATCH || '/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/d64e6ff3-d5c6-481a-957e-cc3c595811d5/scratchpad';
 const files=readdirSync(S+'/xmlin').filter(f=>f.endsWith('.xml')).sort().map(f=>S+'/xmlin/'+f);
 const browser=await chromium.launch({channel:'chrome',headless:true});
 const page=await (await browser.newContext({viewport:{width:1600,height:900}})).newPage();
@@ -15,6 +16,7 @@ await page.locator('.layout-btn').click(); await page.waitForSelector('.listview
 log('liste satır:', await page.locator('.lv-table tbody tr').count(), '| başlıklar:', (await page.locator('.lv-table thead th').allInnerTexts()).join(' | '));
 // Q kaydet ve ata, manuel ata, boşluk
 await page.locator('.slot').nth(0).hover(); await page.locator('.slot').nth(0).locator('.slot-icon.edit').click(); await page.keyboard.type('770.01'); await page.keyboard.press('Enter'); await page.waitForTimeout(150);
+await enableAutoAdvance(page); // testler hızlı çalışma (kendiliğinden geçiş) varsayar
 await page.keyboard.press('q'); await page.waitForTimeout(100); await page.keyboard.press('q'); await page.waitForTimeout(100);
 await page.keyboard.press('/'); await page.keyboard.type('153'); await page.keyboard.press('Enter'); await page.waitForTimeout(150);
 log('atama sonrası:', await page.locator('.progress').innerText(), '| geçerli satır #:', await page.locator('tr.current td.num').innerText(), '| ilk 3 kod:', (await page.locator('.lv-table td.lv-code').allInnerTexts()).slice(0,3).join(','));

@@ -1,6 +1,7 @@
 import { chromium } from 'playwright';
+import { enableAutoAdvance } from './e2e-helpers.mjs';
 import { readdirSync } from 'node:fs';
-const S='/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/aa071f3a-6270-4292-9e7a-d102afeef53e/scratchpad';
+const S=process.env.SCRATCH || '/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/d64e6ff3-d5c6-481a-957e-cc3c595811d5/scratchpad';
 const files=readdirSync(S+'/xmlin').filter(f=>f.endsWith('.xml')).sort().map(f=>S+'/xmlin/'+f).slice(0,12);
 const browser=await chromium.launch({channel:'chrome',headless:true});
 const page=await (await browser.newContext({viewport:{width:1500,height:900}})).newPage();
@@ -11,6 +12,7 @@ const no=()=>page.locator('.detail-row b').first().innerText();
 const idx=async()=>parseInt((await page.locator('.viewer-badge .muted').innerText()).split('/')[0]);
 // 1,2 ata (q) → şu an 3'te; 4'e geç ve ata → 5'te; Home
 await page.locator('.slot').nth(0).hover(); await page.locator('.slot').nth(0).locator('.slot-icon.edit').click(); await page.keyboard.type('770.01'); await page.keyboard.press('Enter'); await page.waitForTimeout(100);
+await enableAutoAdvance(page); // testler hızlı çalışma (kendiliğinden geçiş) varsayar
 await page.keyboard.press('q'); await page.waitForTimeout(200); await page.keyboard.press('q'); await page.waitForTimeout(200); await page.keyboard.press('ArrowRight'); await page.waitForTimeout(100); await page.keyboard.press('q'); await page.waitForTimeout(200);
 console.log('atananlar (liste sırası):', (await page.locator('.side .row').evaluateAll(els=>els.map((e,i)=>e.classList.contains('done')?i+1:null).filter(Boolean))).join(','));
 await page.keyboard.press('Home'); await page.waitForTimeout(80);

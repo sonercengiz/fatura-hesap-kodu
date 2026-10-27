@@ -1,6 +1,6 @@
 import { chromium } from 'playwright';
 import { readdirSync, writeFileSync, copyFileSync, readFileSync } from 'node:fs';
-const S='/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/aa071f3a-6270-4292-9e7a-d102afeef53e/scratchpad';
+const S=process.env.SCRATCH || '/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/d64e6ff3-d5c6-481a-957e-cc3c595811d5/scratchpad';
 const P='/Users/sonercengiz/Documents/scc/fatura-hesap-kodu/test/fixtures';
 const files=readdirSync(S+'/xmlin').filter(f=>f.endsWith('.xml')).sort().map(f=>S+'/xmlin/'+f).slice(0,5);
 writeFileSync(`${S}/yarim.xml`, files.length ? readFileSync(files[0],'utf8').slice(0, 3000) : '<Invoice>');

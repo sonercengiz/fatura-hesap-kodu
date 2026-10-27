@@ -480,7 +480,8 @@ export function pushUndo(label: string, inverse: Change[], redo: Change[]) {
   redoStack.value = [];
 }
 
-export async function assign(codeRaw: string, advance = true) {
+/** Kod ver. `advance` verilmezse Ayarlar › Görünüm › "Kod verdikten sonra" seçimi geçerlidir. */
+export async function assign(codeRaw: string, advance?: boolean) {
   const inv = current.value;
   const code = codeRaw.trim();
   if (!inv || !batchRec.value || !code) return;
@@ -492,7 +493,7 @@ export async function assign(codeRaw: string, advance = true) {
     mode.value = 'nav';
     manualText.value = '';
   });
-  if (advance) next();
+  if (advance ?? settings.value.autoAdvance) next();
 }
 
 export async function clearAssignment() {

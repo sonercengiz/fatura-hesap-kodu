@@ -103,7 +103,7 @@ export const sections: Section[] = [
           <>Elle giriş: <K k="/" />, <K k="Enter" /> ya da doğrudan bir rakam.</>,
         ]} />
         <Shot src="07a-yuva-yaz.png" alt="Yuvaya kod yazma" notes={[<>Boş yuvaya tıklayın, kodu yazın, <K k="Enter" />. Yuvalar yalnızca sizin yazdığınız kodları taşır; kendiliğinden değişmez.</>]} />
-        <Shot src="07b-atama.png" alt="Q tuşuyla atama: önce ve sonra" notes={[<>Tuşa basınca kod verilir, kart ve listedeki satır renklenir, sıradaki faturaya geçilir. Yanlışsa <K k="Ctrl+Z" />.</>]} />
+        <Shot src="07b-atama.png" alt="Q tuşuyla atama: önce ve sonra" notes={[<>Tuşa basınca kod verilir; kart ve listedeki satır renklenir, fatura ekranda kalır. <K k="→" /> ya da <K k="Tab" /> ile geçersiniz. Hızlı çalışmak isterseniz <b>Ayarlar › Görünüm › Kod verdikten sonra</b> bölümünden kendiliğinden geçişi açın. Yanlışsa <K k="Ctrl+Z" />.</>]} />
         <Shot src="08-manuel.png" alt="Elle giriş" notes={[
           <>Yuvada olmayan bir kod için <K k="/" /> basıp yazın; <K k="Enter" /> verir, <K k="Esc" /> vazgeçer.</>,
           <>Daha önce kullandığınız kodlar yazdıkça önerilir; <K k="Tab" /> ilkini alır.</>,
@@ -248,7 +248,7 @@ export const keys: [string, string][] = [
   ['←  →', 'Önceki / sonraki fatura'],
   ['Tab  Shift+Tab', 'Sonraki / önceki kod almamış fatura'],
   ['Ctrl+→', 'Toplu ve kuralla atananlar dahil gez'],
-  ['Q W E A S D', 'Yuvadaki kodu ver, sonrakine geç'],
+  ['Q W E A S D', 'Yuvadaki kodu ver (ayara göre sıradakine geç)'],
   ['Boşluk', 'Kuralın ya da satıcıya önce verilen kodu ver'],
   ['/  Enter  0–9', 'Elle kod girişi'],
   ['Ctrl+.', 'Hesap kodu listesinde ara ve ver'],

@@ -1,7 +1,8 @@
 // Kapsam: kalıcı VKN kuralı + partiye özel unvan kuralı → parti kuralı önde; not görünür; başka partide kalıcı geçerli; parti silinince parti kuralı gider; kural dosyasında yalnızca kalıcı
 import { chromium } from 'playwright';
+import { enableAutoAdvance } from './e2e-helpers.mjs';
 import { readdirSync, readFileSync } from 'node:fs';
-const S = '/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/aa071f3a-6270-4292-9e7a-d102afeef53e/scratchpad';
+const S = process.env.SCRATCH || '/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/d64e6ff3-d5c6-481a-957e-cc3c595811d5/scratchpad';
 const files = readdirSync(S + '/xmlin').filter((f) => f.endsWith('.xml')).sort().map((f) => `${S}/xmlin/${f}`);
 const turkcell = files.filter((f) => /8770013406/.test(f));
 const browser = await chromium.launch({ channel: 'chrome', headless: true });
@@ -26,6 +27,7 @@ await page.keyboard.press('Escape');
 // bir faturanın atamasını kaldır → ipucu "Parti kuralı diyor ki 740.09"
 await page.keyboard.press('Control+Home'); await page.keyboard.press('Backspace'); await page.waitForTimeout(200);
 log('ipucu:', await page.locator('button.hint').innerText());
+await enableAutoAdvance(page); // testler hızlı çalışma (kendiliğinden geçiş) varsayar
 await page.keyboard.press(' '); await page.waitForTimeout(200); await page.keyboard.press('Control+ArrowLeft'); await page.waitForTimeout(150);
 log('boşlukla atanan:', await page.locator('.detail-code b').innerText(), '| not:', await page.locator('.rule-note').innerText().catch(() => '(yok)'));
 // yeni XML yükle → parti kuralı (740.09) uygulanmalı, kalıcı değil

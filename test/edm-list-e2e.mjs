@@ -2,7 +2,7 @@ import { chromium } from 'playwright';
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import * as XLSX from 'xlsx';
 import { unzipSync, strFromU8 } from 'fflate';
-const S='/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/aa071f3a-6270-4292-9e7a-d102afeef53e/scratchpad';
+const S=process.env.SCRATCH || '/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/d64e6ff3-d5c6-481a-957e-cc3c595811d5/scratchpad';
 const files=readdirSync(S+'/xmlin').filter(f=>f.endsWith('.xml')).sort().map(f=>S+'/xmlin/'+f);
 const meta=(f)=>{const x=readFileSync(f,'utf8');return {no:x.match(/<cbc:ID>([^<]+)/)[1], date:x.match(/<cbc:IssueDate>(\d{4})-(\d{2})-(\d{2})/).slice(1).reverse().join('/'), vkn:(x.match(/schemeID="VKN">(\d+)/)||[])[1]||'', name:(x.match(/<cac:PartyName><cbc:Name>([^<]+)/)||[])[1]||'', amt:Number(x.match(/<cbc:PayableAmount[^>]*>([^<]*)/)[1])};};
 // EDM listesi: ilk 5 XML + listede olup XML'i olmayan 2 fatura (7. ve 8. XML'in no'ları ama XML yüklenmeyecek; 8. sonra yüklenecek)

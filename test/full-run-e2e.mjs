@@ -1,8 +1,9 @@
 // Tam kullanım testi: gerçek XML'ler → yükle → gez → ata → F5 → F1 (Excel XML ile karşılaştırılır) → tekrar yükleme → yeniden açma → çıkarma → yeni parti → yedek
 import { chromium } from 'playwright';
+import { enableAutoAdvance } from './e2e-helpers.mjs';
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import * as XLSX from 'xlsx';
-const S = '/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/aa071f3a-6270-4292-9e7a-d102afeef53e/scratchpad';
+const S = process.env.SCRATCH || '/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/d64e6ff3-d5c6-481a-957e-cc3c595811d5/scratchpad';
 const XML_DIR = process.env.XML_DIR || `${S}/xmlin`; // gerçek e-Fatura XML'leri (depoya girmez)
 const files = readdirSync(XML_DIR).filter((f) => f.endsWith('.xml')).sort().map((f) => `${XML_DIR}/${f}`);
 const browser = await chromium.launch({ channel: 'chrome', headless: true });
@@ -52,6 +53,7 @@ await page.screenshot({ path: `${S}/shots/e2e-01-ekran.png` });
 await page.keyboard.press('Home');
 for (const c of ['770.01', '770.01', '770.01']) { await page.keyboard.press('/'); await page.waitForSelector('.manual-input'); await page.keyboard.type(c); await page.keyboard.press('Enter'); await page.waitForTimeout(80); }
 await page.locator('.slot').nth(0).hover(); await page.locator('.slot').nth(0).locator('.slot-icon.edit').click(); await page.keyboard.type('770.01'); await page.keyboard.press('Enter');
+await enableAutoAdvance(page); // testler hızlı çalışma (kendiliğinden geçiş) varsayar
 for (let i = 0; i < 5; i++) { await page.keyboard.press('q'); await page.waitForTimeout(60); }
 await page.keyboard.press(' '); // satıcı ipucu varsa
 await page.waitForTimeout(100);
