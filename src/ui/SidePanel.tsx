@@ -7,27 +7,38 @@ import { SORT_LABELS, type SortMode } from '../core/sort';
 import type { FilterMode } from '../core/types';
 import { useState } from 'preact/hooks';
 
-const MAX_LINES = 8;
+const LINES_KEY = 'linesOpen';
+const readLinesOpen = () => { try { return localStorage.getItem(LINES_KEY) !== '0'; } catch { return true; } };
 
-/** Seçili faturanın kalemleri: ad, miktar, KDV; her kalemden "miktara göre kural" taslağı */
-function Lines({ inv, code }: { inv: NonNullable<typeof S.current.value>; code: string | undefined }) {
-  const [all, setAll] = useState(false);
-  const shown = all ? inv.lines : inv.lines.slice(0, MAX_LINES);
+/**
+ * Seçili faturanın kalemleri: tek satırda "ad · miktar × fiyat = tutar · KDV"; en çok üç satır yüksekliğinde, fazlası kaydırılır
+ * (panel yüksekliği faturadan faturaya değişmesin, alttaki liste yerinden oynamasın). Başlıktan kapatılır; seçim hatırlanır.
+ */
+function Lines({ inv }: { inv: NonNullable<typeof S.current.value> }) {
+  const [open, setOpen] = useState(readLinesOpen);
+  const toggle = () => { setOpen(!open); try { localStorage.setItem(LINES_KEY, open ? '0' : '1'); } catch { /* yok say */ } };
   const fmtQty = (q: number | null, u: string) => (q === null ? '' : `${q.toLocaleString('tr-TR', { maximumFractionDigits: 3 })} ${unitLabel(u)}`);
-  void code;
+  const money = (n: number | null | undefined) => (n == null ? '' : n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
   return (
-    <div class="lines">
-      <div class="lines-head"><span>Kalemler ({inv.lines.length})</span><span class="muted small">⚡ kalemden kural</span></div>
-      {shown.map((l, k) => (
-        <div class="line-row" title={`${l.label ?? l.name}${l.price != null ? ` · birim fiyat ${fmtAmount(l.price, inv.currency)} (KDV hariç)` : ''}`}>
-          <div class="line-main">
-            <span class="line-name">{l.label ?? l.name}</span>
-            <span class="line-sub muted">{fmtQty(l.qty, l.unit)}{l.price != null ? ` × ${fmtAmount(l.price, inv.currency)}` : ''}{l.amount != null ? ` = ${fmtAmount(l.amount, inv.currency)}` : ''}{l.vat !== null ? ` · KDV %${l.vat}` : ''}</span>
-          </div>
-          <button class="ghost tiny line-rule" title="Bu kalemden kural yap (kalem adı ve miktarı işaretli gelir)" onClick={() => (S.quickRule.value = { lineIndex: k })}>⚡</button>
+    <div class={`lines ${open ? '' : 'closed'}`}>
+      <button class="lines-head" onClick={toggle} title={open ? 'Kalemleri gizle' : 'Kalemleri göster'}>
+        <span>{open ? '▾' : '▸'} Kalemler ({inv.lines.length})</span>
+        <span class="muted small">⚡ kalemden kural</span>
+      </button>
+      {open && (
+        <div class="lines-body">
+          {inv.lines.map((l, k) => {
+            const sub = [fmtQty(l.qty, l.unit), l.price != null ? `× ${money(l.price)}` : '', l.amount != null ? `= ${money(l.amount)}` : '', l.vat !== null ? `· KDV %${l.vat}` : ''].filter(Boolean).join(' ');
+            return (
+              <div class="line-row" title={`${l.label ?? l.name}\n${sub}${l.price != null ? ' (birim fiyat KDV hariç)' : ''}`}>
+                <span class="line-name">{l.label ?? l.name}</span>
+                <span class="line-sub muted">{sub}</span>
+                <button class="ghost tiny line-rule" title="Bu kalemden kural yap (kalem adı ve miktarı işaretli gelir)" onClick={() => (S.quickRule.value = { lineIndex: k })}>⚡</button>
+              </div>
+            );
+          })}
         </div>
-      ))}
-      {inv.lines.length > MAX_LINES && <button class="ghost tiny" onClick={() => setAll(!all)}>{all ? 'Daha az göster' : `+ ${inv.lines.length - MAX_LINES} kalem daha`}</button>}
+      )}
     </div>
   );
 }
@@ -48,15 +59,13 @@ export function SidePanel() {
     <aside class="side">
       {inv && (
         <div class="detail">
-          <div class="detail-name">{inv.supplierName}</div>
+          <div class="detail-name" title={inv.supplierName}>{inv.supplierName}</div>
           <div class="detail-row"><span>Fatura No</span><b>{inv.no}</b></div>
           <div class="detail-row"><span>Tarih</span><b>{inv.date}</b></div>
           <div class="detail-row"><span>VKN</span><b>{inv.supplierVkn}</b></div>
           <div class="detail-row"><span>Tip</span><b>{inv.invoiceType} · {inv.profile}</b></div>
           <div class="detail-row"><span>Ödenecek</span><b>{fmtAmount(inv.amount, inv.currency)}</b></div>
-          {inv.taxExclusive != null && (
-            <div class="detail-row"><span>Matrah · vergi</span><b>{fmtAmount(inv.taxExclusive, inv.currency)}{inv.taxAmount != null ? ` · ${fmtAmount(inv.taxAmount, inv.currency)}` : ''}</b></div>
-          )}
+          <div class="detail-row"><span>Matrah · vergi</span><b>{inv.taxExclusive != null ? `${fmtAmount(inv.taxExclusive, inv.currency)}${inv.taxAmount != null ? ` · ${fmtAmount(inv.taxAmount, inv.currency)}` : ''}` : '—'}</b></div>
           <div class={`detail-code slot-${S.slotIndexOf(code)}`}>
             <span>Atanan{S.ruleNos.value.has(inv.no) && <span class="bulk-tag" title="Kuralla atandı">kural</span>}</span>
             <b>{code ?? '—'}</b>
@@ -85,7 +94,7 @@ export function SidePanel() {
           {code && S.accounts.value.length > 0 && S.accountMap.value.has(code) && (
             <div class="detail-row"><span>Hesap adı</span><b>{S.accountMap.value.get(code)}</b></div>
           )}
-          {inv.lines.length > 0 && <Lines inv={inv} code={code} />}
+          {inv.lines.length > 0 && <Lines inv={inv} />}
           {S.issuesFor(inv).filter((k) => k !== 'no-code').map((k) => (
             <div class="issue">{S.ISSUE_LABEL[k]}</div>
           ))}
