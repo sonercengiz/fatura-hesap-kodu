@@ -13,7 +13,6 @@ const ctx = await browser.newContext({ viewport: { width: 1440, height: 820 }, a
 const page = await ctx.newPage();
 page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
 page.on('console', (m) => { if (m.type() === 'error' && !/srcdoc|sandboxed/.test(m.text())) errors.push('console: ' + m.text()); });
-page.on('dialog', (d) => d.accept(d.type() === 'prompt' ? 'Deneme Ltd' : undefined));
 await page.addInitScript(() => { try { localStorage.setItem('guideSeen', '1'); } catch {} });
 await page.goto('http://localhost:5179/');
 await page.waitForSelector('.welcome');
@@ -52,7 +51,7 @@ await page.screenshot({ path: `${S}/shots/e2e-01-ekran.png` });
 // 3) Atama: elle 3 kod, kısayola kaydet, Q ile 5 atama, toplu atama, F5
 await page.keyboard.press('Home');
 for (const c of ['770.01', '770.01', '770.01']) { await page.keyboard.press('/'); await page.waitForSelector('.manual-input'); await page.keyboard.type(c); await page.keyboard.press('Enter'); await page.waitForTimeout(80); }
-await page.locator('.slot').nth(0).locator('.slot-icon.save').click();
+await page.locator('.slot').nth(0).hover(); await page.locator('.slot').nth(0).locator('.slot-icon.edit').click(); await page.keyboard.type('770.01'); await page.keyboard.press('Enter');
 for (let i = 0; i < 5; i++) { await page.keyboard.press('q'); await page.waitForTimeout(60); }
 await page.keyboard.press(' '); // satıcı ipucu varsa
 await page.waitForTimeout(100);
@@ -112,7 +111,7 @@ log('yeniden yükleme sonrası:', await page.locator('.progress').innerText(), '
 
 // 8) Faturayı partiden çıkar
 const before = await page.locator('.list .row').count();
-await page.locator('.files button', { hasText: 'çıkar' }).first().click();
+await page.locator('.files button', { hasText: 'çıkar' }).first().click(); await page.locator('.modal.dialog button.danger').click();
 await page.waitForTimeout(300);
 log('çıkarma:', before, '→', await page.locator('.list .row').count());
 

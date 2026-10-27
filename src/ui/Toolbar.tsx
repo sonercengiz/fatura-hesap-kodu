@@ -1,5 +1,6 @@
 import { useRef } from 'preact/hooks';
 import * as S from './state';
+import { askName } from './dialog';
 
 export function Toolbar() {
   const xml = useRef<HTMLInputElement>(null);
@@ -18,8 +19,7 @@ export function Toolbar() {
           const v = (e.currentTarget as HTMLSelectElement).value;
           if (v === '__new') {
             (e.currentTarget as HTMLSelectElement).value = S.firm.value.id;
-            const name = prompt('Yeni firma adı:');
-            if (name) S.createFirm(name);
+            askName({ title: 'Yeni firma', label: 'Firma adı', placeholder: 'Örnek Kırtasiye Ltd. Şti.' }).then((name) => { if (name) S.createFirm(name); });
           } else S.switchFirm(v);
         }}
       >
@@ -33,21 +33,20 @@ export function Toolbar() {
           const id = (e.currentTarget as HTMLSelectElement).value;
           if (id === '__new') {
             (e.currentTarget as HTMLSelectElement).value = b?.id ?? '';
-            const name = prompt('Yeni parti adı (boş bırakılırsa yüklenen faturaların ayına göre adlanır):', '');
-            if (name !== null) S.createBatch(name);
+            askName({ title: 'Yeni dönem', label: 'Dönem adı', placeholder: 'örn. Eylül 2026', hint: 'Boş bırakırsanız yüklenen faturaların ayına göre kendiliğinden adlanır.', allowEmpty: true, okLabel: 'Oluştur' }).then((name) => { if (name !== null) S.createBatch(name); });
           } else if (id) S.openBatch(id);
         }}
-        title="Parti (bir dönemin faturaları; XML'ler sonradan da eklenebilir)"
+        title="Dönem (bir dönemin faturaları; XML'ler sonradan da eklenebilir)"
       >
-        {!b && <option value="">Parti seçin</option>}
+        {!b && <option value="">Dönem seçin</option>}
         {S.batchList.value.map((x) => (
           <option value={x.id}>
             {x.name} · {new Date(x.createdAt).toLocaleDateString('tr-TR')}
           </option>
         ))}
-        <option value="__new">+ Yeni parti…</option>
+        <option value="__new">+ Yeni dönem…</option>
       </select>
-      <button class={b ? '' : 'primary'} onClick={() => xml.current?.click()} title={(b ? 'Açık partiye e-Fatura XML ya da ZIP dosyaları ekle' : 'e-Fatura XML ya da ZIP dosyalarını yükle (yeni parti açılır)') + '. Klasörü pencereye sürükleyerek de yükleyebilirsiniz.'}>Yükle</button>
+      <button class={b ? '' : 'primary'} onClick={() => xml.current?.click()} title={(b ? 'Açık döneme e-Fatura XML ya da ZIP dosyaları ekle' : 'e-Fatura XML ya da ZIP dosyalarını yükle (yeni dönem açılır)') + '. Klasörü pencereye sürükleyerek de yükleyebilirsiniz.'}>Yükle</button>
       <div class="spacer" />
       {b && (
         <div class="progress" title="Atanan / toplam">
@@ -56,7 +55,7 @@ export function Toolbar() {
           <span class="saved" title="Her atama anında bu tarayıcıya kaydedilir; ayrıca kaydetmeniz gerekmez"> · ✓ anında kaydedilir</span>
         </div>
       )}
-      <button class={`ghost layout-btn ${S.settings.value.layout === 'list' ? 'on' : ''}`} onClick={() => S.setLayout(S.settings.value.layout === 'list' ? 'hybrid' : 'list')} disabled={!b} title={S.settings.value.layout === 'list' ? 'Hibrit görünüme geç (fatura görseli + panel)' : 'Liste görünümüne geç (yalnızca tablo)'}>{S.settings.value.layout === 'list' ? '▣ Hibrit' : '☰ Liste'}</button>
+      <button class={`ghost layout-btn ${S.settings.value.layout === 'list' ? 'on' : ''}`} onClick={() => S.setLayout(S.settings.value.layout === 'list' ? 'hybrid' : 'list')} disabled={!b} title={S.settings.value.layout === 'list' ? 'Görsel görünüme geç (fatura görüntüsü + panel)' : 'Liste görünümüne geç (yalnızca tablo)'}>{S.settings.value.layout === 'list' ? '▣ Görsel' : '☰ Liste'}</button>
       <button class="ghost" onClick={() => S.undo()} disabled={!S.undoStack.value.length} title={S.undoStack.value.length ? `Geri al: ${S.undoStack.value[S.undoStack.value.length - 1].label} (Ctrl+Z)` : 'Geri alınacak işlem yok'}>↶</button>
       <button onClick={() => (S.previewOpen.value = true)} disabled={!b} title="F5">Önizle <kbd>F5</kbd></button>
       <button class="primary" onClick={() => S.exportExcel()} disabled={!b || n === 0} title="F1">Excel üret <kbd>F1</kbd></button>

@@ -7,8 +7,7 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true });
 const errors = [];
 const mk = async () => { const ctx = await browser.newContext({ viewport: { width: 1440, height: 820 }, acceptDownloads: true }); const page = await ctx.newPage();
   page.on('pageerror', (e) => errors.push('pageerror: ' + e.message)); page.on('console', (m) => { if (m.type() === 'error' && !/srcdoc|sandboxed/.test(m.text())) errors.push('console: ' + m.text()); });
-  page.on('dialog', (d) => d.accept(d.type() === 'prompt' ? 'Beta Ltd' : undefined));
-  await page.addInitScript(() => { try { localStorage.setItem('guideSeen', '1'); } catch {} }); await page.goto('http://localhost:5179/'); return page; };
+    await page.addInitScript(() => { try { localStorage.setItem('guideSeen', '1'); } catch {} }); await page.goto('http://localhost:5179/'); return page; };
 const a = await mk();
 await a.waitForSelector('.firm-select');
 console.log('varsayılan firma:', await a.locator('.firm-select option:checked').innerText());
@@ -21,7 +20,7 @@ await a.locator('.acc-text').fill('770.01 Kırtasiye'); await a.locator('button:
 await a.keyboard.press('Escape');
 console.log('A firması: slot Q =', (await a.locator('.slot').nth(0).innerText()).replace(/\n/g,' '), '| parti:', await a.locator('.batch-select option:checked').innerText(), '| liste kodu:', await a.locator('.firm-select option:checked').innerText());
 // Yeni firma (prompt → "Beta Ltd")
-await a.locator('.firm-select').selectOption('__new'); await a.waitForTimeout(400);
+await a.locator('.firm-select').selectOption('__new'); await a.waitForSelector('.modal.dialog input'); await a.locator('.modal.dialog input').fill('Beta Ltd'); await a.keyboard.press('Enter'); await a.waitForTimeout(400);
 console.log('yeni firma seçili:', await a.locator('.firm-select option:checked').innerText(), '| karşılama görünüyor:', await a.locator('.welcome').count(), '| slot Q:', (await a.locator('.slot').nth(0).innerText()).replace(/\n/g,' '), '| firma sayısı:', (await a.locator('.firm-select option').count()) - 1);
 await a.locator('input[accept*=".zip"]').setInputFiles(XMLS); await a.waitForSelector('.inv-frame');
 console.log('Beta: ilk fatura kodu (Alfa atamaları sızmamalı):', await a.locator('.detail-code b').innerText(), '| ipucu:', await a.locator('button.hint').count(), '| hesap listesi:', await a.evaluate(() => document.querySelectorAll('.acc-row').length));
@@ -65,7 +64,7 @@ if (existsSync(legacy)) {
 }
 // Firma silme (Beta) → Alfa'ya döner
 await b.locator('button[title="Ayarlar"]').click();
-await b.locator('button:has-text("Firmayı sil")').click(); await b.waitForTimeout(500);
+await b.locator('button:has-text("Firmayı sil")').click(); await b.locator('.modal.dialog button.danger').click(); await b.waitForTimeout(500);
 console.log('silme sonrası firmalar:', (await b.locator('.firm-select option').allInnerTexts()).join(' | '));
 console.log('HATALAR:', errors.length ? errors : 'yok');
 await browser.close();

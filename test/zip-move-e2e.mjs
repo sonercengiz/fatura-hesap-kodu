@@ -13,7 +13,6 @@ writeFileSync(`${S}/edm-3f9a2c.zip`, zipSync(ent));
 const browser=await chromium.launch({channel:'chrome',headless:true});
 const page=await (await browser.newContext({viewport:{width:1500,height:900}})).newPage();
 const errors=[]; page.on('pageerror',e=>errors.push(e.message));
-page.on('dialog',d=>d.accept('Beta Ltd'));
 await page.addInitScript(()=>{try{localStorage.setItem('guideSeen','1')}catch{}});
 await page.goto('http://localhost:5179/'); await page.waitForSelector('.welcome');
 const inp='input[accept*=".zip"]';
@@ -25,7 +24,7 @@ console.log('parti:', await page.locator('.batch-select option:checked').innerTe
 await page.locator('.slot').nth(0).hover(); await page.locator('.slot').nth(0).locator('.slot-icon.edit').click(); await page.keyboard.type('770.01'); await page.keyboard.press('Enter'); await page.waitForTimeout(100);
 await page.keyboard.press('q'); await page.waitForTimeout(150); await page.keyboard.press('q'); await page.waitForTimeout(150);
 // yeni firma Beta (prompt) → geri Firma 1'e dön
-await page.locator('.firm-select').selectOption('__new'); await page.waitForTimeout(400);
+await page.locator('.firm-select').selectOption('__new'); await page.waitForSelector('.modal.dialog input'); await page.locator('.modal.dialog input').fill('Beta Ltd'); await page.keyboard.press('Enter'); await page.waitForTimeout(400);
 const alfa=await page.locator('.firm-select option:has-text("Firma 1")').getAttribute('value');
 await page.locator('.firm-select').selectOption(alfa); await page.waitForTimeout(400);
 console.log('Firma 1 geri:', await page.locator('.progress').innerText());

@@ -22,7 +22,7 @@ const EMPTY_FIRM: FirmRecord = { id: DEFAULT_FIRM_ID, name: '', createdAt: 0, sh
 export const firm = computed<FirmRecord>(() => firms.value.find((f) => f.id === currentFirmId.value) ?? firms.value[0] ?? EMPTY_FIRM);
 export const batchRec = signal<BatchRecord | null>(null);
 export const batchList = signal<BatchRecord[]>([]);
-/** Açık partinin fatura kayıtları (XML dahil) */
+/** Açık dönemin fatura kayıtları (XML dahil) */
 export const invoiceRecs = signal<InvoiceRecord[]>([]);
 export const assignments = signal<Map<string, string>>(new Map());
 export const currentIndex = signal(0);
@@ -58,7 +58,7 @@ export interface PrintJob { items: Invoice[]; opts: PrintOpts; parts: Invoice[][
 export const printJob = signal<PrintJob | null>(null);
 /** Kurallar penceresi açılırken forma önceden doldurulacak değerler */
 export const ruleDraft = signal<{ kind: RuleKind; pattern: string; code: string; scope?: RuleScope } | null>(null);
-/** Kural kapsamı: firma geneli (kalıcı) ya da yalnızca açık parti */
+/** Kural kapsamı: firma geneli (kalıcı) ya da yalnızca açık dönem */
 export type RuleScope = 'firm' | 'batch';
 /** Listede seçili faturalar (toplu atama için) */
 export const selected = signal<Set<string>>(new Set());
@@ -163,9 +163,9 @@ export const ruleFor = computed(() => {
   }
   return m;
 });
-/** Bu partide geçerli kurallar (kalıcılar + bu partininkiler) */
+/** Bu dönemde geçerli kurallar (kalıcılar + bu dönemdekiler) */
 export const batchRules = computed(() => activeRules(rules.value, batchRec.value?.id ?? null));
-/** Parti kuralının bu partide geçersiz kıldığı kalıcı kural(lar): fatura sayısı ve kodlar */
+/** Dönem kuralının bu dönemde geçersiz kıldığı kalıcı kural(lar): fatura sayısı ve kodlar */
 export function overriddenBy(rule: Rule): { count: number; codes: string[] } {
   if (!rule.batchId) return { count: 0, codes: [] };
   const codes = new Set<string>();
@@ -177,7 +177,7 @@ export function overriddenBy(rule: Rule): { count: number; codes: string[] } {
   }
   return { count, codes: Array.from(codes) };
 }
-/** Partide kurala uyan ama henüz kod almamış faturalar */
+/** Dönemde kurala uyan ama henüz kod almamış faturalar */
 export const rulePending = computed(() => invoices.value.filter((i) => !assignments.value.has(i.no) && ruleFor.value.has(i.no)));
 
 export type IssueKind = 'no-code' | 'not-in-chart' | 'type' | 'no-view';
@@ -194,7 +194,7 @@ export const ISSUE_LABEL: Record<IssueKind, string> = {
   'no-code': 'Hesap kodu atanmamış',
   'not-in-chart': 'Kod hesap kodu listesinde yok',
   type: 'Tevkifat / İade faturası, kontrol edin',
-  'no-view': 'XML yok (eski Excel partisi); görsel çizilemez',
+  'no-view': 'XML yok (eski Excel dönemi); görsel çizilemez',
 };
 
 /** Toolbar ve listede gösterilecek uyarılar: atanmamış kod ve görsel eksikliği hariç. */
@@ -247,8 +247,8 @@ export async function getInvoiceView(no: string): Promise<InvoiceView | null> {
   } else if (rec.xml) {
     html = '<!--fallback-->' + fallbackHtml(inv, rec.xml, 'Bu faturada görünüm şablonu (XSLT) yok; XML içeriği sade biçimde gösteriliyor.');
   } else {
-    // XML'siz (eski Excel partisi): ekranda kart gösterilir, yazdırmada sade özet
-    return { html: '<!--fallback-->' + fallbackHtml(inv, null, 'Bu faturanın XML\'i yok (eski Excel partisi); yalnızca liste bilgileri.'), official: false };
+    // XML'siz (eski Excel dönemi): ekranda kart gösterilir, yazdırmada sade özet
+    return { html: '<!--fallback-->' + fallbackHtml(inv, null, 'Bu faturanın XML\'i yok (eski Excel dönemi); yalnızca liste bilgileri.'), official: false };
   }
   rememberHtml(key, html);
   return { html, official };
@@ -291,7 +291,7 @@ async function loadFirmData() {
   rules.value = (await db.rules.where('firmId').equals(id).toArray()).sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
-/** Firma değiştir: kısayollar, hesap listesi, geçmiş ve parti listesi birlikte değişir */
+/** Firma değiştir: kısayollar, hesap listesi, geçmiş ve dönem listesi birlikte değişir */
 export async function switchFirm(id: string) {
   if (!firms.value.some((f) => f.id === id)) return;
   currentFirmId.value = id;
@@ -334,7 +334,7 @@ export async function updateFirm(patch: Partial<Omit<FirmRecord, 'id'>>) {
   firms.value = await db.firms.orderBy('name').toArray();
 }
 
-/** Firmayı ve ona bağlı her şeyi (partiler, faturalar, atamalar, liste, geçmiş) siler */
+/** Firmayı ve ona bağlı her şeyi (dönemler, faturalar, atamalar, liste, geçmiş) siler */
 export async function deleteFirm(id: string) {
   if (firms.value.length <= 1) { showToast('Son firma silinemez.'); return; }
   const batchIds = await db.batches.where('firmId').equals(id).primaryKeys();
@@ -375,14 +375,14 @@ export async function openBatch(id: string) {
   currentIndex.value = idx >= 0 ? idx : firstNavigable();
 }
 
-/** Yeni, boş parti oluşturur ve açar. Ad verilmezse ilk XML yüklemesinde baskın aya göre adlanır. */
+/** Yeni, boş dönem oluşturur ve açar. Ad verilmezse ilk XML yüklemesinde baskın aya göre adlanır. */
 export async function createBatch(name?: string) {
   const now = Date.now();
   const n = (name ?? '').trim();
   const rec: BatchRecord = {
     id: newId(),
     firmId: currentFirmId.value,
-    name: n || `Yeni parti ${new Date(now).toLocaleDateString('tr-TR')}`,
+    name: n || `Yeni dönem ${new Date(now).toLocaleDateString('tr-TR')}`,
     autoName: !n,
     createdAt: now,
     updatedAt: now,
@@ -430,7 +430,7 @@ export async function expandZips(list: File[], depth = 0): Promise<File[]> {
 export interface ImportReport {
   added: number;
   skipped: number;
-  /** Zaten partide olduğu için atlanan dosyalar */
+  /** Zaten dönemde olduğu için atlanan dosyalar */
   skippedFiles: { file: string; no: string }[];
   /** Kuralla kendiliğinden atanan */
   ruled: number;
@@ -438,8 +438,8 @@ export interface ImportReport {
 }
 
 /**
- * e-Fatura XML dosyalarını açık partiye ekler (parti yoksa oluşturur). Aynı fatura no partide varsa atlanır.
- * XSLT'ler özetleriyle tekilleştirilir; daha önce başka partide atanmış faturaların kodu taşınır.
+ * e-Fatura XML dosyalarını açık döneme ekler (dönem yoksa oluşturur). Aynı fatura no dönemde varsa atlanır.
+ * XSLT'ler özetleriyle tekilleştirilir; daha önce başka dönemde atanmış faturaların kodu taşınır.
  */
 export async function importXml(rawList: File[]): Promise<ImportReport> {
   const report: ImportReport = { added: 0, skipped: 0, skippedFiles: [], ruled: 0, failed: [] };
@@ -512,7 +512,7 @@ export async function importXml(rawList: File[]): Promise<ImportReport> {
         if (put.length) await db.xslts.bulkPut(put);
       }
       await db.invoices.bulkPut(recs);
-      // Daha önce başka partide atanmış aynı faturalar varsa atamayı taşı
+      // Daha önce başka dönemde atanmış aynı faturalar varsa atamayı taşı
       const prior = (await db.assignments.where('no').anyOf(recs.map((r) => r.no)).toArray()).filter((a) => a.batchId !== b.id);
       if (prior.length) {
         const latestByNo = new Map<string, AssignmentRecord>();
@@ -555,7 +555,7 @@ export async function importXml(rawList: File[]): Promise<ImportReport> {
   return report;
 }
 
-/** Faturaları partiden çıkarır (atamalarıyla birlikte). */
+/** Faturaları dönemden çıkarır (atamalarıyla birlikte). */
 export async function removeInvoices(nos: string[]) {
   const b = batchRec.value;
   if (!b || nos.length === 0) return;
@@ -569,7 +569,7 @@ export async function removeInvoices(nos: string[]) {
   await openBatch(b.id);
   goTo(idx);
   await cleanupXslts();
-  showToast(`${nos.length} fatura partiden çıkarıldı`);
+  showToast(`${nos.length} fatura dönemden çıkarıldı`);
 }
 
 /** Hiçbir faturanın kullanmadığı XSLT kayıtlarını siler */
@@ -819,7 +819,7 @@ export async function exportExcel() {
   showToast(`İndirildi: ${name}`, 4000);
 }
 
-/** Hibrit ↔ liste görünümü; isteğe bağlı olarak belirli bir faturaya gider */
+/** Görsel ↔ liste görünümü; isteğe bağlı olarak belirli bir faturaya gider */
 export async function setLayout(layout: Settings['layout'], no?: string) {
   await updateSettings({ layout });
   if (no) {
@@ -865,7 +865,7 @@ interface WorkspaceExport {
   batches: { batch: BatchRecord; assignments: AssignmentRecord[]; invoices: InvoiceMeta[] }[];
 }
 
-/** Eski (v1/v2) yedek parti biçimi */
+/** Eski (v1/v2) yedek dönem biçimi */
 interface LegacyBatchExport {
   batch: BatchRecord & { sheet?: EdmSheet; sourceFileName?: string };
   assignments: AssignmentRecord[];
@@ -903,7 +903,7 @@ export async function exportWorkspace() {
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
   lastExportAt.value = Date.now();
   await db.settings.put({ key: 'lastExportAt', value: lastExportAt.value });
-  showToast(`Dışa aktarıldı: ${name} (${data.firms.length} firma, ${batches.length} parti)`, 5000);
+  showToast(`Dışa aktarıldı: ${name} (${data.firms.length} firma, ${batches.length} dönem)`, 5000);
 }
 
 /** Birleştirir, silmez. Firmalar önce kimlikle, sonra adla eşlenir; eşleşmeyen firma yeni oluşturulur. */
@@ -987,7 +987,7 @@ export async function importWorkspace(file: File) {
     await refreshBatchList();
     const latest = batchList.value[0];
     if (latest) await openBatch(batchRec.value?.id ?? latest.id);
-    showToast(`İçe aktarıldı: ${srcFirms.length} firma, ${nb} yeni parti, ${ni} fatura, ${na} atama${nr ? `, ${nr} kural` : ''}`, 5000);
+    showToast(`İçe aktarıldı: ${srcFirms.length} firma, ${nb} yeni dönem, ${ni} fatura, ${na} atama${nr ? `, ${nr} kural` : ''}`, 5000);
   } catch (e) {
     showToast((e as Error).message, 5000);
   } finally {
@@ -1133,7 +1133,7 @@ export async function addRule(kind: RuleKind, patternRaw: string, codeRaw: strin
   const code = codeRaw.trim();
   const err = validateRule(kind, pattern, code);
   if (err) return err;
-  if (scope === 'batch' && !batchRec.value) return 'Partiye özel kural için açık bir parti gerekir.';
+  if (scope === 'batch' && !batchRec.value) return 'Döneme özel kural için açık bir dönem gerekir.';
   const now = Date.now();
   await mergeRule({ id: newId(), firmId: currentFirmId.value, batchId: scope === 'batch' ? batchRec.value!.id : null, kind, pattern: kind === 'vkn' ? normPattern(kind, pattern) : pattern, code, enabled: true, createdAt: now, updatedAt: now });
   await reloadRules();
@@ -1198,7 +1198,7 @@ async function transferHistory(fromFirm: string, toFirm: string, pairs: { vkn: s
   }
 }
 
-/** Açık partiyi tüm faturaları, atamaları ve partiye özel kurallarıyla başka firmaya taşır; oraya geçer. */
+/** Açık dönemi tüm faturaları, atamaları ve döneme özel kurallarıyla başka firmaya taşır; oraya geçer. */
 export async function moveBatchToFirm(targetFirmId: string) {
   const b = batchRec.value;
   if (!b || targetFirmId === b.firmId || !firms.value.some((f) => f.id === targetFirmId)) return;
@@ -1212,12 +1212,12 @@ export async function moveBatchToFirm(targetFirmId: string) {
   const name = firms.value.find((f) => f.id === targetFirmId)?.name ?? '';
   await switchFirm(targetFirmId);
   await openBatch(b.id);
-  showToast(`"${b.name}" partisi ${name} firmasına taşındı. Geri almak için aynı pencereyi kullanın.`, 5000);
+  showToast(`"${b.name}" dönemi ${name} firmasına taşındı. Geri almak için aynı pencereyi kullanın.`, 5000);
 }
 
 /**
- * Seçili faturaları başka firmaya taşır: hedef parti verilmezse orada yeni parti açılır.
- * Atamalar faturayla gider; partiye özel kurallar gitmez.
+ * Seçili faturaları başka firmaya taşır: hedef dönem verilmezse orada yeni dönem açılır.
+ * Atamalar faturayla gider; döneme özel kurallar gitmez.
  */
 export async function moveInvoicesToFirm(nos: string[], targetFirmId: string, targetBatchId: string | null) {
   const b = batchRec.value;
@@ -1229,7 +1229,7 @@ export async function moveInvoicesToFirm(nos: string[], targetFirmId: string, ta
   const now = Date.now();
   let target = targetBatchId ? await db.batches.get(targetBatchId) : undefined;
   if (!target || target.firmId !== targetFirmId) {
-    target = { id: newId(), firmId: targetFirmId, name: dominantMonth(recs.map((r) => r.issueDate)) ?? `Yeni parti ${new Date(now).toLocaleDateString('tr-TR')}`, autoName: true, createdAt: now, updatedAt: now, savedAt: null };
+    target = { id: newId(), firmId: targetFirmId, name: dominantMonth(recs.map((r) => r.issueDate)) ?? `Yeni dönem ${new Date(now).toLocaleDateString('tr-TR')}`, autoName: true, createdAt: now, updatedAt: now, savedAt: null };
     await db.batches.put(target);
   }
   const existing = new Set((await db.invoices.where('batchId').equals(target.id).primaryKeys()).map((k) => k[1]));
@@ -1254,7 +1254,7 @@ export async function moveInvoicesToFirm(nos: string[], targetFirmId: string, ta
   const name = firms.value.find((f) => f.id === targetFirmId)?.name ?? '';
   await refreshBatchList();
   await openBatch(b.id);
-  showToast(`${recs.length - skipped} fatura ${name} › "${target.name}" partisine taşındı${skipped ? ` (${skipped} orada zaten vardı, bırakıldı)` : ''}.`, 5000);
+  showToast(`${recs.length - skipped} fatura ${name} › "${target.name}" dönemine taşındı${skipped ? ` (${skipped} orada zaten vardı, bırakıldı)` : ''}.`, 5000);
 }
 
 // ---------- yazdırma ----------

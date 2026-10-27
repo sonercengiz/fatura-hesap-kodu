@@ -2,7 +2,7 @@ import { useEffect, useState } from 'preact/hooks';
 import * as S from './state';
 import { db, type BatchRecord } from '../storage/db';
 
-/** Yanlış firmaya yüklenen partiyi ya da seçili faturaları başka firmaya taşır (geri taşıma aynı pencereden). */
+/** Yanlış firmaya yüklenen dönemi ya da seçili faturaları başka firmaya taşır (geri taşıma aynı pencereden). */
 export function MoveModal() {
   const cur = S.firm.value;
   const others = S.firms.value.filter((f) => f.id !== cur.id);
@@ -40,7 +40,7 @@ export function MoveModal() {
             <>
               <fieldset>
                 <legend>Ne taşınsın</legend>
-                <label class="radio"><input type="radio" name="mscope" checked={scope === 'batch'} onChange={() => setScope('batch')} /><span>"{b.name}" partisinin tamamı ({S.invoices.value.length} fatura, atamaları ve partiye özel kurallarıyla)</span></label>
+                <label class="radio"><input type="radio" name="mscope" checked={scope === 'batch'} onChange={() => setScope('batch')} /><span>"{b.name}" partisinin tamamı ({S.invoices.value.length} fatura, atamaları ve döneme özel kurallarıyla)</span></label>
                 <label class="radio"><input type="radio" name="mscope" checked={scope === 'selected'} disabled={sel.size === 0} onChange={() => setScope('selected')} /><span>Seçili faturalar ({sel.size}) atamalarıyla</span></label>
                 {sel.size === 0 && <div class="muted small">Belirli faturaları taşımak için önce listeden seçin (☑ Seç, Shift/Ctrl+tık).</div>}
               </fieldset>
@@ -50,9 +50,9 @@ export function MoveModal() {
                 </select>
               </label>
               {scope === 'selected' && (
-                <label><span>Hedef parti</span>
+                <label><span>Hedef dönem</span>
                   <select value={batchId} onChange={(e) => setBatchId((e.currentTarget as HTMLSelectElement).value)} onKeyDown={(e) => e.stopPropagation()}>
-                    <option value="__new">Yeni parti (faturaların ayına göre adlanır)</option>
+                    <option value="__new">Yeni dönem (faturaların ayına göre adlanır)</option>
                     {batches.map((x) => <option value={x.id}>{x.name} · {new Date(x.createdAt).toLocaleDateString('tr-TR')}</option>)}
                   </select>
                 </label>

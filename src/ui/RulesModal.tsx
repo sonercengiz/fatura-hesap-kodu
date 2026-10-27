@@ -56,11 +56,11 @@ export function RulesModal() {
         <div class="form">
           <div class="muted small">
             Bu firmada tekrar eden satıcılar için kod sabitleyin: belirteç uyan her fatura <b>yüklenir yüklenmez</b> o kodu alır ("kural" etiketi, Ctrl+Z ile geri alınır).
-            Öncelik: VKN/TCKN › unvan › kalem adı. <b>Kalıcı</b> kural firmanın her partisinde, <b>partiye özel</b> kural yalnızca o ayda geçerlidir ve kalıcının önüne geçer. Kurallar yalnızca bu tarayıcıda saklanır; yedeğe girer, kalıcılar dosya olarak paylaşılabilir.
+            Öncelik: VKN/TCKN › unvan › kalem adı. <b>Kalıcı</b> kural firmanın her partisinde, <b>döneme özel</b> kural yalnızca o ayda geçerlidir ve kalıcının önüne geçer. Kurallar yalnızca bu tarayıcıda saklanır; yedeğe girer, kalıcılar dosya olarak paylaşılabilir.
           </div>
           <div class="scope-seg" role="radiogroup" aria-label="Kural kapsamı">
-            <button class={scope === 'firm' ? 'on' : ''} onClick={() => setScope('firm')} title="Firmanın bütün partilerinde geçerli">Kalıcı · {S.firm.value.name}</button>
-            <button class={scope === 'batch' ? 'on' : ''} disabled={!batch} onClick={() => setScope('batch')} title="Yalnızca açık partide geçerli; parti silinince kural da gider">Yalnızca bu parti · {batch?.name ?? '—'}</button>
+            <button class={scope === 'firm' ? 'on' : ''} onClick={() => setScope('firm')} title="Firmanın bütün dönemlerinde geçerli">Kalıcı · {S.firm.value.name}</button>
+            <button class={scope === 'batch' ? 'on' : ''} disabled={!batch} onClick={() => setScope('batch')} title="Yalnızca açık dönemde geçerli; dönem silinince kural da gider">Yalnızca bu dönem · {batch?.name ?? '—'}</button>
           </div>
           <div class="rule-form">
             <select value={kind} onChange={(e) => pick((e.currentTarget as HTMLSelectElement).value as RuleKind)} onKeyDown={(e) => e.stopPropagation()}>
@@ -68,16 +68,16 @@ export function RulesModal() {
             </select>
             <input ref={patInput} class="rule-pattern" placeholder={kind === 'vkn' ? 'VKN (10) / TCKN (11 rakam)' : kind === 'name' ? 'unvanda geçen metin, örn. güneş temizlik' : 'kalem adında geçen metin, örn. kargo'} value={pattern} onInput={(e) => setPattern((e.currentTarget as HTMLInputElement).value)} onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); codeInput.current?.focus(); } }} />
             <input ref={codeInput} class="rule-code" placeholder="hesap kodu" value={code} onInput={(e) => setCode((e.currentTarget as HTMLInputElement).value)} onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); submit(); } }} />
-            <button class="primary" onClick={submit} disabled={!pattern.trim() || !code.trim()}>{scope === 'batch' ? 'Bu partiye kaydet' : 'Kaydet ve uygula'}</button>
+            <button class="primary" onClick={submit} disabled={!pattern.trim() || !code.trim()}>{scope === 'batch' ? 'Bu döneme kaydet' : 'Kaydet ve uygula'}</button>
           </div>
           {err && <div class="issue">{err}</div>}
           {pattern.trim() && S.batchRec.value && (
-            <div class="muted small">Bu partide uyan fatura: <b>{hits({ id: '', firmId: '', batchId: null, kind, pattern, code: '', enabled: true, createdAt: 0, updatedAt: 0 })}</b> / {invs.length}</div>
+            <div class="muted small">Bu dönemde uyan fatura: <b>{hits({ id: '', firmId: '', batchId: null, kind, pattern, code: '', enabled: true, createdAt: 0, updatedAt: 0 })}</b> / {invs.length}</div>
           )}
 
           <div class="row-inline" style="margin-top:4px">
             <input placeholder="Kurallarda ara" value={filter} onInput={(e) => setFilter((e.currentTarget as HTMLInputElement).value)} onKeyDown={(e) => e.stopPropagation()} style="flex:1" />
-            <button disabled={!pending} title="Partideki kod almamış, kurala uyan faturalara kodlarını ver" onClick={() => S.applyRules(() => true).then((n) => S.showToast(n ? `${n} faturaya uygulandı` : 'Uygulanacak fatura yok'))}>Bu partiye uygula ({pending})</button>
+            <button disabled={!pending} title="Partideki kod almamış, kurala uyan faturalara kodlarını ver" onClick={() => S.applyRules(() => true).then((n) => S.showToast(n ? `${n} faturaya uygulandı` : 'Uygulanacak fatura yok'))}>Bu döneme uygula ({pending})</button>
           </div>
           <div class="acc-list rule-list">
             {list.length === 0 && <div class="chart-empty">{S.batchRules.value.length ? 'Aramaya uyan kural yok.' : 'Henüz kural yok. Yukarıdan ekleyin ya da panelde "Kural yap"a basın.'}</div>}
@@ -86,22 +86,22 @@ export function RulesModal() {
               return (
               <div class={`acc-row rule-row ${r.enabled ? '' : 'off'} ${r.batchId ? 'scoped' : ''}`}>
                 <input type="checkbox" checked={r.enabled} title={r.enabled ? 'Kuralı kapat' : 'Kuralı aç'} onChange={(e) => S.updateRule(r.id, { enabled: (e.currentTarget as HTMLInputElement).checked })} />
-                <span class="rule-kind">{r.batchId ? <span class="bulk-tag scope-tag" title={`Yalnızca ${batch?.name ?? 'bu parti'} partisinde geçerli`}>bu parti</span> : null}{RULE_KIND_LABELS[r.kind]}</span>
-                <span class="rule-pat" title={r.pattern}>{r.pattern}{ov && ov.count > 0 && <span class="override-note" title={`Bu partide ${ov.count} faturada kalıcı kuralın (${ov.codes.join(', ')}) yerine geçiyor`}> · kalıcı {ov.codes.join(', ')} yerine</span>}</span>
-                <span class="muted small rule-hits" title="Bu partide uyan fatura">{S.batchRec.value ? `${hits(r)} fatura` : ''}</span>
+                <span class="rule-kind">{r.batchId ? <span class="bulk-tag scope-tag" title={`Yalnızca ${batch?.name ?? 'bu dönem'} partisinde geçerli`}>bu dönem</span> : null}{RULE_KIND_LABELS[r.kind]}</span>
+                <span class="rule-pat" title={r.pattern}>{r.pattern}{ov && ov.count > 0 && <span class="override-note" title={`Bu dönemde ${ov.count} faturada kalıcı kuralın (${ov.codes.join(', ')}) yerine geçiyor`}> · kalıcı {ov.codes.join(', ')} yerine</span>}</span>
+                <span class="muted small rule-hits" title="Bu dönemde uyan fatura">{S.batchRec.value ? `${hits(r)} fatura` : ''}</span>
                 <input class="acc-name rule-code-edit" value={r.code} title="Hesap kodu" onKeyDown={(e) => e.stopPropagation()} onChange={(e) => { const v = (e.currentTarget as HTMLInputElement).value.trim(); if (v) S.updateRule(r.id, { code: v }); }} />
                 <button class="ghost tiny" title="Kuralı sil (yapılmış atamalar kalır)" onClick={() => S.deleteRule(r.id)}>✕</button>
               </div>
               );
             })}
           </div>
-          {otherBatchRules > 0 && <div class="muted small">Başka partilere özel {otherBatchRules} kural burada listelenmez; kendi partileri açılınca görünür.</div>}
+          {otherBatchRules > 0 && <div class="muted small">Başka dönemlere özel {otherBatchRules} kural burada listelenmez; kendi dönemleri açılınca görünür.</div>}
 
           <div class="row-inline" style="justify-content:flex-start; flex-wrap:wrap">
             <button onClick={() => S.exportRules()} disabled={!S.rules.value.length}>Kuralları dışa aktar (.json)</button>
             <button onClick={() => imp.current?.click()}>Kural dosyası al</button>
             <input ref={imp} type="file" accept=".json,application/json" hidden onChange={(e) => { const f = (e.currentTarget as HTMLInputElement).files?.[0]; if (f) S.importRules(f); (e.currentTarget as HTMLInputElement).value = ''; }} />
-            <span class="muted small">Dosyaya yalnızca kalıcı kurallar yazılır; başka bilgisayarda aynı firmaya alınır, aynı belirteç güncellenir, hiçbir kural silinmez. Çalışma alanı yedeği partiye özel kuralları da içerir.</span>
+            <span class="muted small">Dosyaya yalnızca kalıcı kurallar yazılır; başka bilgisayarda aynı firmaya alınır, aynı belirteç güncellenir, hiçbir kural silinmez. Çalışma alanı yedeği döneme özel kuralları da içerir.</span>
           </div>
         </div>
       </div>

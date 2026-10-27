@@ -66,8 +66,8 @@ export function ListView() {
         </div>
         <div class="spacer" />
         {inv && rule && rule.code !== code && (
-          <button class="hint lv-hint" onClick={() => S.assign(rule.code)} title={`${rule.batchId ? 'Parti kuralı' : 'Kalıcı kural'}: ${rule.pattern}`}>
-            {rule.batchId ? 'Parti kuralı' : 'Kural'}: <b>{rule.code}</b> <kbd>Boşluk</kbd>
+          <button class="hint lv-hint" onClick={() => S.assign(rule.code)} title={`${rule.batchId ? 'Dönem kuralı' : 'Kalıcı kural'}: ${rule.pattern}`}>
+            {rule.batchId ? 'Dönem kuralı' : 'Kural'}: <b>{rule.code}</b> <kbd>Boşluk</kbd>
           </button>
         )}
         {hint && (
@@ -75,7 +75,7 @@ export function ListView() {
             Bu satıcıya önce: <b>{hint.code}</b> <span class="muted">×{hint.count}</span> <kbd>Boşluk</kbd>
           </button>
         )}
-        {S.firms.value.length > 1 && <button class="ghost tiny" title="Bu partiyi ya da seçili faturaları başka firmaya taşı" onClick={() => (S.moveOpen.value = true)}>taşı</button>}
+        {S.firms.value.length > 1 && <button class="ghost tiny" title="Bu dönemi ya da seçili faturaları başka firmaya taşı" onClick={() => (S.moveOpen.value = true)}>taşı</button>}
         <span class="muted small">{S.invoices.value.filter(S.passesFilter).length} / {S.invoices.value.length} fatura · çift tık: görseli aç</span>
       </div>
       <div class="lv-bulk"><BulkBar /></div>
@@ -133,7 +133,7 @@ export function ListView() {
             })}
           </tbody>
         </table>
-        {S.invoices.value.length === 0 && <div class="pdf-status">Bu partide fatura yok. XML yükleyin.</div>}
+        {S.invoices.value.length === 0 && <div class="pdf-status">Bu dönemde fatura yok. XML yükleyin.</div>}
       </div>
     </main>
   );

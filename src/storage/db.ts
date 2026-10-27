@@ -19,7 +19,7 @@ export interface FirmRecord {
   chartName: string;
 }
 
-/** Parti: bir dönemin faturaları (XML'ler peyderpey eklenebilir). */
+/** Dönem: bir dönemin faturaları (XML'ler peyderpey eklenebilir). */
 export interface BatchRecord {
   id: string;
   firmId: string;
@@ -31,7 +31,7 @@ export interface BatchRecord {
   savedAt: number | null;
 }
 
-/** Bir fatura; XML'i (XSLT'si ayrılmış) ve başlık alanları. Eski Excel partilerinde xml null. */
+/** Bir fatura; XML'i (XSLT'si ayrılmış) ve başlık alanları. Eski Excel dönemlerinde xml null. */
 export interface InvoiceRecord {
   batchId: string;
   no: string;
@@ -150,7 +150,7 @@ class AppDb extends Dexie {
         await tx.table('settings').put({ key: 'currentFirmId', value: firmId });
       });
     this.version(5).stores({ history: null, accounts: null });
-    // v6: kaynak XML; Excel partileri fatura kayıtlarına çevrilir, PDF dosyaları ve elle bağlantılar kalkar
+    // v6: kaynak XML; Excel dönemleri fatura kayıtlarına çevrilir, PDF dosyaları ve elle bağlantılar kalkar
     this.version(6)
       .stores({
         batches: 'id, updatedAt, firmId',
@@ -209,7 +209,7 @@ class AppDb extends Dexie {
           } catch { /* kalem metni boş kalır */ }
         });
       });
-    // v8: kural kapsamı (kalıcı / partiye özel)
+    // v8: kural kapsamı (kalıcı / döneme özel)
     this.version(8).stores({ rules: 'id, firmId, batchId' }).upgrade(async (tx) => {
       await tx.table('rules').toCollection().modify((r: Rule) => { if (r.batchId === undefined) r.batchId = null; });
     });

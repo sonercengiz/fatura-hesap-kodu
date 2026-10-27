@@ -17,6 +17,8 @@ import { ImportReportModal } from './ImportReportModal';
 import { MoveModal } from './MoveModal';
 import { TemplateModal } from './TemplateModal';
 import { filesFromDataTransfer } from './dnd';
+import { DialogModal } from './DialogModal';
+import { dialog } from './dialog';
 
 export function App() {
   const [drag, setDrag] = useState(false);
@@ -93,6 +95,7 @@ export function App() {
         else if (e.key === 'Enter' && !inInput) { e.preventDefault(); document.querySelector<HTMLButtonElement>('.print-modal .modal-head button.primary')?.click(); }
         return;
       }
+      if (dialog.value) return; // küçük pencere kendi tuşlarını işler
       if (S.importReport.value) {
         if (e.key === 'Escape' || e.key === 'Enter') S.importReport.value = null;
         return;
@@ -256,7 +259,7 @@ export function App() {
             ) : inv ? (
               <InvoiceCard inv={inv} />
             ) : (
-              <div class="pdf-status">{S.invoices.value.length === 0 ? 'Bu partide fatura yok. XML yükleyin.' : 'Fatura yok.'}</div>
+              <div class="pdf-status">{S.invoices.value.length === 0 ? 'Bu dönemde fatura yok. XML yükleyin.' : 'Fatura yok.'}</div>
             )}
             {inv && (
               <div class="viewer-badge">
@@ -279,6 +282,7 @@ export function App() {
       {S.importReport.value && <ImportReportModal />}
       {S.moveOpen.value && <MoveModal />}
       {S.templateOpen.value && <TemplateModal />}
+      {dialog.value && <DialogModal />}
       <PrintRoot />
       {S.busy.value && <div class="busy">{S.busy.value}</div>}
       {S.toast.value && <div class="toast">{S.toast.value}</div>}

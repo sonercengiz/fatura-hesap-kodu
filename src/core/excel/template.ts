@@ -26,7 +26,7 @@ export const ROW_ORDER_LABELS: Record<RowOrder, string> = {
   added: 'Yükleme sırası',
 };
 
-/** Satır bağlamı: atamalar, hesap adları, kaynaklar, firma/parti adı */
+/** Satır bağlamı: atamalar, hesap adları, kaynaklar, firma/dönem adı */
 export interface RowContext {
   codes: Map<string, string>;
   accountNames?: Map<string, string>;
@@ -76,7 +76,7 @@ export const FIELD_DEFS: Record<OutputFieldId, FieldDef> = {
   source: { label: 'Atama kaynağı (Elle / Toplu / Kural)', header: 'Kaynak', edm: false, value: (i, c) => { const s = c.sources?.get(i.no); return s ? SRC_LABEL[s] : ''; } },
   accountName: { label: 'Hesap adı (listeden)', header: 'Hesap Adı', edm: false, value: (i, c) => { const code = c.codes.get(i.no); return code ? c.accountNames?.get(code) ?? '' : ''; } },
   firm: { label: 'Firma adı', header: 'Firma', edm: false, value: (_i, c) => c.firmName ?? '' },
-  batch: { label: 'Parti adı', header: 'Parti', edm: false, value: (_i, c) => c.batchName ?? '' },
+  batch: { label: 'Dönem adı', header: 'Dönem', edm: false, value: (_i, c) => c.batchName ?? '' },
   blank: { label: 'Boş sütun', header: '', edm: false, value: () => '' },
 };
 

@@ -1,6 +1,7 @@
 import { useRef, useState } from 'preact/hooks';
 import { parseAccountSheet, parseAccountText } from '../core/chart';
 import * as S from './state';
+import { askName, askConfirm } from './dialog';
 import type { ViewMode, Layout } from '../core/types';
 import { isEdmDefault } from '../core/excel/template';
 
@@ -22,7 +23,7 @@ export function SettingsModal() {
         <div class="form">
           <fieldset>
             <legend>Firma: {S.firm.value.name}</legend>
-            <div class="muted small">Kısayollar, hesap kodu listesi, öneri geçmişi ve partiler firmaya bağlıdır. Üst çubuktaki firma menüsünden geçiş yapılır ve yeni firma eklenir.</div>
+            <div class="muted small">Kısayollar, hesap kodu listesi, öneri geçmişi ve dönemler firmaya bağlıdır. Üst çubuktaki firma menüsünden geçiş yapılır ve yeni firma eklenir.</div>
             <label style="margin-top:8px">
               <span>Firma adı (çıktı dosya adında kullanılır)</span>
               <input value={S.firm.value.name} onInput={(e) => S.updateFirm({ name: (e.currentTarget as HTMLInputElement).value })} placeholder="ABC LTD" />
@@ -30,8 +31,8 @@ export function SettingsModal() {
             <div class="row-inline" style="margin-top:8px">
               <span class="muted small">{S.firms.value.length} firma kayıtlı.</span>
               <span>
-                <button onClick={() => { const n = prompt('Yeni firma adı:'); if (n) S.createFirm(n); }}>+ Yeni firma</button>{' '}
-                {S.firms.value.length > 1 && <button class="danger" onClick={() => { const f = S.firm.value; if (confirm(`"${f.name}" firması, tüm partileri, faturaları, atamaları, hesap listesi ve geçmişiyle silinsin mi? Bu işlem geri alınamaz.`)) { S.deleteFirm(f.id); S.settingsOpen.value = false; } }}>Firmayı sil</button>}
+                <button onClick={() => askName({ title: 'Yeni firma', label: 'Firma adı', placeholder: 'Örnek Kırtasiye Ltd. Şti.' }).then((n) => { if (n) S.createFirm(n); })}>+ Yeni firma</button>{' '}
+                {S.firms.value.length > 1 && <button class="danger" onClick={async () => { const f = S.firm.value; if (await askConfirm({ title: 'Firmayı sil', message: `"${f.name}" firması, tüm dönemleri, faturaları, atamaları, hesap listesi ve geçmişiyle silinecek. Bu işlem geri alınamaz.`, okLabel: 'Sil', danger: true })) { S.deleteFirm(f.id); S.settingsOpen.value = false; } }}>Firmayı sil</button>}
               </span>
             </div>
           </fieldset>
@@ -75,13 +76,13 @@ export function SettingsModal() {
 
           <fieldset>
             <legend>Ana ekran</legend>
-            {([['hybrid', 'Hibrit: fatura görseli + sağda liste'], ['list', 'Liste: yalnızca tablo (sütunlar tablo üstünden seçilir)']] as [Layout, string][]).map(([v, label]) => (
+            {([['hybrid', 'Görsel: fatura görüntüsü + sağda liste'], ['list', 'Liste: yalnızca tablo (sütunlar tablo üstünden seçilir)']] as [Layout, string][]).map(([v, label]) => (
               <label class="radio">
                 <input type="radio" name="layout" checked={s.layout === v} onChange={() => S.setLayout(v)} />
                 <span>{label}</span>
               </label>
             ))}
-            <div class="muted small">Üst çubuktaki ☰ Liste / ▣ Hibrit düğmesiyle de değişir. Liste görünümünde satıra çift tıklamak o faturayı hibrit görünümde açar.</div>
+            <div class="muted small">Üst çubuktaki ☰ Liste / ▣ Görsel düğmesiyle de değişir. Liste görünümünde satıra çift tıklamak o faturayı görsel görünümde açar.</div>
           </fieldset>
 
           <label class="radio">
@@ -115,7 +116,7 @@ export function SettingsModal() {
             </label>
             <div class="row-inline" style="justify-content:flex-start">
               <button class="primary" disabled={!accText.trim()} onClick={async () => { const n = await S.upsertAccounts(parseAccountText(accText)); setAccText(''); S.showToast(`${n} kod eklendi/güncellendi`); }}>Listeye ekle</button>
-              {S.accounts.value.length > 0 && <button class="danger" onClick={() => { if (confirm('Hesap kodu listesinin tamamı silinsin mi? Atamalar etkilenmez.')) S.clearAccounts(); }}>Listeyi temizle</button>}
+              {S.accounts.value.length > 0 && <button class="danger" onClick={async () => { if (await askConfirm({ title: 'Listeyi temizle', message: 'Hesap kodu listesinin tamamı silinecek. Atamalar etkilenmez.', okLabel: 'Temizle', danger: true })) S.clearAccounts(); }}>Listeyi temizle</button>}
             </div>
             {S.accounts.value.length > 0 && (
               <>
@@ -145,7 +146,7 @@ export function SettingsModal() {
           <fieldset>
             <legend>Yedekleme ve bilgisayarlar arası paylaşım</legend>
             <div class="row-inline">
-              <span class="muted">Tüm firmalar, partiler, fatura listeleri, atamalar, hesap kodu listeleri, kurallar ve öneri geçmişi tek bir .json dosyasına yazılır; başka bilgisayarda içe aktarılınca mevcut veriyle <b>birleştirilir</b>, hiçbir şey silinmez. Fatura XML'leri (görseller) dosyaya dahil edilmez; gerekirse XML'ler yeniden yüklenir, atamalar korunur.</span>
+              <span class="muted">Tüm firmalar, dönemler, fatura listeleri, atamalar, hesap kodu listeleri, kurallar ve öneri geçmişi tek bir .json dosyasına yazılır; başka bilgisayarda içe aktarılınca mevcut veriyle <b>birleştirilir</b>, hiçbir şey silinmez. Fatura XML'leri (görseller) dosyaya dahil edilmez; gerekirse XML'ler yeniden yüklenir, atamalar korunur.</span>
             </div>
             <div class="row-inline" style="justify-content:flex-start; margin-top:8px">
               <button onClick={() => S.exportWorkspace()}>Dışa aktar (.json)</button>
@@ -160,20 +161,20 @@ export function SettingsModal() {
 
           {S.batchRec.value && (
             <fieldset>
-              <legend>Parti</legend>
+              <legend>Dönem</legend>
               <label>
-                <span>Parti adı{S.batchRec.value.autoName ? ' (yüklenen faturaların ayına göre kendiliğinden verildi)' : ''}</span>
+                <span>Dönem adı{S.batchRec.value.autoName ? ' (yüklenen faturaların ayına göre kendiliğinden verildi)' : ''}</span>
                 <input value={S.batchRec.value.name} onKeyDown={(e) => e.stopPropagation()} onChange={(e) => S.renameBatch((e.currentTarget as HTMLInputElement).value)} />
               </label>
               <div class="row-inline" style="margin-top:8px">
-                <span class="muted">{S.invoices.value.length} fatura. {S.firms.value.length > 1 && <button class="tiny" onClick={() => { S.settingsOpen.value = false; S.moveOpen.value = true; }}>Başka firmaya taşı</button>} Partiyi, faturalarını ve atamalarını kalıcı olarak sil.</span>
-                <button class="danger" onClick={() => {
+                <span class="muted">{S.invoices.value.length} fatura. {S.firms.value.length > 1 && <button class="tiny" onClick={() => { S.settingsOpen.value = false; S.moveOpen.value = true; }}>Başka firmaya taşı</button>} Dönemi, faturalarını ve atamalarını kalıcı olarak sil.</span>
+                <button class="danger" onClick={async () => {
                   const b = S.batchRec.value;
-                  if (b && confirm(`"${b.name}" partisi, faturaları ve atamaları silinsin mi?`)) {
+                  if (b && await askConfirm({ title: 'Dönemi sil', message: `"${b.name}" dönemi, ${S.invoices.value.length} faturası ve atamalarıyla silinecek. Bu işlem geri alınamaz.`, okLabel: 'Sil', danger: true })) {
                     S.deleteBatch(b.id);
                     S.settingsOpen.value = false;
                   }
-                }}>Partiyi sil</button>
+                }}>Dönemi sil</button>
               </div>
             </fieldset>
           )}

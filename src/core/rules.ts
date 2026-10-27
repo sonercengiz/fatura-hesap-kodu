@@ -8,7 +8,7 @@ export type RuleKind = 'vkn' | 'name' | 'item';
 export interface Rule {
   id: string;
   firmId: string;
-  /** null = kalıcı (firma geneli); dolu = yalnızca o partide (ay) geçerli */
+  /** null = kalıcı (firma geneli); dolu = yalnızca o dönemde (ay) geçerli */
   batchId: string | null;
   kind: RuleKind;
   /** VKN/TCKN için rakamlar; diğerlerinde aranan metin (büyük/küçük harf önemsiz) */
@@ -54,12 +54,12 @@ export function ruleMatches(rule: Rule, t: RuleTarget): boolean {
   }
 }
 
-/** Bu partide geçerli kurallar: kalıcılar + yalnızca bu partininkiler */
+/** Bu dönemde geçerli kurallar: kalıcılar + yalnızca bu dönemdekiler */
 export function activeRules(rules: Rule[], batchId: string | null): Rule[] {
   return rules.filter((r) => r.batchId === null || r.batchId === batchId);
 }
 
-/** a, b'den önce mi gelir: parti kuralı kalıcıdan önce; sonra tür önceliği; sonra en son güncellenen */
+/** a, b'den önce mi gelir: dönem kuralı kalıcıdan önce; sonra tür önceliği; sonra en son güncellenen */
 function beats(a: Rule, b: Rule): boolean {
   const sa = a.batchId ? 0 : 1;
   const sb = b.batchId ? 0 : 1;
@@ -69,8 +69,8 @@ function beats(a: Rule, b: Rule): boolean {
 }
 
 /**
- * Uyan kurallardan en öncelikli olanı. `batchId` verilirse yalnızca kalıcılar ve o partinin kuralları değerlendirilir;
- * parti kuralı kalıcı kuralın önüne geçer. Yoksa null.
+ * Uyan kurallardan en öncelikli olanı. `batchId` verilirse yalnızca kalıcılar ve o dönemin kuralları değerlendirilir;
+ * dönem kuralı kalıcı kuralın önüne geçer. Yoksa null.
  */
 export function matchRules(t: RuleTarget, rules: Rule[], batchId: string | null = null): Rule | null {
   let best: Rule | null = null;
@@ -81,7 +81,7 @@ export function matchRules(t: RuleTarget, rules: Rule[], batchId: string | null 
   return best;
 }
 
-/** Yalnızca kalıcı kurallar arasında en öncelikli uyan (parti kuralının neyi geçersiz kıldığını göstermek için) */
+/** Yalnızca kalıcı kurallar arasında en öncelikli uyan (dönem kuralının neyi geçersiz kıldığını göstermek için) */
 export function matchPermanent(t: RuleTarget, rules: Rule[]): Rule | null {
   return matchRules(t, rules.filter((r) => r.batchId === null), null);
 }

@@ -5,7 +5,7 @@ export type CellValue = string | number | boolean | null;
 /** Ekranda ve çıktıda kullanılan fatura özeti; XML'den (eski partilerde Excel satırından) türetilir. */
 export interface Invoice {
   no: string;
-  /** Partiye ekleniş sırası (0 tabanlı) */
+  /** Döneme ekleniş sırası (0 tabanlı) */
   order: number;
   /** GG/AA/YYYY (ekran ve çıktı biçimi) */
   date: string;
@@ -66,7 +66,7 @@ export const DEFAULT_LIST_COLUMNS: ListColumnId[] = ['no', 'date', 'supplier', '
 export interface Settings {
   /** Çıktı Excel şablonu: sütunlar, başlıklar, satır sırası, sayfa adı */
   outputTemplate: OutputTemplate;
-  /** Ana ekran: hibrit (görsel + panel) ya da yalın liste */
+  /** Ana ekran: görsel (görsel + panel) ya da yalın liste */
   layout: Layout;
   /** Liste görünümünde gösterilen sütunlar */
   listColumns: ListColumnId[];

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'preact/hooks';
 import * as S from './state';
+import { askConfirm } from './dialog';
 import { fmtAmount } from './InvoiceCard';
 import { SORT_LABELS, type SortMode } from '../core/sort';
 import type { FilterMode } from '../core/types';
@@ -38,12 +39,12 @@ export function SidePanel() {
             const r = S.ruleFor.value.get(inv.no);
             const perm = r?.batchId ? S.overriddenBy(r) : null;
             if (r && r.code !== code) return (
-              <button class="hint" onClick={() => S.assign(r.code)} title={`${r.batchId ? 'Parti kuralı' : 'Kalıcı kural'}: ${r.pattern}`}>
-                {r.batchId ? 'Parti kuralı' : 'Kural'} diyor ki: <b>{r.code}</b> <span class="muted">({r.pattern})</span> <kbd>Boşluk</kbd>
+              <button class="hint" onClick={() => S.assign(r.code)} title={`${r.batchId ? 'Dönem kuralı' : 'Kalıcı kural'}: ${r.pattern}`}>
+                {r.batchId ? 'Dönem kuralı' : 'Kural'} diyor ki: <b>{r.code}</b> <span class="muted">({r.pattern})</span> <kbd>Boşluk</kbd>
               </button>
             );
             if (r && r.batchId && perm && perm.count > 0 && S.ruleNos.value.has(inv.no)) return (
-              <div class="muted small rule-note" title="Bu partiye özel kural, kalıcı kuralın önüne geçti">Parti kuralı · kalıcı {perm.codes.join(', ')} yerine</div>
+              <div class="muted small rule-note" title="Bu döneme özel kural, kalıcı kuralın önüne geçti">Dönem kuralı · kalıcı {perm.codes.join(', ')} yerine</div>
             );
             if (code && !r) return (
               <button class="ghost tiny rule-make" onClick={() => S.openRules({ kind: 'vkn', pattern: inv.supplierVkn, code })} title="Bu satıcının her faturası bu kodu alsın (kural)">⚡ Kural yap: {inv.supplierVkn} → {code}</button>
@@ -123,9 +124,9 @@ export function SidePanel() {
       </div>
       <div class="files">
         <span>{S.invoices.value.length} fatura · {S.viewCount.value} görselli</span>
-        {inv && <button class="ghost tiny" title="Bu faturayı partiden çıkar (yanlış yüklendiyse)" onClick={() => { if (confirm(`${inv.no} partiden çıkarılsın mı? Ataması da silinir.`)) S.removeInvoices([inv.no]); }}>çıkar</button>}
-        {S.firms.value.length > 1 && <button class="ghost tiny" title="Bu partiyi ya da seçili faturaları başka firmaya taşı" onClick={() => (S.moveOpen.value = true)}>taşı</button>}
-        {S.selected.value.size > 1 && <button class="ghost tiny" title="Seçili faturaları partiden çıkar" onClick={() => { const n = S.selected.value.size; if (confirm(`${n} fatura partiden çıkarılsın mı? Atamaları da silinir.`)) S.removeInvoices(Array.from(S.selected.value)); }}>{S.selected.value.size} seçiliyi çıkar</button>}
+        {inv && <button class="ghost tiny" title="Bu faturayı dönemden çıkar (yanlış yüklendiyse)" onClick={async () => { if (await askConfirm({ title: 'Faturayı çıkar', message: `${inv.no} (${inv.supplierName}) bu dönemden çıkarılacak; ataması da silinir.`, okLabel: 'Çıkar', danger: true })) S.removeInvoices([inv.no]); }}>çıkar</button>}
+        {S.firms.value.length > 1 && <button class="ghost tiny" title="Bu dönemi ya da seçili faturaları başka firmaya taşı" onClick={() => (S.moveOpen.value = true)}>taşı</button>}
+        {S.selected.value.size > 1 && <button class="ghost tiny" title="Seçili faturaları dönemden çıkar" onClick={async () => { const n = S.selected.value.size; if (await askConfirm({ title: 'Seçilileri çıkar', message: `${n} fatura bu dönemden çıkarılacak; atamaları da silinir.`, okLabel: 'Çıkar', danger: true })) S.removeInvoices(Array.from(S.selected.value)); }}>{S.selected.value.size} seçiliyi çıkar</button>}
       </div>
     </aside>
   );

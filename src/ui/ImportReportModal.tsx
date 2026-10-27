@@ -18,7 +18,7 @@ export function ImportReportModal() {
           {r.failed.length > 0 && (
             <fieldset>
               <legend>Okunamayan dosyalar ({r.failed.length})</legend>
-              <div class="muted small">Bu dosyalar partiye eklenmedi. Fatura olmayan dosyalar (irsaliye, yanıt, zarf) normaldir; bozuk görünen bir fatura varsa EDM'den yeniden indirin.</div>
+              <div class="muted small">Bu dosyalar döneme eklenmedi. Fatura olmayan dosyalar (irsaliye, yanıt, zarf) normaldir; bozuk görünen bir fatura varsa EDM'den yeniden indirin.</div>
               <div class="acc-list report-list">
                 {r.failed.map((f) => (
                   <div class="acc-row report-row"><span class="report-file" title={f.file}>{f.file}</span><span class="report-reason">{f.reason}</span></div>
@@ -28,8 +28,8 @@ export function ImportReportModal() {
           )}
           {r.skippedFiles.length > 0 && (
             <fieldset>
-              <legend>Zaten partide olanlar ({r.skippedFiles.length})</legend>
-              <div class="muted small">Aynı fatura numarası bu partide zaten vardı; atama ve görsel korunur, dosya yeniden işlenmez.</div>
+              <legend>Zaten dönemde olanlar ({r.skippedFiles.length})</legend>
+              <div class="muted small">Aynı fatura numarası bu dönemde zaten vardı; atama ve görsel korunur, dosya yeniden işlenmez.</div>
               <div class="acc-list report-list">
                 {r.skippedFiles.slice(0, 200).map((f) => (
                   <div class="acc-row report-row"><span class="report-file" title={f.file}>{f.file}</span><span class="report-reason mono">{f.no}</span></div>

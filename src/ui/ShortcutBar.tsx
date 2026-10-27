@@ -89,7 +89,7 @@ function AssignStatus() {
   );
 }
 
-/** Parti ilerlemesi: atanmamış varken sessiz (zemin rengi), hepsi atanınca renklenir ve sıradaki adımı gösterir. */
+/** Dönem ilerlemesi: atanmamış varken sessiz (zemin rengi), hepsi atanınca renklenir ve sıradaki adımı gösterir. */
 function ProgressCard() {
   const total = S.invoices.value.length;
   if (total === 0) return null;

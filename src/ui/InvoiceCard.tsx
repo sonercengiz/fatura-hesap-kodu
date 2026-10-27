@@ -18,7 +18,7 @@ export function InvoiceCard({ inv }: { inv: Invoice }) {
         {inv.profile && <span class="chip">{inv.profile}</span>}
       </div>
       <div class="card-amount">{fmtAmount(inv.amount, inv.currency)}</div>
-      <div class="card-hint">Bu faturanın XML'i yok (eski Excel partisi); yalnızca liste bilgileri gösteriliyor. XML'ini yüklerseniz görsel çizilir.</div>
+      <div class="card-hint">Bu faturanın XML'i yok (eski Excel dönemi); yalnızca liste bilgileri gösteriliyor. XML'ini yüklerseniz görsel çizilir.</div>
     </div>
   );
 }
