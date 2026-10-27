@@ -45,7 +45,7 @@ describe('çıktı şablonu', () => {
     expect(n.rowOrder).toBe('date-no');
     expect(n.sheetName).toBe('Sheet0');
   });
-  it('EDM listesinden gelen sütunlar çıktıda dolar; XML alanları öncelikli', () => {
+  it('EDM listesinden gelen sütunlar çıktıda birebir kullanılır; eksikler XML\'den', () => {
     const withEdm = mk('ABC2026000000003', { edm: { 'Geliş Zamanı': '10/09/2026 12:28:13', Durum: 'Fatura hazır', 'Zarf No': 'zarf-1', Hash: 'h1', 'Fatura Tipi': 'İstisna' } });
     const rows = buildTemplateRows([withEdm], DEFAULT_OUTPUT_TEMPLATE, ctx);
     const h = rows[0] as string[];
@@ -54,7 +54,8 @@ describe('çıktı şablonu', () => {
     expect(r[h.indexOf('Durum')]).toBe('Fatura hazır');
     expect(r[h.indexOf('Zarf No')]).toBe('zarf-1');
     expect(r[h.indexOf('Hash')]).toBe('h1');
-    expect(r[h.indexOf('Fatura Tipi')]).toBe('Satış'); // XML'den gelen tip korunur
+    expect(r[h.indexOf('Fatura Tipi')]).toBe('İstisna'); // EDM listesi varsa EDM'nin değeri birebir kullanılır
+    expect(r[h.indexOf('Tutar')]).toBe(1500); // EDM satırında Tutar yoksa XML'den
   });
   it('çalışma kitabı EDM görünümünde: kalın başlık, 18,43 genişlik, tutar biçimi', async () => {
     const bytes = await buildTemplateWorkbook(list, DEFAULT_OUTPUT_TEMPLATE, ctx);

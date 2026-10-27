@@ -48,22 +48,22 @@ interface FieldDef {
 }
 
 const SRC_LABEL = { manual: 'Elle', bulk: 'Toplu', rule: 'Kural' } as const;
-/** EDM listesi yüklendiyse o sütunun ham değeri, yoksa verilen varsayılan */
+/** EDM listesi yüklendiyse o sütunun ham değeri (EDM'nin verdiği birebir), yoksa XML'den türetilen varsayılan */
 const edmOr = (header: string, fallback: (i: Invoice) => CellValue) => (i: Invoice): CellValue => {
   const v = i.edm?.[header];
   return v === undefined || v === null || v === '' ? fallback(i) : v;
 };
 
 export const FIELD_DEFS: Record<OutputFieldId, FieldDef> = {
-  no: { label: 'Fatura No', header: 'Fatura No', edm: true, value: (i) => i.no },
-  date: { label: 'Fatura Tarihi (GG/AA/YYYY)', header: 'Fatura Tarihi', edm: true, value: (i) => i.date },
+  no: { label: 'Fatura No', header: 'Fatura No', edm: true, value: edmOr('Fatura No', (i) => i.no) },
+  date: { label: 'Fatura Tarihi (GG/AA/YYYY)', header: 'Fatura Tarihi', edm: true, value: edmOr('Fatura Tarihi', (i) => i.date) },
   arrival: { label: 'Geliş Zamanı (EDM listesinden; yoksa boş)', header: 'Geliş Zamanı', edm: true, value: edmOr('Geliş Zamanı', () => '') },
-  type: { label: 'Fatura Tipi (Satış, İstisna…)', header: 'Fatura Tipi', edm: true, value: (i) => i.invoiceType },
-  profile: { label: 'Fatura Türü (Temel, Ticari…)', header: 'Fatura Türü', edm: true, value: (i) => i.profile },
-  vkn: { label: 'Gönderen VKN/TCKN', header: 'Gönderen VKN/TCKN', edm: true, text: true, value: (i) => i.supplierVkn },
-  name: { label: 'Gönderen Unvan/Ad Soyad', header: 'Gönderen Unvan/Ad Soyad', edm: true, value: (i) => i.supplierName },
-  amount: { label: 'Tutar (ödenecek)', header: 'Tutar', edm: true, money: true, value: (i) => i.amount },
-  currency: { label: 'Döviz Cinsi', header: 'Döviz Cinsi', edm: true, value: (i) => i.currency || 'TRY' },
+  type: { label: 'Fatura Tipi (Satış, İstisna…)', header: 'Fatura Tipi', edm: true, value: edmOr('Fatura Tipi', (i) => i.invoiceType) },
+  profile: { label: 'Fatura Türü (Temel, Ticari…)', header: 'Fatura Türü', edm: true, value: edmOr('Fatura Türü', (i) => i.profile) },
+  vkn: { label: 'Gönderen VKN/TCKN', header: 'Gönderen VKN/TCKN', edm: true, text: true, value: edmOr('Gönderen VKN/TCKN', (i) => i.supplierVkn) },
+  name: { label: 'Gönderen Unvan/Ad Soyad', header: 'Gönderen Unvan/Ad Soyad', edm: true, value: edmOr('Gönderen Unvan/Ad Soyad', (i) => i.supplierName) },
+  amount: { label: 'Tutar (ödenecek)', header: 'Tutar', edm: true, money: true, value: edmOr('Tutar', (i) => i.amount) },
+  currency: { label: 'Döviz Cinsi', header: 'Döviz Cinsi', edm: true, value: edmOr('Döviz Cinsi', (i) => i.currency || 'TRY') },
   status: { label: 'Durum (EDM listesinden; yoksa boş)', header: 'Durum', edm: true, value: edmOr('Durum', () => '') },
   responseStatus: { label: 'Yanıt Durumu (EDM listesinden; yoksa boş)', header: 'Yanıt Durumu', edm: true, value: edmOr('Yanıt Durumu', () => '') },
   localStatus: { label: 'Yerele Aktarım Durumu (EDM listesinden; yoksa boş)', header: 'Yerele Aktarım Durumu', edm: true, value: edmOr('Yerele Aktarım Durumu', () => '') },
