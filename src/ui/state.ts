@@ -261,7 +261,49 @@ export async function getInvoiceView(no: string): Promise<InvoiceView | null> {
 
 // ---------- yükleme ----------
 
+/** Diğer sekmelere "veri değişti" sinyali; alan sekme görünürse yeniler, değilse görünür olunca yeniler */
+const channel: BroadcastChannel | null = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('fatura-hesap-kodu') : null;
+let staleFromOtherTab = false;
+let suppressBroadcast = false;
+export function notifyOtherTabs() {
+  if (suppressBroadcast) return;
+  try { channel?.postMessage({ type: 'changed', at: Date.now() }); } catch { /* yok say */ }
+}
+/** Açık firma ve dönemi veritabanından yeniden okur; seçili fatura ve konum korunur */
+export async function refreshFromDb() {
+  suppressBroadcast = true;
+  try {
+    const keepNo = current.value?.no;
+    const keepIdx = currentIndex.value;
+    settings.value = { ...(await loadSettings(DEFAULT_SETTINGS)), outputTemplate: settings.value.outputTemplate };
+    firms.value = await db.firms.orderBy('name').toArray();
+    if (!firms.value.some((f) => f.id === currentFirmId.value)) { await switchFirm(firms.value[0]?.id ?? DEFAULT_FIRM_ID); return; }
+    await loadFirmData();
+    await refreshBatchList();
+    const b = batchRec.value;
+    if (b && (await db.batches.get(b.id))) {
+      await openBatch(b.id);
+      const idx = keepNo ? invoices.value.findIndex((i) => i.no === keepNo) : -1;
+      goTo(idx >= 0 ? idx : keepIdx);
+    } else if (batchList.value[0]) await openBatch(batchList.value[0].id);
+    else { batchRec.value = null; invoiceRecs.value = []; assignments.value = new Map(); }
+  } finally {
+    suppressBroadcast = false;
+  }
+}
+function setupTabSync() {
+  channel?.addEventListener('message', (e) => {
+    if ((e.data as { type?: string })?.type !== 'changed') return;
+    if (document.visibilityState === 'visible') { refreshFromDb().then(() => showToast('Başka sekmedeki değişiklikler alındı', 2500)); }
+    else staleFromOtherTab = true;
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && staleFromOtherTab) { staleFromOtherTab = false; refreshFromDb().then(() => showToast('Başka sekmedeki değişiklikler alındı', 2500)); }
+  });
+}
+
 export async function init() {
+  setupTabSync();
   settings.value = await loadSettings(DEFAULT_SETTINGS);
   // Eski ayarlar (sütun konumu + başlık) → şablon
   const legacy = ((await db.settings.get('settings'))?.value ?? {}) as { codeColumnIndex?: number; codeHeader?: string; outputTemplate?: unknown };
@@ -337,6 +379,7 @@ export async function updateFirm(patch: Partial<Omit<FirmRecord, 'id'>>) {
   const f = firm.value;
   await db.firms.update(f.id, patch);
   firms.value = await db.firms.orderBy('name').toArray();
+  notifyOtherTabs();
 }
 
 /** Firmayı ve ona bağlı her şeyi (dönemler, faturalar, atamalar, liste, geçmiş) siler */
@@ -406,6 +449,7 @@ export async function renameBatch(name: string) {
   await db.batches.update(b.id, { name: n, autoName: false });
   batchRec.value = { ...b, name: n, autoName: false };
   await refreshBatchList();
+  notifyOtherTabs();
 }
 
 /** ZIP dosyalarını açar (iç içe bir düzey dahil); XML'leri dosya olarak döndürür, diğerlerini olduğu gibi geçirir. */
@@ -585,6 +629,7 @@ export async function importXml(rawList: File[]): Promise<ImportReport> {
     showToast(parts.join(' · '), 3500);
     if (report.failed.length) { console.warn('Okunamayan XML dosyaları', report.failed); importReport.value = report; }
     else lastImportReport.value = report;
+    notifyOtherTabs();
   } catch (e) {
     if (isQuotaError(e)) {
       showToast('Tarayıcının depolama alanı doldu; yükleme kaydedilemedi. Ayarlar › Yedek › Depolama bölümünden eski dönemlerin görsellerini arşivleyin ya da dönem silin.', 9000);
@@ -683,6 +728,7 @@ export async function archiveBatchVisuals(batchId: string): Promise<number> {
   await cleanupXslts();
   forgetHtml(`${batchId}|`);
   if (batchRec.value?.id === batchId) { const idx = currentIndex.value; await openBatch(batchId); goTo(idx); }
+  notifyOtherTabs();
   return n;
 }
 
@@ -707,6 +753,7 @@ export async function removeInvoices(nos: string[]) {
   await openBatch(b.id);
   goTo(idx);
   await cleanupXslts();
+  notifyOtherTabs();
   showToast(`${nos.length} fatura dönemden çıkarıldı`);
 }
 
@@ -737,6 +784,7 @@ export async function deleteBatch(id: string) {
   await refreshBatchList();
   const latest = batchList.value[0];
   if (latest && !batchRec.value) await openBatch(latest.id);
+  notifyOtherTabs();
 }
 
 // ---------- atama ----------
@@ -872,6 +920,7 @@ async function applyChanges(changes: Change[]): Promise<Change[]> {
   }
   history.value = await db.firmHistory.where('firmId').equals(currentFirmId.value).toArray();
   await db.batches.update(b.id, { updatedAt: now });
+  notifyOtherTabs();
   return inverse.reverse();
 }
 
@@ -975,6 +1024,7 @@ export async function toggleColumn(id: ListColumnId) {
 export async function updateSettings(patch: Partial<Settings>) {
   settings.value = { ...settings.value, ...patch };
   await saveSettings(settings.value);
+  notifyOtherTabs();
 }
 
 export function enterManual(initial = '') {
@@ -1263,6 +1313,7 @@ async function mergeRule(r: Rule): Promise<boolean> {
 
 async function reloadRules() {
   rules.value = (await db.rules.where('firmId').equals(currentFirmId.value).toArray()).sort((a, b) => b.updatedAt - a.updatedAt);
+  notifyOtherTabs();
 }
 
 /** Kural ekler (aynı kapsamda aynı belirteç varsa günceller) ve partideki atanmamış uyan faturalara hemen uygular. */
