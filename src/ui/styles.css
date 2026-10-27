@@ -411,3 +411,5 @@ tr.iss-chart td.code-col { color: var(--warn); text-decoration: underline wavy v
 .settings-pane { overflow: auto; }
 .settings-links { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
 @media (max-width: 700px) { .settings-body { grid-template-columns: 1fr; } .settings-tabs { flex-direction: row; flex-wrap: wrap; border-right: none; border-bottom: 1px solid var(--line); } }
+
+.store-list { max-height: 30vh; } .store-row { gap: 10px; } .store-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

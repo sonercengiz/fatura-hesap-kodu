@@ -585,6 +585,15 @@ export async function importXml(rawList: File[]): Promise<ImportReport> {
     showToast(parts.join(' · '), 3500);
     if (report.failed.length) { console.warn('Okunamayan XML dosyaları', report.failed); importReport.value = report; }
     else lastImportReport.value = report;
+  } catch (e) {
+    if (isQuotaError(e)) {
+      showToast('Tarayıcının depolama alanı doldu; yükleme kaydedilemedi. Ayarlar › Yedek › Depolama bölümünden eski dönemlerin görsellerini arşivleyin ya da dönem silin.', 9000);
+      settingsTab.value = 'backup';
+      settingsOpen.value = true;
+    } else {
+      console.error(e);
+      showToast(`Yükleme sırasında hata: ${(e as Error).message ?? e}`, 7000);
+    }
   } finally {
     busy.value = null;
   }
@@ -629,6 +638,59 @@ async function applyEdmList(sheet: EdmSheet, report: ImportReport) {
     const newNos = new Set(fields.map((f) => f.no));
     report.ruled += await applyRules((i) => newNos.has(i.no), true);
   }
+}
+
+// ---------- depolama ----------
+
+export interface StorageInfo {
+  usage: number | null;
+  quota: number | null;
+  /** dönem id → yaklaşık XML boyutu (bayt) ve görselli fatura sayısı */
+  batches: { id: string; name: string; firmName: string; bytes: number; withXml: number; total: number }[];
+  xsltBytes: number;
+}
+
+/** Tarayıcı depolama durumu ve dönem başına yaklaşık boyut (XML metin uzunluğu) */
+export async function storageInfo(): Promise<StorageInfo> {
+  let usage: number | null = null;
+  let quota: number | null = null;
+  try {
+    const est = await navigator.storage?.estimate?.();
+    usage = est?.usage ?? null;
+    quota = est?.quota ?? null;
+  } catch { /* desteklenmiyor */ }
+  const batches = await db.batches.toArray();
+  const firmName = new Map((await db.firms.toArray()).map((f) => [f.id, f.name]));
+  const per = new Map<string, { bytes: number; withXml: number; total: number }>();
+  await db.invoices.each((r) => {
+    const p = per.get(r.batchId) ?? { bytes: 0, withXml: 0, total: 0 };
+    p.total++;
+    if (r.xml) { p.bytes += r.xml.length * 2; p.withXml++; }
+    per.set(r.batchId, p);
+  });
+  let xsltBytes = 0;
+  await db.xslts.each((x) => { xsltBytes += x.text.length * 2; });
+  return {
+    usage, quota, xsltBytes,
+    batches: batches.map((b) => ({ id: b.id, name: b.name, firmName: firmName.get(b.firmId) ?? '', ...(per.get(b.id) ?? { bytes: 0, withXml: 0, total: 0 }) })).sort((a, b) => b.bytes - a.bytes),
+  };
+}
+
+/** Dönemin görsellerini kaldırır: XML ve şablon bağı silinir; liste, atamalar, EDM sütunları ve çıktı aynen kalır. XML yeniden yüklenirse görsel geri gelir. */
+export async function archiveBatchVisuals(batchId: string): Promise<number> {
+  let n = 0;
+  await db.invoices.where('batchId').equals(batchId).modify((r) => { if (r.xml) { r.xml = null; r.xsltId = null; n++; } });
+  await cleanupXslts();
+  forgetHtml(`${batchId}|`);
+  if (batchRec.value?.id === batchId) { const idx = currentIndex.value; await openBatch(batchId); goTo(idx); }
+  return n;
+}
+
+/** Depolama hatası mı (tarayıcı kotası doldu) */
+export function isQuotaError(e: unknown): boolean {
+  const name = (e as { name?: string })?.name ?? '';
+  const msg = String((e as Error)?.message ?? e);
+  return /QuotaExceeded|quota/i.test(name) || /quota|QuotaExceeded/i.test(msg);
 }
 
 /** Faturaları dönemden çıkarır (atamalarıyla birlikte). */

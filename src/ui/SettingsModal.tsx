@@ -1,4 +1,4 @@
-import { useRef, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import * as S from './state';
 import { askName, askConfirm } from './dialog';
 import type { ViewMode, Layout } from '../core/types';
@@ -16,6 +16,9 @@ export function SettingsModal() {
   const close = () => (S.settingsOpen.value = false);
   const openOther = (fn: () => void) => { close(); fn(); };
   const b = S.batchRec.value;
+  const [store, setStore] = useState<S.StorageInfo | null>(null);
+  useEffect(() => { if (tab === 'backup') S.storageInfo().then(setStore); }, [tab]);
+  const mb = (n: number | null) => (n == null ? '?' : `${(n / 1048576).toFixed(n < 10 * 1048576 ? 1 : 0)} MB`);
   return (
     <div class="modal-backdrop" onClick={close}>
       <div class="modal settings" onClick={(e) => e.stopPropagation()}>
@@ -133,6 +136,25 @@ export function SettingsModal() {
                   }} />
                 </div>
                 <div class="muted small">{S.lastExportAt.value ? `Son yedek: ${new Date(S.lastExportAt.value).toLocaleString('tr-TR')}` : 'Henüz yedek alınmadı.'}</div>
+                <fieldset>
+                  <legend>Depolama</legend>
+                  {store ? (
+                    <>
+                      <div class="muted small">Tarayıcı deposu: <b>{mb(store.usage)}</b> kullanılıyor{store.quota ? ` / ${mb(store.quota)} sınır` : ''} · fatura görselleri (XML) {mb(store.batches.reduce((n, x) => n + x.bytes, 0))} + şablonlar {mb(store.xsltBytes)}.</div>
+                      <div class="muted small">Dolmaya yaklaşırsa eski dönemlerin görsellerini arşivleyin: XML ve şablon silinir; liste, atamalar, EDM sütunları ve Excel çıktısı aynen kalır. XML'i yeniden yüklerseniz görsel geri gelir.</div>
+                      <div class="acc-list store-list">
+                        {store.batches.map((x) => (
+                          <div class="acc-row store-row">
+                            <span class="store-name" title={`${x.firmName} › ${x.name}`}>{x.firmName} › <b>{x.name}</b></span>
+                            <span class="muted small">{x.withXml}/{x.total} görselli · {mb(x.bytes)}</span>
+                            <button class="tiny" disabled={x.withXml === 0} onClick={async () => { if (await askConfirm({ title: 'Görselleri arşivle', message: `"${x.name}" dönemindeki ${x.withXml} faturanın görseli (XML) silinecek; liste, atamalar ve çıktı kalır. XML'ler yeniden yüklenirse görseller geri gelir.`, okLabel: 'Arşivle' })) { const n = await S.archiveBatchVisuals(x.id); S.showToast(`${n} faturanın görseli arşivlendi`); setStore(await S.storageInfo()); } }}>Görselleri arşivle</button>
+                          </div>
+                        ))}
+                        {store.batches.length === 0 && <div class="chart-empty">Dönem yok.</div>}
+                      </div>
+                    </>
+                  ) : <div class="muted small">Hesaplanıyor…</div>}
+                </fieldset>
               </>
             )}
             {tab === 'keys' && (
