@@ -12,7 +12,7 @@ const mk = async () => { const ctx = await browser.newContext({ viewport: { widt
 const a = await mk();
 await a.waitForSelector('.firm-select');
 console.log('varsayılan firma:', await a.locator('.firm-select option:checked').innerText());
-await a.locator('input[accept=".xml,text/xml,application/xml"]').setInputFiles(XMLS); await a.waitForSelector('.inv-frame');
+await a.locator('input[accept*=".zip"]').setInputFiles(XMLS); await a.waitForSelector('.inv-frame');
 for (const c of ['770.01', '770.01', '770.01']) { await a.keyboard.press('/'); await a.waitForSelector('.manual-input'); await a.keyboard.type(c); await a.keyboard.press('Enter'); await a.waitForTimeout(80); }
 await a.locator('.slot').nth(0).hover(); await a.locator('.slot').nth(0).locator('.slot-icon.edit').click(); await a.keyboard.type('770.01'); await a.keyboard.press('Enter'); await a.waitForTimeout(150);
 await a.locator('button[title="Ayarlar"]').click();
@@ -23,7 +23,7 @@ console.log('A firması: slot Q =', (await a.locator('.slot').nth(0).innerText()
 // Yeni firma (prompt → "Beta Ltd")
 await a.locator('.firm-select').selectOption('__new'); await a.waitForTimeout(400);
 console.log('yeni firma seçili:', await a.locator('.firm-select option:checked').innerText(), '| karşılama görünüyor:', await a.locator('.welcome').count(), '| slot Q:', (await a.locator('.slot').nth(0).innerText()).replace(/\n/g,' '), '| firma sayısı:', (await a.locator('.firm-select option').count()) - 1);
-await a.locator('input[accept=".xml,text/xml,application/xml"]').setInputFiles(XMLS); await a.waitForSelector('.inv-frame');
+await a.locator('input[accept*=".zip"]').setInputFiles(XMLS); await a.waitForSelector('.inv-frame');
 console.log('Beta: ilk fatura kodu (Alfa atamaları sızmamalı):', await a.locator('.detail-code b').innerText(), '| ipucu:', await a.locator('button.hint').count(), '| hesap listesi:', await a.evaluate(() => document.querySelectorAll('.acc-row').length));
 await a.keyboard.press('/'); await a.keyboard.type('600.002'); await a.keyboard.press('Enter'); await a.waitForTimeout(100);
 await a.locator('.slot').nth(1).hover(); await a.locator('.slot').nth(1).locator('.slot-icon.edit').click(); await a.keyboard.type('600.002'); await a.keyboard.press('Enter'); await a.waitForTimeout(150);

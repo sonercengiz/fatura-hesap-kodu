@@ -6,7 +6,7 @@ const browser=await chromium.launch({channel:'chrome',headless:true});
 const page=await (await browser.newContext({viewport:{width:1500,height:900}})).newPage();
 await page.addInitScript(()=>{try{localStorage.setItem('guideSeen','1')}catch{}});
 await page.goto('http://localhost:5179/'); await page.waitForSelector('.welcome');
-await page.locator('input[accept=".xml,text/xml,application/xml"]').setInputFiles(files); await page.waitForSelector('.inv-frame'); await page.waitForFunction(()=>!document.querySelector('.busy'));
+await page.locator('input[accept*=".zip"]').setInputFiles(files); await page.waitForSelector('.inv-frame'); await page.waitForFunction(()=>!document.querySelector('.busy'));
 await page.locator('.toolbar button:has-text("Yazdır")').click(); await page.waitForSelector('.print-modal');
 await page.waitForSelector('.print-preview-frame');
 const head=async()=>page.locator('.print-preview-head').innerText();

@@ -7,7 +7,7 @@ const page=await (await browser.newContext({viewport:{width:1500,height:900}})).
 const errors=[]; page.on('pageerror',e=>errors.push(e.message)); page.on('console',m=>{if(m.type()==='error'&&!/srcdoc|sandboxed|ERR_/.test(m.text()))errors.push(m.text())});
 await page.addInitScript(()=>{try{localStorage.setItem('guideSeen','1')}catch{}; window.__printCalled=0; window.print=()=>{window.__printCalled++;};});
 await page.goto('http://localhost:5179/'); await page.waitForSelector('.welcome');
-await page.locator('input[accept=".xml,text/xml,application/xml"]').setInputFiles(files.slice(0,20)); await page.waitForSelector('.inv-frame'); await page.waitForFunction(()=>!document.querySelector('.busy'));
+await page.locator('input[accept*=".zip"]').setInputFiles(files.slice(0,20)); await page.waitForSelector('.inv-frame'); await page.waitForFunction(()=>!document.querySelector('.busy'));
 const log=(...a)=>console.log(...a);
 // birkaç atama
 await page.locator('.slot').nth(0).hover(); await page.locator('.slot').nth(0).locator('.slot-icon.edit').click(); await page.keyboard.type('770.01'); await page.keyboard.press('Enter'); await page.waitForTimeout(100);

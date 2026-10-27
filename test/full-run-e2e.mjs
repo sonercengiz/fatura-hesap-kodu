@@ -21,7 +21,7 @@ log('karşılama ekranı OK');
 
 // 1) 57 XML yükle (yeni parti kendiliğinden)
 let t0 = t();
-await page.locator('input[accept=".xml,text/xml,application/xml"]').setInputFiles(files);
+await page.locator('input[accept*=".zip"]').setInputFiles(files);
 await page.waitForSelector('.inv-frame', { timeout: 60000 });
 await page.waitForFunction(() => !document.querySelector('.busy'));
 log(`57 XML yüklendi: ${Math.round(t() - t0)} ms`);
@@ -94,14 +94,14 @@ const dates = aoa.slice(1).map((r) => r[1].split('/').reverse().join(''));
 log('çıktı tarih sırası artan mı:', dates.every((d, i) => i === 0 || d >= dates[i - 1]));
 
 // 5) Aynı dosyaları tekrar yükle → atlanır
-await page.locator('input[accept=".xml,text/xml,application/xml"]').setInputFiles(files.slice(0, 5));
+await page.locator('input[accept*=".zip"]').setInputFiles(files.slice(0, 5));
 await page.waitForSelector('.toast');
 log('tekrar yükleme:', await page.locator('.toast').innerText());
 
 // 6) Bozuk dosya + fatura olmayan dosya
 writeFileSync(`${S}/bozuk.xml`, '<Invoice><cbc:ID>X');
 writeFileSync(`${S}/not.txt`, 'merhaba');
-await page.locator('input[accept=".xml,text/xml,application/xml"]').setInputFiles([`${S}/bozuk.xml`, `${S}/not.txt`]);
+await page.locator('input[accept*=".zip"]').setInputFiles([`${S}/bozuk.xml`, `${S}/not.txt`]);
 await page.waitForTimeout(300);
 log('bozuk yükleme:', await page.locator('.toast').innerText());
 
@@ -119,7 +119,7 @@ log('çıkarma:', before, '→', await page.locator('.list .row').count());
 // 9) Yeni parti + 3 XML; parti listesi
 await page.locator('.batch-select').selectOption('__new');
 await page.waitForTimeout(300);
-await page.locator('input[accept=".xml,text/xml,application/xml"]').setInputFiles(files.slice(10, 13));
+await page.locator('input[accept*=".zip"]').setInputFiles(files.slice(10, 13));
 await page.waitForFunction(() => !document.querySelector('.busy'));
 log('yeni parti:', await page.locator('.batch-select option:checked').innerText(), '| satır', await page.locator('.list .row').count(), '| toplam parti', (await page.locator('.batch-select option').count()) - 1);
 

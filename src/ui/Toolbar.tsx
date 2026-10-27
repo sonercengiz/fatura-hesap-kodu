@@ -3,7 +3,6 @@ import * as S from './state';
 
 export function Toolbar() {
   const xml = useRef<HTMLInputElement>(null);
-  const dir = useRef<HTMLInputElement>(null);
   const b = S.batchRec.value;
   const n = S.invoices.value.length;
   const issues = S.invoices.value.filter((i) => S.attentionIssues(i).length > 0).length;
@@ -48,8 +47,7 @@ export function Toolbar() {
         ))}
         <option value="__new">+ Yeni parti…</option>
       </select>
-      <button class={b ? '' : 'primary'} onClick={() => xml.current?.click()} title={b ? 'Açık partiye e-Fatura XML ya da ZIP dosyaları ekle' : 'e-Fatura XML ya da ZIP dosyalarını yükle (yeni parti açılır)'}>XML / ZIP yükle</button>
-      <button onClick={() => dir.current?.click()} title="Bir klasördeki tüm XML'leri yükle">Klasör yükle</button>
+      <button class={b ? '' : 'primary'} onClick={() => xml.current?.click()} title={(b ? 'Açık partiye e-Fatura XML ya da ZIP dosyaları ekle' : 'e-Fatura XML ya da ZIP dosyalarını yükle (yeni parti açılır)') + '. Klasörü pencereye sürükleyerek de yükleyebilirsiniz.'}>Yükle</button>
       <div class="spacer" />
       {b && (
         <div class="progress" title="Atanan / toplam">
@@ -70,11 +68,6 @@ export function Toolbar() {
       </button>
       <button class="ghost" onClick={() => (S.settingsOpen.value = true)} title="Ayarlar">⚙</button>
       <input ref={xml} type="file" accept=".xml,.zip,text/xml,application/xml,application/zip,application/x-zip-compressed" multiple hidden onChange={(e) => {
-        const fl = Array.from((e.currentTarget as HTMLInputElement).files ?? []);
-        if (fl.length) S.importXml(fl);
-        (e.currentTarget as HTMLInputElement).value = '';
-      }} />
-      <input ref={dir} type="file" hidden {...({ webkitdirectory: true } as Record<string, unknown>)} onChange={(e) => {
         const fl = Array.from((e.currentTarget as HTMLInputElement).files ?? []);
         if (fl.length) S.importXml(fl);
         (e.currentTarget as HTMLInputElement).value = '';

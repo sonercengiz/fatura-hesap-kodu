@@ -16,6 +16,7 @@ import { PrintRoot } from './PrintRoot';
 import { ImportReportModal } from './ImportReportModal';
 import { MoveModal } from './MoveModal';
 import { TemplateModal } from './TemplateModal';
+import { filesFromDataTransfer } from './dnd';
 
 export function App() {
   const [drag, setDrag] = useState(false);
@@ -213,8 +214,8 @@ export function App() {
   const onDrop = (e: DragEvent) => {
     e.preventDefault();
     setDrag(false);
-    const list = Array.from(e.dataTransfer?.files ?? []);
-    if (list.length) S.importXml(list);
+    const dt = e.dataTransfer;
+    filesFromDataTransfer(dt).then((list) => { if (list.length) S.importXml(list); });
   };
 
   return (
@@ -241,7 +242,7 @@ export function App() {
       {!S.batchRec.value ? (
         <main class="welcome">
           <h1>e-Fatura XML dosyalarını yükleyin</h1>
-          <p>EDM'den indirdiğiniz fatura XML'lerini (ya da ZIP'ini) buraya sürükleyin ya da üstteki <b>XML yükle</b> / <b>Klasör yükle</b> düğmelerini kullanın. Faturalar kendi resmî görünümüyle çizilir; tek tuşla hesap kodu verirsiniz.</p>
+          <p>EDM'den indirdiğiniz fatura XML'lerini, ZIP'ini ya da klasörünü buraya sürükleyin ya da üstteki <b>Yükle</b> düğmesini kullanın. Faturalar kendi resmî görünümüyle çizilir; tek tuşla hesap kodu verirsiniz.</p>
           <p class="muted">Veriler yalnızca bu tarayıcıda saklanır. Çıktı, EDM fatura listesi düzeninde (Hesap Kodu sütunu eklenmiş) bir Excel dosyasıdır.</p>
           <p><button class="primary" onClick={() => (S.guideOpen.value = true)}>Kullanım rehberini aç</button></p>
         </main>
@@ -281,7 +282,7 @@ export function App() {
       <PrintRoot />
       {S.busy.value && <div class="busy">{S.busy.value}</div>}
       {S.toast.value && <div class="toast">{S.toast.value}</div>}
-      {drag && <div class="drop-hint">Bırakın: e-Fatura XML ya da ZIP dosyaları</div>}
+      {drag && <div class="drop-hint">Bırakın: e-Fatura XML, ZIP ya da klasör</div>}
     </div>
   );
 }

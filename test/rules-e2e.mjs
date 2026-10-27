@@ -15,7 +15,7 @@ const mk = async () => { const ctx = await browser.newContext({ viewport: { widt
 const log = (...a) => console.log(...a);
 const a = await mk();
 await a.waitForSelector('.welcome');
-const inp = 'input[accept=".xml,text/xml,application/xml"]';
+const inp = 'input[accept*=".zip"]';
 // 1) Önce Turkcell dışındakiler; Turkcell'den biri de dahil olsun diye 2 Turkcell ekle
 await a.locator(inp).setInputFiles([...others, ...turkcell.slice(0, 2)]);
 await a.waitForSelector('.inv-frame'); await a.waitForFunction(() => !document.querySelector('.busy'));

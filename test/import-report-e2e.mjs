@@ -9,7 +9,7 @@ const browser=await chromium.launch({channel:'chrome',headless:true});
 const page=await (await browser.newContext({viewport:{width:1400,height:900}})).newPage();
 await page.addInitScript(()=>{try{localStorage.setItem('guideSeen','1')}catch{}});
 await page.goto('http://localhost:5179/'); await page.waitForSelector('.welcome');
-await page.locator('input[accept=".xml,text/xml,application/xml"]').setInputFiles([...files, `${S}/kopya.xml`, `${P}/irsaliye.xml`, `${P}/bozuk.xml`, `${S}/yarim.xml`, `${S}/not.txt`]);
+await page.locator('input[accept*=".zip"]').setInputFiles([...files, `${S}/kopya.xml`, `${P}/irsaliye.xml`, `${P}/bozuk.xml`, `${S}/yarim.xml`, `${S}/not.txt`]);
 await page.waitForSelector('.modal:has-text("Yükleme sonucu")',{timeout:30000});
 console.log('başlık:', await page.locator('.modal-head .muted').innerText());
 console.log((await page.locator('.report-row').allInnerTexts()).map(t=>t.replace(/\s+/g,' ')).join('\n'));

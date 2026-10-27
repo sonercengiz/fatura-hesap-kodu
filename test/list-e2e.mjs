@@ -7,7 +7,7 @@ const page=await (await browser.newContext({viewport:{width:1600,height:900}})).
 const errors=[]; page.on('pageerror',e=>errors.push(e.message)); page.on('console',m=>{if(m.type()==='error'&&!/srcdoc|sandboxed|ERR_/.test(m.text()))errors.push(m.text())});
 await page.addInitScript(()=>{try{localStorage.setItem('guideSeen','1')}catch{}});
 await page.goto('http://localhost:5179/'); await page.waitForSelector('.welcome');
-await page.locator('input[accept=".xml,text/xml,application/xml"]').setInputFiles(files);
+await page.locator('input[accept*=".zip"]').setInputFiles(files);
 await page.waitForSelector('.inv-frame'); await page.waitForFunction(()=>!document.querySelector('.busy'));
 const log=(...a)=>console.log(...a);
 // liste görünümüne geç

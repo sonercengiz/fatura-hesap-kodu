@@ -7,7 +7,7 @@ const page=await (await browser.newContext({viewport:{width:1500,height:900}})).
 const errors=[]; page.on('pageerror',e=>errors.push(e.message));
 await page.addInitScript(()=>{try{localStorage.setItem('guideSeen','1')}catch{}});
 await page.goto('http://localhost:5179/'); await page.waitForSelector('.welcome');
-await page.locator('input[accept=".xml,text/xml,application/xml"]').setInputFiles(files); await page.waitForSelector('.inv-frame'); await page.waitForFunction(()=>!document.querySelector('.busy'));
+await page.locator('input[accept*=".zip"]').setInputFiles(files); await page.waitForSelector('.inv-frame'); await page.waitForFunction(()=>!document.querySelector('.busy'));
 await page.locator('.slot').nth(0).hover(); await page.locator('.slot').nth(0).locator('.slot-icon.edit').click(); await page.keyboard.type('770.01'); await page.keyboard.press('Enter'); await page.waitForTimeout(100);
 for (let i=0;i<3;i++){ await page.keyboard.press('q'); await page.waitForTimeout(60); }
 await page.locator('.toolbar button:has-text("Yazdır")').click(); await page.waitForSelector('.print-modal');

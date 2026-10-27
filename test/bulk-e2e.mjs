@@ -8,7 +8,7 @@ const page = await (await browser.newContext({ viewport: { width: 1440, height: 
 const errors = []; page.on('pageerror', (e) => errors.push(e.message)); page.on('console', (m) => { if (m.type() === 'error' && !/srcdoc|sandboxed/.test(m.text())) errors.push(m.text()); });
 await page.addInitScript(() => { try { localStorage.setItem('guideSeen', '1'); } catch {} });
 await page.goto('http://localhost:5179/');
-await page.locator('input[accept=".xml,text/xml,application/xml"]').setInputFiles(XMLS);
+await page.locator('input[accept*=".zip"]').setInputFiles(XMLS);
 await page.waitForSelector('.inv-frame');
 const no = () => page.locator('.detail-row b').first().innerText();
 // elle 2 atama (770.01 x2) → Q'ya kaydet

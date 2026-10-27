@@ -11,7 +11,7 @@ page.on('pageerror', (e) => errors.push(e.message)); page.on('console', (m) => {
 page.on('dialog', (d) => d.accept(d.type() === 'prompt' ? 'Ekim 2026' : undefined));
 await page.addInitScript(() => { try { localStorage.setItem('guideSeen', '1'); } catch {} });
 await page.goto('http://localhost:5179/'); await page.waitForSelector('.welcome');
-const inp = 'input[accept=".xml,text/xml,application/xml"]';
+const inp = 'input[accept*=".zip"]';
 const log = (...a) => console.log(...a);
 await page.locator(inp).setInputFiles(turkcell.slice(0, 6)); await page.waitForSelector('.inv-frame'); await page.waitForFunction(() => !document.querySelector('.busy'));
 // kalıcı VKN kuralı
