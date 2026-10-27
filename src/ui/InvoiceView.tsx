@@ -138,6 +138,13 @@ export function InvoiceView(props: { invoiceNo: string; viewMode: ViewMode; marg
       else if (viewMode === 'margin') w.scrollTo(0, marginPx);
       else w.scrollTo(0, lastScroll);
       w.addEventListener('scroll', () => { lastScroll = w.scrollY; });
+      // Çerçeveye tıklanınca odak orada kalır; kısayollar (Q–D, oklar, Tab, Boşluk, F1/F5…) ölmesin diye tuşlar ana pencereye aktarılır.
+      // Metin seçme ve Ctrl+C çerçevede çalışmaya devam eder (ana pencere Ctrl'li harfleri yoksayar).
+      doc.addEventListener('keydown', (e: KeyboardEvent) => {
+        const fwd = new KeyboardEvent('keydown', { key: e.key, code: e.code, ctrlKey: e.ctrlKey, shiftKey: e.shiftKey, altKey: e.altKey, metaKey: e.metaKey, repeat: e.repeat, bubbles: true, cancelable: true });
+        window.dispatchEvent(fwd);
+        if (fwd.defaultPrevented) e.preventDefault();
+      });
       // Ctrl + fare tekerleği: yakınlaştır / uzaklaştır (tarayıcı yakınlaştırması engellenir)
       doc.addEventListener('wheel', (e: WheelEvent) => {
         if (!e.ctrlKey && !e.metaKey) return;

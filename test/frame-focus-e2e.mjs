@@ -1,0 +1,33 @@
+// Fatura çerçevesine tıklandıktan sonra kısayollar çalışmalı (tuşlar çerçeveden ana pencereye aktarılır); kopyalama bozulmamalı
+import { chromium } from 'playwright';
+import { readdirSync } from 'node:fs';
+const S = process.env.SCRATCH || '/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/867f9974-1a43-4076-a88f-b37ee3fd36c1/scratchpad';
+const XML_DIR = process.env.XML_DIR || `${S}/xmlin`;
+const files = readdirSync(XML_DIR).filter((f) => f.endsWith('.xml')).sort().map((f) => `${XML_DIR}/${f}`);
+const browser = await chromium.launch({ channel: 'chrome', headless: true });
+const errors = [];
+const page = await (await browser.newContext({ viewport: { width: 1366, height: 768 } })).newPage();
+page.on('pageerror', (e) => errors.push('pageerror: ' + e.message)); page.on('console', (m) => { if (m.type() === 'error' && !/srcdoc|sandboxed|ERR_/.test(m.text())) errors.push('console: ' + m.text()); });
+await page.addInitScript(() => { try { localStorage.setItem('guideSeen', '1'); } catch {} });
+await page.goto('http://localhost:5179/'); await page.waitForSelector('.welcome');
+await page.locator('input[accept*=".zip"]').setInputFiles(files); await page.waitForSelector('.inv-frame'); await page.waitForFunction(() => !document.querySelector('.busy')); await page.waitForTimeout(600);
+await page.locator('.slot.slot-0').click(); await page.keyboard.type('153.01'); await page.keyboard.press('Enter'); await page.waitForTimeout(200);
+const log = (...a) => console.log(...a);
+const code = () => page.evaluate(() => document.querySelector('.detail-code b')?.textContent);
+const pos = () => page.evaluate(() => document.querySelector('.viewer-badge .muted')?.textContent);
+const clickFrame = async () => { const fb = await page.locator('.inv-frame').boundingBox(); await page.mouse.click(fb.x + fb.width / 2, fb.y + fb.height / 2); await page.waitForTimeout(150); };
+await clickFrame(); log('odak:', await page.evaluate(() => document.activeElement?.tagName), '(IFRAME bekleniyor)');
+await page.keyboard.press('q'); await page.waitForTimeout(250); log('çerçeve içi Q →', await code(), '(153.01 bekleniyor)');
+await page.keyboard.press('Backspace'); await page.waitForTimeout(250); log('çerçeve içi Backspace →', await code(), '(— bekleniyor)');
+const p0 = await pos(); await page.keyboard.press('ArrowRight'); await page.waitForTimeout(400); log('çerçeve içi → :', p0, '→', await pos());
+await clickFrame(); await page.keyboard.press('Tab'); await page.waitForTimeout(400); log('çerçeve içi Tab (atanmamışa):', await pos());
+await clickFrame(); await page.keyboard.press('Enter'); await page.waitForTimeout(200); log('çerçeve içi Enter → elle giriş kutusu:', await page.locator('.manual-input').count());
+await page.keyboard.type('770.01'); await page.keyboard.press('Enter'); await page.waitForTimeout(300); log('elle giriş →', await code(), '(770.01 bekleniyor)');
+await clickFrame(); await page.keyboard.press('F5'); await page.waitForTimeout(400); log('çerçeve içi F5 → önizleme:', await page.locator('.modal').count(), '| sayfa yenilenmedi:', await page.evaluate(() => !!document.querySelector('.inv-frame')));
+await page.keyboard.press('Escape'); await page.waitForTimeout(200);
+// Kopyalama: çerçevede metin seçip Ctrl+C → pano (headless'ta pano izni olmayabilir; seçimin korunduğunu ölç)
+await clickFrame(); const sel = await page.evaluate(() => { const d = document.querySelector('.inv-frame').contentDocument; const w = d.defaultView; const tw = d.createTreeWalker(d.body, NodeFilter.SHOW_TEXT); let n; while ((n = tw.nextNode())) { if (n.textContent.trim().length > 5) break; } const r = d.createRange(); r.selectNodeContents(n); w.getSelection().removeAllRanges(); w.getSelection().addRange(r); return w.getSelection().toString().trim(); });
+await page.keyboard.press('Control+c'); await page.waitForTimeout(150);
+log('seçim Ctrl+C sonrası korundu:', (await page.evaluate(() => document.querySelector('.inv-frame').contentDocument.defaultView.getSelection().toString().trim())) === sel, '| kod değişmedi:', await code());
+log('HATALAR:', errors.length ? errors : 'yok');
+await browser.close();
