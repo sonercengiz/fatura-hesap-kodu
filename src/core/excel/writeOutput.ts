@@ -1,6 +1,6 @@
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx-js-style';
 import type { CellValue, Invoice } from '../types';
-import { buildTemplateRows, textColumns, type OutputTemplate, type RowContext } from './template';
+import { buildTemplateRows, textColumns, moneyColumns, type OutputTemplate, type RowContext } from './template';
 
 export { EDM_HEADERS, EDM_SHEET_NAME } from './edm';
 import { EDM_HEADERS, EDM_SHEET_NAME } from './edm';
@@ -96,11 +96,22 @@ export function buildTemplateWorkbook(invoices: Invoice[], t: OutputTemplate, ct
   const aoa = buildTemplateRows(invoices, t, ctx);
   const ws = XLSX.utils.aoa_to_sheet(aoa);
   const textCols = textColumns(t);
+  const moneyCols = new Set(moneyColumns(t));
+  // EDM dosyasıyla aynı görünüm: kalın başlık, 18,43 genişlik, tutarlar #,##0.00
+  for (let c = 0; c < aoa[0].length; c++) {
+    const h = ws[XLSX.utils.encode_cell({ r: 0, c })];
+    if (h) h.s = { font: { bold: true, name: 'Calibri', sz: 11 } };
+  }
+  ws['!cols'] = aoa[0].map(() => ({ wch: 17.6 })); // Excel'de 18,43 görünür (EDM dosyasıyla aynı)
   for (let r = 1; r < aoa.length; r++) {
     for (const c of textCols) {
       const addr = XLSX.utils.encode_cell({ r, c });
       const v = aoa[r][c];
       ws[addr] = { t: 's', v: v == null ? '' : String(v) };
+    }
+    for (const c of moneyCols) {
+      const cell = ws[XLSX.utils.encode_cell({ r, c })];
+      if (cell && cell.t === 'n') cell.z = '#,##0.00\\ ';
     }
   }
   const wb = XLSX.utils.book_new();

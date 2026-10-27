@@ -10,7 +10,7 @@ export function ImportReportModal() {
       <div class="modal" onClick={(e) => e.stopPropagation()}>
         <div class="modal-head">
           <b>Yükleme sonucu</b>
-          <span class="muted">{r.added} eklendi{r.ruled ? ` · ${r.ruled} kuralla atandı` : ''}{r.skipped ? ` · ${r.skipped} zaten vardı` : ''} · {r.failed.length} okunamadı</span>
+          <span class="muted">{r.added} eklendi{r.ruled ? ` · ${r.ruled} kuralla atandı` : ''}{r.skipped ? ` · ${r.skipped} zaten vardı` : ''}{r.edmMatched || r.edmAdded ? ` · EDM listesi: ${r.edmMatched} eşleşti, ${r.edmAdded} eklendi` : ''} · {r.failed.length} okunamadı</span>
           <div class="spacer" />
           <button class="ghost" onClick={close}>Kapat <kbd>Esc</kbd></button>
         </div>

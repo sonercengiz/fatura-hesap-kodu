@@ -42,36 +42,43 @@ interface FieldDef {
   edm: boolean;
   /** Metin tipinde yazılmalı (sayıya dönüşmesin) */
   text?: boolean;
+  /** Para biçimi (#,##0.00) */
+  money?: boolean;
   value: (inv: Invoice, ctx: RowContext) => CellValue;
 }
 
 const SRC_LABEL = { manual: 'Elle', bulk: 'Toplu', rule: 'Kural' } as const;
+/** EDM listesi yüklendiyse o sütunun ham değeri, yoksa verilen varsayılan */
+const edmOr = (header: string, fallback: (i: Invoice) => CellValue) => (i: Invoice): CellValue => {
+  const v = i.edm?.[header];
+  return v === undefined || v === null || v === '' ? fallback(i) : v;
+};
 
 export const FIELD_DEFS: Record<OutputFieldId, FieldDef> = {
   no: { label: 'Fatura No', header: 'Fatura No', edm: true, value: (i) => i.no },
   date: { label: 'Fatura Tarihi (GG/AA/YYYY)', header: 'Fatura Tarihi', edm: true, value: (i) => i.date },
-  arrival: { label: 'Geliş Zamanı (XML\'de yok, boş)', header: 'Geliş Zamanı', edm: true, value: () => '' },
+  arrival: { label: 'Geliş Zamanı (EDM listesinden; yoksa boş)', header: 'Geliş Zamanı', edm: true, value: edmOr('Geliş Zamanı', () => '') },
   type: { label: 'Fatura Tipi (Satış, İstisna…)', header: 'Fatura Tipi', edm: true, value: (i) => i.invoiceType },
   profile: { label: 'Fatura Türü (Temel, Ticari…)', header: 'Fatura Türü', edm: true, value: (i) => i.profile },
   vkn: { label: 'Gönderen VKN/TCKN', header: 'Gönderen VKN/TCKN', edm: true, text: true, value: (i) => i.supplierVkn },
   name: { label: 'Gönderen Unvan/Ad Soyad', header: 'Gönderen Unvan/Ad Soyad', edm: true, value: (i) => i.supplierName },
-  amount: { label: 'Tutar (ödenecek)', header: 'Tutar', edm: true, value: (i) => i.amount },
+  amount: { label: 'Tutar (ödenecek)', header: 'Tutar', edm: true, money: true, value: (i) => i.amount },
   currency: { label: 'Döviz Cinsi', header: 'Döviz Cinsi', edm: true, value: (i) => i.currency || 'TRY' },
-  status: { label: 'Durum (boş)', header: 'Durum', edm: true, value: () => '' },
-  responseStatus: { label: 'Yanıt Durumu (boş)', header: 'Yanıt Durumu', edm: true, value: () => '' },
-  localStatus: { label: 'Yerele Aktarım Durumu (boş)', header: 'Yerele Aktarım Durumu', edm: true, value: () => '' },
-  envelope: { label: 'Zarf No (boş)', header: 'Zarf No', edm: true, value: () => '' },
-  kepObjection: { label: 'KEP İtiraz Durumu (boş)', header: 'KEP İtiraz Durumu', edm: true, value: () => '' },
-  gibCancel: { label: 'Gib Portal Fatura Iptal Durumu (boş)', header: 'Gib Portal Fatura Iptal Durumu', edm: true, value: () => '' },
-  officialObjection: { label: 'Resmi Yazı İtiraz Durumu (boş)', header: 'Resmi Yazı İtiraz Durumu', edm: true, value: () => '' },
-  gibObjection: { label: 'Gib Portal Fatura İtiraz Durumu (boş)', header: 'Gib Portal Fatura İtiraz Durumu', edm: true, value: () => '' },
-  branch: { label: 'Şube (boş)', header: 'Şube', edm: true, value: () => '' },
-  hash: { label: 'Hash (boş)', header: 'Hash', edm: true, value: () => '' },
-  tag: { label: 'Etiket (boş)', header: 'Etiket', edm: true, value: () => '' },
+  status: { label: 'Durum (EDM listesinden; yoksa boş)', header: 'Durum', edm: true, value: edmOr('Durum', () => '') },
+  responseStatus: { label: 'Yanıt Durumu (EDM listesinden; yoksa boş)', header: 'Yanıt Durumu', edm: true, value: edmOr('Yanıt Durumu', () => '') },
+  localStatus: { label: 'Yerele Aktarım Durumu (EDM listesinden; yoksa boş)', header: 'Yerele Aktarım Durumu', edm: true, value: edmOr('Yerele Aktarım Durumu', () => '') },
+  envelope: { label: 'Zarf No (EDM listesinden; yoksa boş)', header: 'Zarf No', edm: true, value: edmOr('Zarf No', () => '') },
+  kepObjection: { label: 'KEP İtiraz Durumu (EDM listesinden; yoksa boş)', header: 'KEP İtiraz Durumu', edm: true, value: edmOr('KEP İtiraz Durumu', () => '') },
+  gibCancel: { label: 'Gib Portal Fatura Iptal Durumu (EDM listesinden; yoksa boş)', header: 'Gib Portal Fatura Iptal Durumu', edm: true, value: edmOr('Gib Portal Fatura Iptal Durumu', () => '') },
+  officialObjection: { label: 'Resmi Yazı İtiraz Durumu (EDM listesinden; yoksa boş)', header: 'Resmi Yazı İtiraz Durumu', edm: true, value: edmOr('Resmi Yazı İtiraz Durumu', () => '') },
+  gibObjection: { label: 'Gib Portal Fatura İtiraz Durumu (EDM listesinden; yoksa boş)', header: 'Gib Portal Fatura İtiraz Durumu', edm: true, value: edmOr('Gib Portal Fatura İtiraz Durumu', () => '') },
+  branch: { label: 'Şube (EDM listesinden; yoksa boş)', header: 'Şube', edm: true, value: edmOr('Şube', () => '') },
+  hash: { label: 'Hash (EDM listesinden; yoksa boş)', header: 'Hash', edm: true, value: edmOr('Hash', () => '') },
+  tag: { label: 'Etiket (EDM listesinden; yoksa boş)', header: 'Etiket', edm: true, value: edmOr('Etiket', () => '') },
   code: { label: 'Hesap Kodu (atanan)', header: 'Hesap Kodu', edm: false, text: true, value: (i, c) => c.codes.get(i.no) ?? '' },
   uuid: { label: 'ETTN (UUID)', header: 'ETTN', edm: false, text: true, value: (i) => i.uuid },
-  taxExclusive: { label: 'Matrah (vergiler hariç)', header: 'Matrah', edm: false, value: (i) => i.taxExclusive },
-  tax: { label: 'Vergi toplamı', header: 'Vergi', edm: false, value: (i) => i.taxAmount },
+  taxExclusive: { label: 'Matrah (vergiler hariç)', header: 'Matrah', edm: false, money: true, value: (i) => i.taxExclusive },
+  tax: { label: 'Vergi toplamı', header: 'Vergi', edm: false, money: true, value: (i) => i.taxAmount },
   lineCount: { label: 'Kalem sayısı', header: 'Kalem', edm: false, value: (i) => i.lineCount },
   source: { label: 'Atama kaynağı (Elle / Toplu / Kural)', header: 'Kaynak', edm: false, value: (i, c) => { const s = c.sources?.get(i.no); return s ? SRC_LABEL[s] : ''; } },
   accountName: { label: 'Hesap adı (listeden)', header: 'Hesap Adı', edm: false, value: (i, c) => { const code = c.codes.get(i.no); return code ? c.accountNames?.get(code) ?? '' : ''; } },
@@ -118,6 +125,10 @@ export function buildTemplateRows(invoices: Invoice[], t: OutputTemplate, ctx: R
 /** Metin tipinde yazılması gereken sütun indeksleri (0 tabanlı) */
 export function textColumns(t: OutputTemplate): number[] {
   return t.columns.map((c, k) => (FIELD_DEFS[c.id].text ? k : -1)).filter((k) => k >= 0);
+}
+
+export function moneyColumns(t: OutputTemplate): number[] {
+  return t.columns.map((c, k) => (FIELD_DEFS[c.id].money ? k : -1)).filter((k) => k >= 0);
 }
 
 export function codeColumnIndexOf(t: OutputTemplate): number {

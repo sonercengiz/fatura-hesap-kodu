@@ -1,5 +1,5 @@
 import Dexie, { type Table } from 'dexie';
-import type { Settings, ShortcutSlot } from '../core/types';
+import type { Settings, ShortcutSlot, CellValue } from '../core/types';
 import { DEFAULT_SHORTCUT_KEYS } from '../core/types';
 import type { HistoryEntry } from '../core/suggest/engine';
 import { sheetToInvoices, type EdmSheet } from '../core/legacy';
@@ -52,6 +52,8 @@ export interface InvoiceRecord {
   itemText: string;
   xml: string | null;
   xsltId: string | null;
+  /** EDM Excel listesinden gelen ham sütunlar (başlık → değer) */
+  edm?: Record<string, CellValue>;
   fileName: string;
   addedAt: number;
   order: number;

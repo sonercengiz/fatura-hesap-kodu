@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import * as XLSX from 'xlsx';
 import { edmTemplate, DEFAULT_OUTPUT_TEMPLATE, normalizeTemplate, buildTemplateRows, isEdmDefault, codeColumnIndexOf, type OutputTemplate } from '../src/core/excel/template';
 import { buildTemplateWorkbook, EDM_HEADERS } from '../src/core/excel/writeOutput';
+import { unzipSync, strFromU8 } from 'fflate';
 import type { Invoice } from '../src/core/types';
 
 const mk = (no: string, over: Partial<Invoice> = {}): Invoice => ({
@@ -43,5 +44,29 @@ describe('çıktı şablonu', () => {
     expect(n.columns.map((c) => c.id)).toEqual(['no', 'code']);
     expect(n.rowOrder).toBe('date-no');
     expect(n.sheetName).toBe('Sheet0');
+  });
+  it('EDM listesinden gelen sütunlar çıktıda dolar; XML alanları öncelikli', () => {
+    const withEdm = mk('ABC2026000000003', { edm: { 'Geliş Zamanı': '10/09/2026 12:28:13', Durum: 'Fatura hazır', 'Zarf No': 'zarf-1', Hash: 'h1', 'Fatura Tipi': 'İstisna' } });
+    const rows = buildTemplateRows([withEdm], DEFAULT_OUTPUT_TEMPLATE, ctx);
+    const h = rows[0] as string[];
+    const r = rows[1];
+    expect(r[h.indexOf('Geliş Zamanı')]).toBe('10/09/2026 12:28:13');
+    expect(r[h.indexOf('Durum')]).toBe('Fatura hazır');
+    expect(r[h.indexOf('Zarf No')]).toBe('zarf-1');
+    expect(r[h.indexOf('Hash')]).toBe('h1');
+    expect(r[h.indexOf('Fatura Tipi')]).toBe('Satış'); // XML'den gelen tip korunur
+  });
+  it('çalışma kitabı EDM görünümünde: kalın başlık, 18,43 genişlik, tutar biçimi', () => {
+    const bytes = buildTemplateWorkbook(list, DEFAULT_OUTPUT_TEMPLATE, ctx);
+    const files = unzipSync(new Uint8Array(bytes));
+    const styles = strFromU8(files['xl/styles.xml']);
+    const sheet = strFromU8(files['xl/worksheets/sheet1.xml']);
+    expect(styles).toContain('<b/>');
+    expect(styles).toContain('#,##0.00');
+    expect(sheet).toMatch(/<cols><col [^>]*min="1" max="1" width="18\.4\d+"/);
+    const wb = XLSX.read(bytes, { type: 'array' });
+    const ws = wb.Sheets.Sheet0;
+    expect(ws['A1'].s?.font?.bold ?? ws['A1'].s).toBeTruthy();
+    expect(ws['I2'].z).toBe('#,##0.00\\ ');
   });
 });

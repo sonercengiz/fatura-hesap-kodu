@@ -5,6 +5,7 @@ import { buildTemplateRows, normalizeTemplate, edmTemplate, codeColumnIndexOf, t
 import { parseUbl, decodeBytes, dominantMonth, UblParseError } from '../core/xml/parseUbl';
 import { sha256 } from '../core/hash';
 import { sheetToInvoices, type EdmSheet } from '../core/legacy';
+import { readEdmSheet, edmRowsByNo } from '../core/excel/readEdm';
 import { supplierHint, type HistoryEntry } from '../core/suggest/engine';
 import { sortInvoices, SORT_LABELS } from '../core/sort';
 import { db, DEFAULT_FIRM_ID, loadSettings, saveSettings, newId, type BatchRecord, type InvoiceRecord, type AssignmentRecord, type AccountRecord, type AssignmentSource, type FirmRecord, type FirmHistoryEntry } from '../storage/db';
@@ -118,6 +119,7 @@ export function toInvoice(r: InvoiceRecord): Invoice {
     hasView: !!r.xml,
     itemText: r.itemText ?? '',
     lineCount: r.lineCount,
+    edm: r.edm,
   };
 }
 
@@ -437,6 +439,11 @@ export interface ImportReport {
   skippedFiles: { file: string; no: string }[];
   /** Kuralla kendiliğinden atanan */
   ruled: number;
+  /** XML'i sonradan gelen (daha önce yalnızca listeden eklenmiş) faturalar */
+  upgraded: number;
+  /** EDM listesi: eşleşen ve yeni (XML'siz) eklenen */
+  edmMatched: number;
+  edmAdded: number;
   failed: { file: string; reason: string }[];
 }
 
@@ -445,13 +452,15 @@ export interface ImportReport {
  * XSLT'ler özetleriyle tekilleştirilir; daha önce başka dönemde atanmış faturaların kodu taşınır.
  */
 export async function importXml(rawList: File[]): Promise<ImportReport> {
-  const report: ImportReport = { added: 0, skipped: 0, skippedFiles: [], ruled: 0, failed: [] };
+  const report: ImportReport = { added: 0, skipped: 0, skippedFiles: [], ruled: 0, upgraded: 0, edmMatched: 0, edmAdded: 0, failed: [] };
   busy.value = rawList.some((f) => /\.zip$/i.test(f.name)) ? 'ZIP açılıyor…' : busy.value;
   const list = await expandZips(rawList);
   const isXml = (f: File) => /\.xml$/i.test(f.name) || f.type === 'text/xml' || f.type === 'application/xml';
+  const isEdm = (f: File) => /\.xlsx?$/i.test(f.name);
   const xmls = list.filter(isXml);
-  for (const f of list) if (!isXml(f) && !/^\.|\.ds_store$/i.test(f.name)) report.failed.push({ file: f.name, reason: /\(içinde XML yok\)|\(ZIP açılamadı\)$/.test(f.name) ? 'ZIP içeriği kullanılamadı' : 'XML dosyası değil (yalnızca .xml ve .zip yüklenir)' });
-  if (xmls.length === 0) {
+  const edms = list.filter(isEdm);
+  for (const f of list) if (!isXml(f) && !isEdm(f) && !/^\.|\.ds_store$/i.test(f.name)) report.failed.push({ file: f.name, reason: /\(içinde XML yok\)|\(ZIP açılamadı\)$/.test(f.name) ? 'ZIP içeriği kullanılamadı' : 'XML dosyası değil (yalnızca .xml ve .zip yüklenir)' });
+  if (xmls.length === 0 && edms.length === 0) {
     busy.value = null;
     if (report.failed.length) importReport.value = report;
     else showToast('XML dosyası seçilmedi. e-Fatura XML dosyalarını (.xml ya da .zip) yükleyin.', 4000);
@@ -461,6 +470,9 @@ export async function importXml(rawList: File[]): Promise<ImportReport> {
   try {
     const b = batchRec.value ?? (await createBatch());
     const existing = new Set(invoiceRecs.value.map((r) => r.no));
+    /** XML'siz (listeden gelmiş) kayıtlar: XML gelince tamamlanır */
+    const upgradable = new Map(invoiceRecs.value.filter((r) => !r.xml).map((r) => [r.no, r]));
+    const upgrades: InvoiceRecord[] = [];
     const seenNow = new Set<string>();
     const recs: InvoiceRecord[] = [];
     const xsltTexts = new Map<string, string>();
@@ -474,14 +486,16 @@ export async function importXml(rawList: File[]): Promise<ImportReport> {
         const text = decodeBytes(new Uint8Array(await f.arrayBuffer()));
         const u = parseUbl(text);
         const no = u.no.toUpperCase();
-        if (existing.has(no) || seenNow.has(no)) { report.skipped++; report.skippedFiles.push({ file: f.name, no }); continue; }
+        const up = upgradable.get(no);
+        if (!up && (existing.has(no) || seenNow.has(no))) { report.skipped++; report.skippedFiles.push({ file: f.name, no }); continue; }
+        if (up && seenNow.has(no)) { report.skipped++; report.skippedFiles.push({ file: f.name, no }); continue; }
         seenNow.add(no);
         let xsltId: string | null = null;
         if (u.xslt) {
           xsltId = await sha256(u.xslt);
           if (!xsltTexts.has(xsltId)) xsltTexts.set(xsltId, u.xslt);
         }
-        recs.push({
+        const rec: InvoiceRecord = {
           batchId: b.id,
           no,
           uuid: u.uuid,
@@ -502,21 +516,29 @@ export async function importXml(rawList: File[]): Promise<ImportReport> {
           fileName: f.name,
           addedAt: now,
           order: order++,
-        });
+        };
+        if (up) { upgrades.push({ ...rec, edm: up.edm, addedAt: up.addedAt, order: up.order }); report.upgraded++; }
+        else recs.push(rec);
       } catch (e) {
         report.failed.push({ file: f.name, reason: e instanceof UblParseError ? e.message : /\.xml$/i.test(f.name) ? 'Dosya okunamadı (bozuk ya da yarım inmiş olabilir)' : 'XML dosyası değil' });
       }
     }
-    if (recs.length) {
+    if (upgrades.length) {
+      busy.value = 'Kaydediliyor…';
+      await db.invoices.bulkPut(upgrades);
+      for (const u of upgrades) forgetHtml(`${b.id}|${u.no}`);
+      // XSLT'leri de yaz
+    }
+    if (recs.length || upgrades.length) {
       busy.value = 'Kaydediliyor…';
       if (xsltTexts.size) {
         const have = new Set((await db.xslts.where('id').anyOf(Array.from(xsltTexts.keys())).primaryKeys()) as string[]);
         const put = Array.from(xsltTexts, ([id, text]) => ({ id, text })).filter((x) => !have.has(x.id));
         if (put.length) await db.xslts.bulkPut(put);
       }
-      await db.invoices.bulkPut(recs);
+      if (recs.length) await db.invoices.bulkPut(recs);
       // Daha önce başka dönemde atanmış aynı faturalar varsa atamayı taşı
-      const prior = (await db.assignments.where('no').anyOf(recs.map((r) => r.no)).toArray()).filter((a) => a.batchId !== b.id);
+      const prior = recs.length ? (await db.assignments.where('no').anyOf(recs.map((r) => r.no)).toArray()).filter((a) => a.batchId !== b.id) : [];
       if (prior.length) {
         const latestByNo = new Map<string, AssignmentRecord>();
         for (const a of prior) {
@@ -545,7 +567,18 @@ export async function importXml(rawList: File[]): Promise<ImportReport> {
       const newNos = new Set(recs.map((r) => r.no));
       report.ruled = await applyRules((i) => newNos.has(i.no), true);
     }
+    // EDM listesi (Excel): mevcut faturalara ek sütunlar, listede olup XML'i olmayanlar görselsiz kayıt
+    for (const f of edms) {
+      try {
+        const sheet = readEdmSheet(await f.arrayBuffer());
+        await applyEdmList(sheet, report);
+      } catch (e) {
+        report.failed.push({ file: f.name, reason: (e as Error).message || 'Excel okunamadı' });
+      }
+    }
     const parts = [`${report.added} fatura eklendi`];
+    if (report.upgraded) parts.push(`${report.upgraded} faturanın XML'i tamamlandı`);
+    if (report.edmMatched || report.edmAdded) parts.push(`EDM listesi: ${report.edmMatched} eşleşti, ${report.edmAdded} listeden eklendi`);
     if (report.ruled) parts.push(`${report.ruled} kuralla atandı`);
     if (report.skipped) parts.push(`${report.skipped} zaten vardı`);
     if (report.failed.length) parts.push(`${report.failed.length} dosya okunamadı`);
@@ -556,6 +589,46 @@ export async function importXml(rawList: File[]): Promise<ImportReport> {
     busy.value = null;
   }
   return report;
+}
+
+/**
+ * EDM listesini açık döneme işler: numarası eşleşen faturalara ham EDM sütunları eklenir (çıktıda boş kalan
+ * alanlar dolar); listede olup dönemde olmayanlar XML'siz (görselsiz) fatura olarak eklenir.
+ */
+async function applyEdmList(sheet: EdmSheet, report: ImportReport) {
+  const b = batchRec.value;
+  if (!b) return;
+  const byNo = edmRowsByNo(sheet);
+  const current = await db.invoices.where('batchId').equals(b.id).toArray();
+  const have = new Map(current.map((r) => [r.no, r]));
+  const puts: InvoiceRecord[] = [];
+  for (const [no, edm] of byNo) {
+    const r = have.get(no);
+    if (r) { puts.push({ ...r, edm }); report.edmMatched++; }
+  }
+  const fields = sheetToInvoices(sheet);
+  let order = current.reduce((m, r) => Math.max(m, r.order + 1), 0);
+  const now = Date.now();
+  for (const f of fields) {
+    if (have.has(f.no)) continue;
+    puts.push({
+      batchId: b.id, no: f.no, uuid: '', issueDate: f.issueDate, issueTime: '', profileId: f.profileId, typeCode: f.typeCode, currency: f.currency,
+      supplierVkn: f.supplierVkn, supplierName: f.supplierName, payable: f.payable, taxExclusive: null, taxAmount: null, lineCount: null, itemText: '',
+      xml: null, xsltId: null, edm: byNo.get(f.no), fileName: sheet.sheetName, addedAt: now, order: order++,
+    });
+    have.set(f.no, puts[puts.length - 1]);
+    report.edmAdded++;
+  }
+  if (puts.length) {
+    await db.invoices.bulkPut(puts);
+    await db.batches.update(b.id, { updatedAt: now });
+    await refreshBatchList();
+    const keepNo = current.length ? current[0].no : undefined;
+    await openBatch(b.id);
+    if (keepNo) { const idx = invoices.value.findIndex((i) => i.no === keepNo); if (idx >= 0) currentIndex.value = idx; }
+    const newNos = new Set(fields.map((f) => f.no));
+    report.ruled += await applyRules((i) => newNos.has(i.no), true);
+  }
 }
 
 /** Faturaları dönemden çıkarır (atamalarıyla birlikte). */

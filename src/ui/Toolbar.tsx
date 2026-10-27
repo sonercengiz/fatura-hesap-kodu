@@ -46,7 +46,7 @@ export function Toolbar() {
         ))}
         <option value="__new">+ Yeni dönem…</option>
       </select>
-      <button class={b ? '' : 'primary'} onClick={() => xml.current?.click()} title={(b ? 'Açık döneme e-Fatura XML ya da ZIP dosyaları ekle' : 'e-Fatura XML ya da ZIP dosyalarını yükle (yeni dönem açılır)') + '. Klasörü pencereye sürükleyerek de yükleyebilirsiniz.'}>Yükle</button>
+      <button class={b ? '' : 'primary'} onClick={() => xml.current?.click()} title={(b ? 'Açık döneme e-Fatura XML ya da ZIP dosyaları ekle' : 'e-Fatura XML ya da ZIP dosyalarını yükle (yeni dönem açılır)') + '. EDM fatura listesi (Excel) de yüklenebilir: boş kalan sütunları doldurur. Klasörü pencereye sürükleyerek de yükleyebilirsiniz.'}>Yükle</button>
       <div class="spacer" />
       {b && (
         <div class="progress" title="Atanan / toplam">
@@ -66,7 +66,7 @@ export function Toolbar() {
         {S.settings.value.theme === 'dark' ? '☀' : '☾'}
       </button>
       <button class="ghost" onClick={() => (S.settingsOpen.value = true)} title="Ayarlar">⚙</button>
-      <input ref={xml} type="file" accept=".xml,.zip,text/xml,application/xml,application/zip,application/x-zip-compressed" multiple hidden onChange={(e) => {
+      <input ref={xml} type="file" accept=".xml,.zip,.xlsx,.xls,text/xml,application/xml,application/zip,application/x-zip-compressed,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" multiple hidden onChange={(e) => {
         const fl = Array.from((e.currentTarget as HTMLInputElement).files ?? []);
         if (fl.length) S.importXml(fl);
         (e.currentTarget as HTMLInputElement).value = '';

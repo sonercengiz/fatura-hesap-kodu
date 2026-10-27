@@ -15,6 +15,7 @@
     "fflate": "^0.8.3",
     "preact": "^11.0.2",
     "xlsx": "^0.18.5",
+    "xlsx-js-style": "^1.2.0",
     "xslt-polyfill": "^1.0.33"
   },
   "devDependencies": {

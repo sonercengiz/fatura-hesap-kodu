@@ -30,6 +30,8 @@ export interface Invoice {
   /** Kalem adları (normalize), kurallar için */
   itemText: string;
   lineCount: number | null;
+  /** EDM Excel listesinden gelen ham sütunlar (başlık → değer); XML'de olmayan alanlar çıktıda buradan dolar */
+  edm?: Record<string, CellValue>;
 }
 
 export interface ShortcutSlot {
