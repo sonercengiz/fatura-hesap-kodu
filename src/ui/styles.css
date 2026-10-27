@@ -104,7 +104,7 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 0;
 .status.empty .status-code { font-family: inherit; font-size: 17px; font-weight: 600; }
 .status-sub { font-size: 12px; opacity: .8; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bar.manual .bar-mid { opacity: .6; }
-.progress-card { border-color: var(--line); background: var(--panel); color: var(--muted); max-width: 220px; }
+.progress-card { border-color: var(--line); background: var(--panel); color: var(--muted); max-width: 240px; }
 .progress-card .status-code { color: var(--ink); }
 .progress-card.complete { background: var(--s1); color: var(--s1i); border-color: var(--s1); }
 .progress-card.complete .status-code { color: inherit; }
@@ -552,5 +552,8 @@ tr.iss-chart td.code-col { color: var(--warn); text-decoration: underline wavy v
 .app.density-compact .viewer-badge { top: 12px; right: 16px; padding: 2px 8px; }
 .app.density-compact .lv-table td, .app.density-compact .lv-table th { padding: 3px 8px; }
 .app.density-compact .lv-head { padding: 6px 10px; }
+/* Ferah yerleşim, geniş olmayan pencere (örn. 1280×1024): kartlar ezilmesin diye yuva sütunu daralır, kartlara en az 300 px */
+.app:not(.wide).density-comfortable .bar { grid-template-columns: minmax(0, 1fr) minmax(300px, 380px) minmax(240px, 300px); }
+.app:not(.wide).density-comfortable .bar-mid { max-width: none; }
 .app.narrow .bar { grid-template-columns: minmax(0, 1fr) minmax(190px, 250px); }
 .app.narrow.density-comfortable .slots { max-width: none; }
