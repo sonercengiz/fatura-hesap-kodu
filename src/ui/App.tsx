@@ -41,6 +41,14 @@ export function App() {
     document.documentElement.dataset.theme = S.settings.value.theme;
   }, [S.settings.value.theme]);
 
+  // Arayüz ölçeği: kök öğede CSS zoom (pencere ölçüsünden kendiliğinden ya da Ayarlar › Ekran'dan sabit)
+  const scale = S.uiScale.value;
+  useEffect(() => {
+    document.documentElement.style.zoom = scale === 1 ? '' : String(scale);
+  }, [scale]);
+  const density = S.density.value;
+  const appCls = `app ${drag ? 'drag' : ''} density-${density} ${S.narrow.value ? 'narrow' : ''} ${S.stacked.value ? 'stacked' : ''} ${S.effSize.value.w >= 1600 ? 'wide' : ''}`;
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
@@ -226,7 +234,8 @@ export function App() {
 
   return (
     <div
-      class={`app ${drag ? 'drag' : ''}`}
+      class={appCls}
+      style={`--panel-w:${S.panelW.value}px`}
       onDragOver={(e) => {
         e.preventDefault();
         setDrag(true);

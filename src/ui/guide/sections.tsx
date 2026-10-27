@@ -250,9 +250,23 @@ export const sections: Section[] = [
     body: (
       <>
         <Shot src="17-ayarlar.png" alt="Ayarlar" notes={[
-          <>Sekmeler: Firma, Dönem, Çıktı, Görünüm, Yedek, Klavye.</>,
+          <>Sekmeler: Firma, Dönem, Çıktı, Görünüm, Ekran, Yedek, Klavye.</>,
           <>Kısayol kodları burada da yazılır.</>,
           <>Hesap kodu listesi ve kurallar kendi pencerelerinde.</>,
+        ]} />
+        <h4>Küçük ya da eski ekranlar</h4>
+        <p>Uygulama pencereye kendiliğinden uyar: 1024×768 ya da 1280×1024 gibi kare ekranlarda ve %125 yazı ölçekli dizüstülerde <T t="arayüz ölçeği">arayüz biraz küçülür</T>, <T t="sıkışık yerleşim">sıkışık yerleşime</T> geçer, liste daha çok fatura gösterir. Üst çubuğa sığmayan düğmeler <b>⋯</b> menüsüne taşınır.</p>
+        <Shot src="22-kucuk-ekran.png" alt="1024×768 ekranda sıkışık yerleşim" notes={[
+          <>Üst çubuk tek satır; sığmayan düğmeler <b>⋯</b> menüsünde (bkz. alttaki görsel).</>,
+          <>Panel bilgileri iki sütun, kalemler iki satır.</>,
+          <>Kısayollar tek sıra; durum kartı küçülür.</>,
+          <>Görüntü ile liste arasındaki çizgi sürüklenir: panel genişliği hatırlanır.</>,
+        ]} />
+        <Shot src="22b-menu.png" alt="Dar pencerede ⋯ menüsü" w="mid" notes={[<>Pencere daralınca Rehber, tema, geri al gibi düğmeler <b>⋯</b> altına girer; pencere genişleyince yerine döner.</>]} />
+        <Shot src="17b-ekran.png" alt="Ayarlar › Ekran" notes={[
+          <>Bu bilgisayarın ekranı ve uygulamanın şu anki ölçeği / yerleşimi.</>,
+          <>Arayüz ölçeği: kendiliğinden ya da %85–%150. Yazı küçük geliyorsa %100 seçin.</>,
+          <>Yerleşim: kendiliğinden, ferah ya da sıkışık. Bu seçimler yalnızca bu bilgisayarda kalır; yedeğe girmez.</>,
         ]} />
         <Shot src="21-koyu.png" alt="Koyu tema" notes={[<>Üst çubuktaki ☾/☀ ile koyu tema. Gri tonludur, fatura görüntüsü hafifçe kısılır.</>]} />
         <Shot src="20-tamamlandi.png" alt="Tamamlandı" notes={[<>Bütün faturalar kod alınca ilerleme kartı yeşile döner ve sıradaki adımı söyler: <K k="F1" /> Excel üret.</>]} />
@@ -283,6 +297,9 @@ export const keys: [string, string][] = [
 export const troubles: [string, string][] = [
   ['Yükledim, bazı dosyalar "okunamadı"', 'Fatura olmayan XML\'ler (irsaliye, yanıt, zarf) normaldir. Bozuk görünen bir fatura varsa EDM\'den yeniden indirin.'],
   ['Fatura görüntüsü küçük ya da kesik görünüyor', 'Ctrl + fare tekerleği ile yakınlaştırın; sağ alttaki "oto" kendiliğinden ölçüye döndürür. Ayarlar › Görünüm\'den yeni faturaya geçince en üstten mi, kaldığınız yerden mi başlayacağını seçin.'],
+  ['Düğmeler üst çubuğa sığmıyor ya da bazı düğmeler yok', 'Dar pencerede Rehber, tema, geri al gibi düğmeler sağ üstteki ⋯ menüsüne taşınır. Pencereyi büyütün ya da Ayarlar › Ekran\'dan arayüz ölçeğini küçültün.'],
+  ['Liste çok az fatura gösteriyor, her şey büyük', 'Ayarlar › Ekran\'da "Sıkışık" yerleşimi ve daha küçük bir ölçek seçin; görüntü ile liste arasındaki çizgiyi sürükleyerek paneli daraltın. Kalemler bölümü başlığından kapatılabilir.'],
+  ['Yazılar çok küçük', 'Ayarlar › Ekran\'dan %100 ya da %110 ölçek seçin. Tarayıcının Ctrl + / Ctrl − yakınlaştırması da olur; uygulama ona göre yeniden yerleşir.'],
   ['Fatura görüntüsü yerine kart görünüyor', 'O faturanın XML\'i yok (EDM listesinden ya da arşivden geldi). XML\'ini yükleyin, görüntü gelir; atama korunur.'],
   ['Q tuşu "yuva boş" diyor', 'Alt çubukta o yuvaya tıklayıp bir kod yazın. Yuvalar kendiliğinden dolmaz.'],
   ['Kod verdim ama listede göremiyorum', 'Süzgeç "Atanmamış" olabilir; "Tümü" yapın. Toplu/kural atananlar gezerken atlanır; Ctrl+ok ile görülür.'],

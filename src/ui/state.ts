@@ -6,3 +6,4 @@ export * from './state/workspace';
 export * from './state/rules';
 export * from './state/move';
 export * from './state/print';
+export * from './state/screen';

@@ -14,15 +14,18 @@ const ctx = await browser.newContext({ viewport: { width: W, height: H }, device
 const page = await ctx.newPage();
 await page.addInitScript(() => { try { localStorage.setItem('guideSeen', '1'); } catch {} });
 
-async function annotate(items) {
+async function annotate(items, pg = page) {
   const boxes = [];
   for (const it of items) {
-    const loc = page.locator(it.sel).first();
+    const loc = pg.locator(it.sel).first();
     const box = await loc.boundingBox().catch(() => null);
     if (box) boxes.push({ ...it, box });
   }
-  await page.evaluate((boxes) => {
-    for (const { box: r, n, pad = 4, pos = 'tl' } of boxes) {
+  await pg.evaluate((boxes) => {
+    // Arayüz ölçeği (kök zoom) varsa görsel koordinatlar CSS pikseline çevrilir
+    const z = parseFloat(document.documentElement.style.zoom || '1') || 1;
+    for (const { box: r0, n, pad = 4, pos = 'tl' } of boxes) {
+      const r = { x: r0.x / z, y: r0.y / z, width: r0.width / z, height: r0.height / z };
       const o = document.createElement('div'); o.className = '__c';
       Object.assign(o.style, { position: 'fixed', left: r.x - pad + 'px', top: r.y - pad + 'px', width: r.width + pad * 2 + 'px', height: r.height + pad * 2 + 'px', border: '2.5px solid #2f6fed', borderRadius: '10px', zIndex: 99998, pointerEvents: 'none', boxSizing: 'border-box', boxShadow: '0 0 0 3px rgba(47,111,237,.18)' });
       document.body.appendChild(o);
@@ -206,6 +209,26 @@ await annotate([{ sel: 'button:has-text("Dışa aktar (.json)")', n: 1 }, { sel:
 await shot('18-yedek.png', { clip: await clipOf('.modal.settings', 12) }); await clear();
 await page.locator('.settings-tabs button:has-text("Dönem")').click(); await wait(150);
 await shot('18b-donem.png', { clip: await clipOf('.modal.settings', 12) }); await esc();
+// Küçük ekran: 1024×768 (sıkışık yerleşim, %85 ölçek), dar pencerede ⋯ menüsü
+await page.setViewportSize({ width: 1024, height: 768 }); await wait(500); await page.keyboard.press('Home'); await wait(300);
+await page.locator('.panel-divider').hover(); await wait(100);
+await annotate([{ sel: '.toolbar', n: 1, pad: 2 }, { sel: '.detail-rows', n: 2, pad: 2 }, { sel: '.slots', n: 3, pad: 2 }, { sel: '.panel-divider', n: 4, pad: 2 }]);
+await shot('22-kucuk-ekran.png'); await clear();
+await page.setViewportSize({ width: 820, height: 600 }); await wait(500); await page.locator('.tb-more').click(); await page.waitForSelector('.tb-menu'); await wait(150);
+await annotate([{ sel: '.tb-more', n: 1 }, { sel: '.tb-menu', n: 2, pad: 2 }]);
+await shot('22b-menu.png', { clip: { x: 300, y: 0, width: 520, height: 260 } }); await clear(); await esc();
+await page.setViewportSize({ width: W, height: H }); await wait(500);
+// Ayarlar › Ekran: gerçekçi bir dizüstü (1366×768, Windows ölçeği %125) ayrı bağlamda; fatura gerekmez
+{
+  const c2 = await browser.newContext({ viewport: { width: 1093, height: 614 }, deviceScaleFactor: 1.25 });
+  const p2 = await c2.newPage(); await p2.addInitScript(() => { try { localStorage.setItem('guideSeen', '1'); } catch {} });
+  await p2.goto(URL); await p2.waitForSelector('.welcome');
+  await p2.locator('button[title="Ayarlar"]').click(); await p2.locator('.settings-tabs button:has-text("Ekran")').click(); await p2.waitForTimeout(200);
+  await annotate([{ sel: 'fieldset:has-text("Bu bilgisayarın ekranı")', n: 1, pad: 2 }, { sel: 'fieldset:has-text("Arayüz ölçeği")', n: 2, pad: 2 }, { sel: 'fieldset:has-text("Yerleşim")', n: 3, pad: 2 }], p2);
+  const b = await p2.locator('.modal.settings').boundingBox();
+  await p2.screenshot({ path: `${OUT}/17b-ekran.png`, clip: { x: Math.max(0, b.x - 12), y: Math.max(0, b.y - 12), width: Math.min(1093, b.width + 24), height: Math.min(614 - Math.max(0, b.y - 12), b.height + 24) } });
+  await c2.close();
+}
 // taşıma penceresi için ikinci firma
 await page.locator('.firm-select').selectOption('__new'); await nameDialog('Örnek Kırtasiye Ltd.');
 const first = await page.locator('.firm-select option:has-text("Deneme")').getAttribute('value'); await page.locator('.firm-select').selectOption(first); await wait(400); await page.waitForSelector('.inv-frame');

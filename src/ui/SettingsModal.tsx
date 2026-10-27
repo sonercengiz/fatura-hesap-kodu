@@ -4,8 +4,56 @@ import { askName, askConfirm } from './dialog';
 import type { ViewMode, Layout } from '../core/types';
 import { isEdmDefault } from '../core/excel/template';
 
-type Tab = 'firm' | 'batch' | 'output' | 'view' | 'backup' | 'keys';
-const TABS: [Tab, string][] = [['firm', 'Firma'], ['batch', 'Dönem'], ['output', 'Çıktı'], ['view', 'Görünüm'], ['backup', 'Yedek'], ['keys', 'Klavye']];
+import { SCALE_STEPS, describeScreen, type Density } from '../core/layout';
+
+type Tab = 'firm' | 'batch' | 'output' | 'view' | 'screen' | 'backup' | 'keys';
+const TABS: [Tab, string][] = [['firm', 'Firma'], ['batch', 'Dönem'], ['output', 'Çıktı'], ['view', 'Görünüm'], ['screen', 'Ekran'], ['backup', 'Yedek'], ['keys', 'Klavye']];
+const DENSITY_LABEL: Record<Density, string> = { comfortable: 'ferah', compact: 'sıkışık' };
+const pct = (x: number) => `%${Math.round(x * 100)}`;
+
+/** Ayarlar › Ekran: bu bilgisayarın ekranı, arayüz ölçeği, yerleşim yoğunluğu, panel genişliği. Tercihler yalnızca bu bilgisayarda. */
+function ScreenTab() {
+  const p = S.screenPrefs.value;
+  const info = S.screenInfo.value; const win = S.winSize.value; const eff = S.effSize.value;
+  const auto = S.autoScale.value; const cur = S.uiScale.value; const dens = S.density.value; const autoD = S.autoDens.value;
+  const steps = SCALE_STEPS.includes(cur as (typeof SCALE_STEPS)[number]) || p.uiScale == null ? [...SCALE_STEPS] : [...SCALE_STEPS, cur].sort((a, b) => a - b);
+  return (
+    <>
+      <fieldset>
+        <legend>Bu bilgisayarın ekranı</legend>
+        <div><b>{describeScreen({ ...info, winW: win.w, winH: win.h })}</b></div>
+        <div class="muted small">Uygulama şu an <b>{pct(cur)}</b> ölçekle <b>{DENSITY_LABEL[dens]}</b> yerleşimde çalışıyor; kullanılabilir alan {eff.w} × {eff.h}. Pencere büyüyüp küçüldükçe kendiliğinden uyar. Buradaki seçimler yalnızca bu bilgisayarda geçerlidir; yedek dosyasına girmez.</div>
+      </fieldset>
+      <fieldset>
+        <legend>Arayüz ölçeği (yazı ve düğme boyu)</legend>
+        <div class="scale-row">
+          <label class="radio"><input type="radio" name="uiScale" checked={p.uiScale == null} onChange={() => S.setScreenPrefs({ uiScale: null })} /><span>Kendiliğinden <span class="muted">(şu an {pct(auto)})</span></span></label>
+          {steps.map((v) => (
+            <label class="radio"><input type="radio" name="uiScale" checked={p.uiScale === v} onChange={() => S.setScreenPrefs({ uiScale: v })} /><span>{pct(v)}</span></label>
+          ))}
+        </div>
+        <div class="muted small">Küçük ya da düşük çözünürlüklü ekranda (1024×768, 1280×1024, %125 ölçekli dizüstü) kendiliğinden %85–%95'e iner ki üst çubuk tek satırda kalsın ve liste daha çok fatura göstersin. Yazı küçük geliyorsa %100 seçin; sıkışık yerleşim yine yer kazandırır. Büyük ekranda yazıyı büyütmek için %110–%150.</div>
+      </fieldset>
+      <fieldset>
+        <legend>Yerleşim</legend>
+        {([['auto', `Kendiliğinden (şu an ${DENSITY_LABEL[autoD]})`], ['comfortable', 'Ferah: kısayollar iki sıra, panel bilgileri alt alta, durum kartları'], ['compact', 'Sıkışık: kısayollar tek sıra, panel bilgileri iki sütun, dar panel, liste daha çok satır']] as [ScreenPrefsDensity, string][]).map(([v, label]) => (
+          <label class="radio"><input type="radio" name="density" checked={p.density === v} onChange={() => S.setScreenPrefs({ density: v })} /><span>{label}</span></label>
+        ))}
+        <div class="muted small">Üst çubuğa sığmayan düğmeler kendiliğinden <b>⋯</b> menüsüne taşınır; pencere genişleyince geri gelir. Çok dar pencerede liste paneli görüntünün altına iner.</div>
+      </fieldset>
+      <fieldset>
+        <legend>Liste paneli genişliği</legend>
+        <div class="row-inline" style="justify-content:flex-start; gap:10px; flex-wrap:wrap">
+          <span>{p.panelW == null ? `Varsayılan: ${S.panelW.value} px` : `Sürüklenmiş: ${S.panelW.value} px`}</span>
+          {p.panelW != null && <button class="tiny" onClick={() => S.setScreenPrefs({ panelW: null })}>Varsayılana dön</button>}
+        </div>
+        <div class="muted small">Görsel görünümde fatura görüntüsü ile liste arasındaki çizgiyi sürükleyin; çift tık varsayılana döndürür.</div>
+      </fieldset>
+      <div class="muted small">Tarayıcının kendi yakınlaştırması (<kbd>Ctrl</kbd> + / −) da kullanılabilir; uygulama ona göre yeniden yerleşir.</div>
+    </>
+  );
+}
+type ScreenPrefsDensity = 'auto' | Density;
 
 /** Ayarlar: sekmeli; büyük listeler (hesap kodları, kurallar, şablon) kendi pencerelerine gider. */
 export function SettingsModal() {
@@ -137,6 +185,7 @@ export function SettingsModal() {
                 </label>
               </>
             )}
+            {tab === 'screen' && <ScreenTab />}
             {tab === 'backup' && (
               <>
                 <div class="muted">Tüm firmalar, dönemler, fatura listeleri, atamalar, hesap kodu listeleri, kurallar, çıktı şablonu ve öneri geçmişi tek bir .json dosyasına yazılır; başka bilgisayarda içe aktarılınca mevcut veriyle <b>birleştirilir</b>, hiçbir şey silinmez.</div>

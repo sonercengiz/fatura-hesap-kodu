@@ -57,15 +57,18 @@ export function SidePanel() {
 
   return (
     <aside class="side">
+      <PanelDivider />
       {inv && (
         <div class="detail">
           <div class="detail-name" title={inv.supplierName}>{inv.supplierName}</div>
-          <div class="detail-row"><span>Fatura No</span><b>{inv.no}</b></div>
-          <div class="detail-row"><span>Tarih</span><b>{inv.date}</b></div>
-          <div class="detail-row"><span>VKN</span><b>{inv.supplierVkn}</b></div>
-          <div class="detail-row"><span>Tip</span><b>{inv.invoiceType} · {inv.profile}</b></div>
-          <div class="detail-row"><span>Ödenecek</span><b>{fmtAmount(inv.amount, inv.currency)}</b></div>
-          <div class="detail-row"><span>Matrah · vergi</span><b>{inv.taxExclusive != null ? `${fmtAmount(inv.taxExclusive, inv.currency)}${inv.taxAmount != null ? ` · ${fmtAmount(inv.taxAmount, inv.currency)}` : ''}` : '—'}</b></div>
+          <div class="detail-rows">
+            <div class="detail-row full"><span>Fatura No</span><b title={inv.no}>{inv.no}</b></div>
+            <div class="detail-row"><span>Tarih</span><b>{inv.date}</b></div>
+            <div class="detail-row"><span>VKN</span><b>{inv.supplierVkn}</b></div>
+            <div class="detail-row"><span>Tip</span><b title={`${inv.invoiceType} · ${inv.profile}`}>{inv.invoiceType} · {inv.profile}</b></div>
+            <div class="detail-row"><span>Ödenecek</span><b>{fmtAmount(inv.amount, inv.currency)}</b></div>
+            <div class="detail-row full"><span>Matrah · vergi</span><b title="Matrah · hesaplanan vergi">{inv.taxExclusive != null ? `${fmtAmount(inv.taxExclusive, inv.currency)}${inv.taxAmount != null ? ` · ${fmtAmount(inv.taxAmount, inv.currency)}` : ''}` : '—'}</b></div>
+          </div>
           <div class={`detail-code slot-${S.slotIndexOf(code)}`}>
             <span>Atanan{S.ruleNos.value.has(inv.no) && <span class="bulk-tag" title="Kuralla atandı">kural</span>}</span>
             <b>{code ?? '—'}</b>
@@ -166,6 +169,24 @@ export function SidePanel() {
       </div>
     </aside>
   );
+}
+
+/**
+ * Görüntü ile liste paneli arasındaki sürüklenebilir çizgi: panel genişliği bu bilgisayarda hatırlanır (Ayarlar › Ekran'dan sıfırlanır).
+ * Çift tık varsayılana döndürür. Yığılı yerleşimde (çok dar pencere) gizlidir.
+ */
+function PanelDivider() {
+  const onDown = (e: PointerEvent) => {
+    if (e.button !== 0) return;
+    const el = e.currentTarget as HTMLElement;
+    const work = el.closest('.work') as HTMLElement | null; if (!work) return;
+    e.preventDefault(); el.setPointerCapture(e.pointerId); el.classList.add('dragging');
+    const right = work.getBoundingClientRect().right;
+    const move = (ev: PointerEvent) => { S.setScreenPrefs({ panelW: Math.round((right - ev.clientX) / S.uiScale.value) }); };
+    const up = () => { el.classList.remove('dragging'); el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up); };
+    el.addEventListener('pointermove', move); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+  };
+  return <div class="panel-divider" title="Sürükleyin: liste paneli genişliği · çift tık: varsayılan" onPointerDown={onDown} onDblClick={() => S.setScreenPrefs({ panelW: null })} />;
 }
 
 export function BulkBar() {

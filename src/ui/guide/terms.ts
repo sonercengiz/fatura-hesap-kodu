@@ -27,5 +27,7 @@ export const TERMS: Record<string, string> = {
   'ettn': 'ETTN: faturanın evrensel tekil numarası. Fatura numarasından farklıdır; nadiren gerekir.',
   'zip': 'ZIP: EDM\'den toplu indirdiğiniz sıkıştırılmış dosya. Açmadan doğrudan yükleyebilirsiniz.',
   'taşı': 'Başka firmaya taşı: yanlış firmaya yüklenen dönemi ya da seçili faturaları, atamalarıyla birlikte doğru firmaya götürür. Aynı pencereden geri de taşınır.',
+  'arayüz ölçeği': 'Arayüz ölçeği: yazı ve düğmelerin boyu. Küçük ekranda kendiliğinden %85–%95\'e iner ki her şey sığsın; Ayarlar › Ekran\'dan sabitlenir. Fatura görüntüsünün yakınlaştırmasından ayrıdır.',
+  'sıkışık yerleşim': 'Sıkışık yerleşim: kısayollar tek sıra, panel bilgileri iki sütun, dar panel, daha çok liste satırı. Kısa ya da dar pencerede kendiliğinden açılır; Ayarlar › Ekran\'dan seçilir.',
   'tab': 'Tab tuşu: sıradaki kod almamış faturaya atlar. Shift+Tab bir öncekine. Aradaki kodlu faturaları gezmek zorunda kalmazsınız.',
 };

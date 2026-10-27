@@ -49,7 +49,7 @@ export const previewOpen = signal(false);
 export const settingsOpen = signal(false);
 
 /** Ayarlar'da son açık sekme ve hesap kodu listesi penceresi */
-export const settingsTab = signal<'firm' | 'batch' | 'output' | 'view' | 'backup' | 'keys'>('firm');
+export const settingsTab = signal<'firm' | 'batch' | 'output' | 'view' | 'screen' | 'backup' | 'keys'>('firm');
 
 export const accountsOpen = signal(false);
 
