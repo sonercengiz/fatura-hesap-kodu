@@ -1,4 +1,3 @@
-import * as XLSX from 'xlsx-js-style';
 import type { CellValue } from './types';
 
 export interface Account {
@@ -25,7 +24,8 @@ export function searchAccounts(list: Account[], query: string, limit = 12): Acco
 }
 
 /** Excel/CSV'den kod + isim çiftleri: ilk iki dolu sütun; başlık satırı (kodda rakam yoksa) atlanır. */
-export function parseAccountSheet(data: ArrayBuffer | Uint8Array): Account[] {
+export async function parseAccountSheet(data: ArrayBuffer | Uint8Array): Promise<Account[]> {
+  const XLSX = await import('xlsx-js-style');
   const wb = XLSX.read(data, { type: 'array', raw: true });
   const ws = wb.Sheets[wb.SheetNames[0]];
   if (!ws) return [];

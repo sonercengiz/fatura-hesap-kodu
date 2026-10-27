@@ -1,11 +1,11 @@
-import * as XLSX from 'xlsx-js-style';
 import type { CellValue } from '../types';
 import type { EdmSheet } from '../legacy';
 
 const norm = (s: unknown) => String(s ?? '').toLocaleLowerCase('tr').replace(/\s+/g, ' ').trim();
 
 /** EDM "Gelen Faturalar" Excel'ini olduğu gibi okur (ilk sayfa, başlık satırı + hücreler). */
-export function readEdmSheet(data: ArrayBuffer | Uint8Array): EdmSheet {
+export async function readEdmSheet(data: ArrayBuffer | Uint8Array): Promise<EdmSheet> {
+  const XLSX = await import('xlsx-js-style');
   const wb = XLSX.read(data, { type: 'array', raw: true, cellDates: false });
   const sheetName = wb.SheetNames[0];
   if (!sheetName) throw new Error('Excel dosyasında sayfa bulunamadı.');

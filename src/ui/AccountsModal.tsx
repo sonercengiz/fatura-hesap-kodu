@@ -32,7 +32,7 @@ export function AccountsModal() {
               (e.currentTarget as HTMLInputElement).value = '';
               if (!f) return;
               try {
-                const items = /\.(csv|txt)$/i.test(f.name) ? parseAccountText(await f.text()) : parseAccountSheet(await f.arrayBuffer());
+                const items = /\.(csv|txt)$/i.test(f.name) ? parseAccountText(await f.text()) : await parseAccountSheet(await f.arrayBuffer());
                 const n = await S.upsertAccounts(items);
                 S.showToast(`${n} hesap kodu yüklendi`);
               } catch (err) { S.showToast((err as Error).message, 5000); }

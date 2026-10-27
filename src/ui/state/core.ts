@@ -542,7 +542,7 @@ export async function setOutputTemplate(t: OutputTemplate) {
 export async function exportExcel() {
   const b = batchRec.value;
   if (!b) return;
-  const bytes = buildTemplateWorkbook(outputOrder.value, settings.value.outputTemplate, outputContext());
+  const bytes = await buildTemplateWorkbook(outputOrder.value, settings.value.outputTemplate, outputContext());
   const name = buildFileName(firm.value.name, outputOrder.value);
   const blob = new Blob([bytes as unknown as ArrayBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   const url = URL.createObjectURL(blob);

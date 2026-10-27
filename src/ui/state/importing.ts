@@ -170,7 +170,7 @@ export async function importXml(rawList: File[]): Promise<ImportReport> {
     // EDM listesi (Excel): mevcut faturalara ek sütunlar, listede olup XML'i olmayanlar görselsiz kayıt
     for (const f of edms) {
       try {
-        const sheet = readEdmSheet(await f.arrayBuffer());
+        const sheet = await readEdmSheet(await f.arrayBuffer());
         await applyEdmList(sheet, report);
       } catch (e) {
         report.failed.push({ file: f.name, reason: (e as Error).message || 'Excel okunamadı' });

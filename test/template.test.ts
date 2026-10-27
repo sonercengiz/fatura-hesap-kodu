@@ -25,13 +25,13 @@ describe('çıktı şablonu', () => {
     expect(isEdmDefault(edmTemplate(1))).toBe(false);
     expect(codeColumnIndexOf(edmTemplate(99, 'HK'))).toBe(20);
   });
-  it('özel şablon: sütun seçimi, başlık, ekstra alanlar; metin sütunları metin kalır', () => {
+  it('özel şablon: sütun seçimi, başlık, ekstra alanlar; metin sütunları metin kalır', async () => {
     const t: OutputTemplate = { columns: [{ id: 'code', header: 'Hesap' }, { id: 'no', header: 'Belge No' }, { id: 'uuid', header: 'ETTN' }, { id: 'taxExclusive', header: 'Matrah' }, { id: 'source', header: 'Kaynak' }, { id: 'accountName', header: 'Hesap Adı' }, { id: 'firm', header: 'Firma' }, { id: 'blank', header: '' }], rowOrder: 'date-no', sheetName: 'GMS' };
     const rows = buildTemplateRows(list, t, ctx);
     expect(rows[0]).toEqual(['Hesap', 'Belge No', 'ETTN', 'Matrah', 'Kaynak', 'Hesap Adı', 'Firma', '']);
     expect(rows[1]).toEqual(['600.002', 'ABC2026000000001', 'u-1', 1250, 'Kural', 'Alıcılar', 'ABC', '']);
     expect(rows[2]).toEqual(['', 'ABC2026000000002', 'u-1', 1250, '', '', 'ABC', '']);
-    const wb = XLSX.read(buildTemplateWorkbook(list, t, ctx), { type: 'array' });
+    const wb = XLSX.read(await buildTemplateWorkbook(list, t, ctx), { type: 'array' });
     expect(wb.SheetNames).toEqual(['GMS']);
     const ws = wb.Sheets.GMS;
     expect(ws['A2']).toMatchObject({ t: 's', v: '600.002' });
@@ -56,8 +56,8 @@ describe('çıktı şablonu', () => {
     expect(r[h.indexOf('Hash')]).toBe('h1');
     expect(r[h.indexOf('Fatura Tipi')]).toBe('Satış'); // XML'den gelen tip korunur
   });
-  it('çalışma kitabı EDM görünümünde: kalın başlık, 18,43 genişlik, tutar biçimi', () => {
-    const bytes = buildTemplateWorkbook(list, DEFAULT_OUTPUT_TEMPLATE, ctx);
+  it('çalışma kitabı EDM görünümünde: kalın başlık, 18,43 genişlik, tutar biçimi', async () => {
+    const bytes = await buildTemplateWorkbook(list, DEFAULT_OUTPUT_TEMPLATE, ctx);
     const files = unzipSync(new Uint8Array(bytes));
     const styles = strFromU8(files['xl/styles.xml']);
     const sheet = strFromU8(files['xl/worksheets/sheet1.xml']);
