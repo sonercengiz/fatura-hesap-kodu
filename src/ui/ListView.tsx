@@ -75,6 +75,7 @@ export function ListView() {
             Bu satıcıya önce: <b>{hint.code}</b> <span class="muted">×{hint.count}</span> <kbd>Boşluk</kbd>
           </button>
         )}
+        {S.firms.value.length > 1 && <button class="ghost tiny" title="Bu partiyi ya da seçili faturaları başka firmaya taşı" onClick={() => (S.moveOpen.value = true)}>taşı</button>}
         <span class="muted small">{S.invoices.value.filter(S.passesFilter).length} / {S.invoices.value.length} fatura · çift tık: görseli aç</span>
       </div>
       <div class="lv-bulk"><BulkBar /></div>

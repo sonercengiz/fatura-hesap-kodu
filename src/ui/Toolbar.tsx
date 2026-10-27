@@ -48,7 +48,7 @@ export function Toolbar() {
         ))}
         <option value="__new">+ Yeni parti…</option>
       </select>
-      <button class={b ? '' : 'primary'} onClick={() => xml.current?.click()} title={b ? 'Açık partiye e-Fatura XML dosyaları ekle' : 'e-Fatura XML dosyalarını yükle (yeni parti açılır)'}>XML yükle</button>
+      <button class={b ? '' : 'primary'} onClick={() => xml.current?.click()} title={b ? 'Açık partiye e-Fatura XML ya da ZIP dosyaları ekle' : 'e-Fatura XML ya da ZIP dosyalarını yükle (yeni parti açılır)'}>XML / ZIP yükle</button>
       <button onClick={() => dir.current?.click()} title="Bir klasördeki tüm XML'leri yükle">Klasör yükle</button>
       <div class="spacer" />
       {b && (
@@ -70,7 +70,7 @@ export function Toolbar() {
         {S.settings.value.theme === 'dark' ? '☀' : '☾'}
       </button>
       <button class="ghost" onClick={() => (S.settingsOpen.value = true)} title="Ayarlar">⚙</button>
-      <input ref={xml} type="file" accept=".xml,text/xml,application/xml" multiple hidden onChange={(e) => {
+      <input ref={xml} type="file" accept=".xml,.zip,text/xml,application/xml,application/zip,application/x-zip-compressed" multiple hidden onChange={(e) => {
         const fl = Array.from((e.currentTarget as HTMLInputElement).files ?? []);
         if (fl.length) S.importXml(fl);
         (e.currentTarget as HTMLInputElement).value = '';

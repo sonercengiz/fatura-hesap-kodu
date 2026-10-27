@@ -14,6 +14,7 @@ import { ListView } from './ListView';
 import { PrintModal } from './PrintModal';
 import { PrintRoot } from './PrintRoot';
 import { ImportReportModal } from './ImportReportModal';
+import { MoveModal } from './MoveModal';
 
 export function App() {
   const [drag, setDrag] = useState(false);
@@ -93,6 +94,10 @@ export function App() {
       }
       if (S.importReport.value) {
         if (e.key === 'Escape' || e.key === 'Enter') S.importReport.value = null;
+        return;
+      }
+      if (S.moveOpen.value) {
+        if (e.key === 'Escape') S.moveOpen.value = false;
         return;
       }
       if (S.previewOpen.value || S.settingsOpen.value || S.guideOpen.value || S.rulesOpen.value) {
@@ -244,7 +249,7 @@ export function App() {
       {!S.batchRec.value ? (
         <main class="welcome">
           <h1>e-Fatura XML dosyalarını yükleyin</h1>
-          <p>EDM'den indirdiğiniz fatura XML'lerini buraya sürükleyin ya da üstteki <b>XML yükle</b> / <b>Klasör yükle</b> düğmelerini kullanın. Faturalar kendi resmî görünümüyle çizilir; tek tuşla hesap kodu verirsiniz.</p>
+          <p>EDM'den indirdiğiniz fatura XML'lerini (ya da ZIP'ini) buraya sürükleyin ya da üstteki <b>XML yükle</b> / <b>Klasör yükle</b> düğmelerini kullanın. Faturalar kendi resmî görünümüyle çizilir; tek tuşla hesap kodu verirsiniz.</p>
           <p class="muted">Veriler yalnızca bu tarayıcıda saklanır. Çıktı, EDM fatura listesi düzeninde (Hesap Kodu sütunu eklenmiş) bir Excel dosyasıdır.</p>
           <p><button class="primary" onClick={() => (S.guideOpen.value = true)}>Kullanım rehberini aç</button></p>
         </main>
@@ -279,10 +284,11 @@ export function App() {
       {S.rulesOpen.value && <RulesModal />}
       {S.printOpen.value && <PrintModal />}
       {S.importReport.value && <ImportReportModal />}
+      {S.moveOpen.value && <MoveModal />}
       <PrintRoot />
       {S.busy.value && <div class="busy">{S.busy.value}</div>}
       {S.toast.value && <div class="toast">{S.toast.value}</div>}
-      {drag && <div class="drop-hint">Bırakın: e-Fatura XML dosyaları</div>}
+      {drag && <div class="drop-hint">Bırakın: e-Fatura XML ya da ZIP dosyaları</div>}
     </div>
   );
 }

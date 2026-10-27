@@ -174,7 +174,7 @@ export function SettingsModal() {
                 <input value={S.batchRec.value.name} onKeyDown={(e) => e.stopPropagation()} onChange={(e) => S.renameBatch((e.currentTarget as HTMLInputElement).value)} />
               </label>
               <div class="row-inline" style="margin-top:8px">
-                <span class="muted">{S.invoices.value.length} fatura. Partiyi, faturalarını ve atamalarını kalıcı olarak sil.</span>
+                <span class="muted">{S.invoices.value.length} fatura. {S.firms.value.length > 1 && <button class="tiny" onClick={() => { S.settingsOpen.value = false; S.moveOpen.value = true; }}>Başka firmaya taşı</button>} Partiyi, faturalarını ve atamalarını kalıcı olarak sil.</span>
                 <button class="danger" onClick={() => {
                   const b = S.batchRec.value;
                   if (b && confirm(`"${b.name}" partisi, faturaları ve atamaları silinsin mi?`)) {

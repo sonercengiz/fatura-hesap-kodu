@@ -12,6 +12,7 @@
   "dependencies": {
     "@preact/signals": "^2.11.3",
     "dexie": "^4.4.7",
+    "fflate": "^0.8.3",
     "preact": "^11.0.2",
     "xlsx": "^0.18.5",
     "xslt-polyfill": "^1.0.33"

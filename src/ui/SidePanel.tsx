@@ -124,6 +124,7 @@ export function SidePanel() {
       <div class="files">
         <span>{S.invoices.value.length} fatura · {S.viewCount.value} görselli</span>
         {inv && <button class="ghost tiny" title="Bu faturayı partiden çıkar (yanlış yüklendiyse)" onClick={() => { if (confirm(`${inv.no} partiden çıkarılsın mı? Ataması da silinir.`)) S.removeInvoices([inv.no]); }}>çıkar</button>}
+        {S.firms.value.length > 1 && <button class="ghost tiny" title="Bu partiyi ya da seçili faturaları başka firmaya taşı" onClick={() => (S.moveOpen.value = true)}>taşı</button>}
         {S.selected.value.size > 1 && <button class="ghost tiny" title="Seçili faturaları partiden çıkar" onClick={() => { const n = S.selected.value.size; if (confirm(`${n} fatura partiden çıkarılsın mı? Atamaları da silinir.`)) S.removeInvoices(Array.from(S.selected.value)); }}>{S.selected.value.size} seçiliyi çıkar</button>}
       </div>
     </aside>
