@@ -533,17 +533,19 @@ tr.iss-chart td.code-col { color: var(--warn); text-decoration: underline wavy v
 .app.density-compact .list-controls { margin: 6px 8px 0; } .app.density-compact .search { margin: 5px 8px 3px; padding: 4px 8px; }
 .app.density-compact .row { padding: 4px 10px; gap: 6px; } .app.density-compact .row-sub { font-size: 10px; }
 .app.density-compact .files { padding: 4px 10px; }
-.app.density-compact .bar { padding: 6px 10px; gap: 8px; grid-template-columns: minmax(0, 1fr) auto minmax(190px, 250px); }
-.app.density-compact .progress-card { display: none; } /* üst çubuktaki sayaç yeter */
-.app.density-compact .bar-mid { width: auto; max-width: none; justify-self: stretch; } .app.density-compact .status { min-width: 150px; max-width: 220px; }
+.app.density-compact .bar { padding: 6px 10px; gap: 8px; grid-template-columns: minmax(0, 1fr) auto minmax(150px, 190px); }
+/* Durum ve ilerleme kartları sıkışık yerleşimde de okunur boyda kalır: kullanıcı kodun nereye gittiğini ve kaç fatura kaldığını buradan görür */
+.app.density-compact .bar-mid { width: auto; max-width: none; justify-self: stretch; gap: 8px; }
+.app.density-compact .status { flex: 1 1 auto; min-width: 150px; max-width: 230px; padding: 5px 12px; gap: 1px; border-radius: 10px; }
+.app.density-compact .progress-card { min-width: 180px; max-width: 210px; }
+.app.density-compact .status-code { font-size: 22px; } .app.density-compact .status.empty .status-code { font-size: 15px; }
+.app.density-compact .status-label { font-size: 10px; } .app.density-compact .status-sub { font-size: 11px; }
+.app.density-compact .manual-box > button kbd { display: none; } /* tuşlar durum kartında ve Klavye sekmesinde yazılı */
 .app.density-compact .slots { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; max-width: none; }
 .app.density-compact .slot { padding: 6px 8px; gap: 6px; font-size: 14px; border-radius: 8px; min-width: 0; }
 .app.density-compact .slot kbd { font-size: 12px; } .app.density-compact .slot-code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .app.density-compact .slot .slot-icon.edit { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); padding: 2px 4px; } .app.density-compact .slot.editing .slot-icon { position: static; transform: none; }
 .app.density-compact .bar-mid { max-width: 420px; gap: 8px; }
-.app.density-compact .status { padding: 3px 10px; gap: 0; border-radius: 9px; }
-.app.density-compact .status-code { font-size: 18px; } .app.density-compact .status.empty .status-code { font-size: 14px; }
-.app.density-compact .status-label { font-size: 10px; } .app.density-compact .status-sub { font-size: 11px; }
 .app.density-compact .manual-input { font-size: 15px; padding: 5px 8px; }
 .app.density-compact .manual-box > button { padding: 5px 8px; font-size: 13px; }
 .app.density-compact .inv-view { padding: 8px; }
