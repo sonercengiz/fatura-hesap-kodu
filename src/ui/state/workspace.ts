@@ -1,7 +1,7 @@
 import { DEFAULT_SHORTCUT_KEYS, type Settings } from '../../core/types';
 import { sheetToInvoices, type EdmSheet } from '../../core/legacy';
 import { db, newId, type BatchRecord, type InvoiceRecord, type AssignmentRecord, type AccountRecord, type FirmRecord, type FirmHistoryEntry } from '../../storage/db';
-import { type Rule } from '../../core/rules';
+import { upgradeRule, type Rule } from '../../core/rules';
 import { batchList, batchRec, busy, currentFirmId, firm, firms, lastExportAt, settings, showToast } from './core';
 import { loadFirmData, openBatch, refreshBatchList } from './firms';
 import { mergeRule } from './rules';
@@ -133,8 +133,9 @@ export async function importWorkspace(file: File) {
     }
     let nr = 0;
     for (const r of raw.rules ?? []) {
-      if (!r?.kind || !r.pattern || !r.code) continue;
-      nr += await mergeRule({ ...r, batchId: r.batchId ?? null, firmId: fid(r.firmId) }) ? 1 : 0;
+      const up = upgradeRule(r);
+      if (!up) continue;
+      nr += await mergeRule({ ...(r as Rule), ...up, batchId: r.batchId ?? null, firmId: fid(r.firmId) }) ? 1 : 0;
     }
     firms.value = await db.firms.orderBy('name').toArray();
     await loadFirmData();

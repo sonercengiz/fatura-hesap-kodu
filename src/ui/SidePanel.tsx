@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'preact/hooks';
 import * as S from './state';
+import { ruleLabel } from '../core/rules';
 import { askConfirm } from './dialog';
 import { fmtAmount } from './InvoiceCard';
 import { SORT_LABELS, type SortMode } from '../core/sort';
@@ -39,15 +40,15 @@ export function SidePanel() {
             const r = S.ruleFor.value.get(inv.no);
             const perm = r?.batchId ? S.overriddenBy(r) : null;
             if (r && r.code !== code) return (
-              <button class="hint" onClick={() => S.assign(r.code)} title={`${r.batchId ? 'Dönem kuralı' : 'Kalıcı kural'}: ${r.pattern}`}>
-                {r.batchId ? 'Dönem kuralı' : 'Kural'} diyor ki: <b>{r.code}</b> <span class="muted">({r.pattern})</span> <kbd>Boşluk</kbd>
+              <button class="hint" onClick={() => S.assign(r.code)} title={`${r.batchId ? 'Dönem kuralı' : 'Kalıcı kural'}: ${ruleLabel(r)}`}>
+                {r.batchId ? 'Dönem kuralı' : 'Kural'} diyor ki: <b>{r.code}</b> <span class="muted">({ruleLabel(r)})</span> <kbd>Boşluk</kbd>
               </button>
             );
             if (r && r.batchId && perm && perm.count > 0 && S.ruleNos.value.has(inv.no)) return (
               <div class="muted small rule-note" title="Bu döneme özel kural, kalıcı kuralın önüne geçti">Dönem kuralı · kalıcı {perm.codes.join(', ')} yerine</div>
             );
             if (code && !r) return (
-              <button class="ghost tiny rule-make" onClick={() => S.openRules({ kind: 'vkn', pattern: inv.supplierVkn, code })} title="Bu satıcının her faturası bu kodu alsın (kural)">⚡ Kural yap: {inv.supplierVkn} → {code}</button>
+              <button class="ghost tiny rule-make" onClick={() => S.openRules({ conds: [{ kind: 'vkn', text: inv.supplierVkn }], code })} title="Bu satıcının her faturası bu kodu alsın (kural)">⚡ Kural yap: {inv.supplierVkn} → {code}</button>
             );
             return null;
           })()}

@@ -1,4 +1,5 @@
 import { DEFAULT_OUTPUT_TEMPLATE, type OutputTemplate } from './excel/template';
+import type { LineInfo } from './xml/parseUbl';
 
 export type CellValue = string | number | boolean | null;
 
@@ -23,6 +24,8 @@ export interface Invoice {
   currency: string;
   /** Satış / İstisna / Tevkifat / İade … (etiket) */
   invoiceType: string;
+  /** SATIS, IADE, TEVKIFAT… (XML'deki kod; kurallar için) */
+  typeCode: string;
   /** Temel / Ticari … (etiket) */
   profile: string;
   /** XML + XSLT mevcut → fatura görseli çizilebilir */
@@ -30,6 +33,10 @@ export interface Invoice {
   /** Kalem adları (normalize), kurallar için */
   itemText: string;
   lineCount: number | null;
+  /** Kalemler (kurallar için); listeden gelen kayıtlarda boş */
+  lines: LineInfo[];
+  /** Faturadaki KDV oranları (yüzde) */
+  vatRates: number[];
   /** EDM Excel listesinden gelen ham sütunlar (başlık → değer); XML'de olmayan alanlar çıktıda buradan dolar */
   edm?: Record<string, CellValue>;
 }

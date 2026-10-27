@@ -23,19 +23,21 @@ const INVOICES = [
   ['temizlik', 1, '2026-09-05', [['Ofis temizliği (Eylül, haftalık)', 4, 'ADET', 2500.0, 20]]],
   ['kargo', 1, '2026-09-05', [['Kargo hizmeti (12 gönderi)', 12, 'ADET', 95.0, 20]]],
   ['telekom', 2, '2026-09-09', [['Hat ücreti (Eylül)', 1, 'ADET', 289.9, 20], ['Yurt dışı arama', 1, 'ADET', 42.5, 20]]],
-  ['gida', 1, '2026-09-10', [['Çay 1 kg', 20, 'KGM', 310.0, 1], ['Şeker küp 1 kg', 15, 'KGM', 48.0, 1]]],
+  ['gida', 1, '2026-09-10', [['Çay 1 kg', 20, 'KGM', 310.0, 1], ['Yumurta 30 lu koli', 2, 'ADET', 165.0, 10]]],
   ['kirtasiye', 2, '2026-09-12', [['Klasör geniş sırt', 24, 'ADET', 68.0, 20], ['Tükenmez kalem (50 adet)', 2, 'ADET', 240.0, 20]]],
   ['elektrik', 1, '2026-09-15', [['Elektrik tüketim bedeli (Ağustos)', 1842, 'KWH', 3.12, 20], ['Dağıtım bedeli', 1, 'ADET', 1180.4, 20]]],
   ['sahis', 1, '2026-09-16', [['Mali danışmanlık hizmeti (Eylül)', 1, 'ADET', 12000.0, 20]]],
   ['kargo', 2, '2026-09-18', [['Kargo hizmeti (9 gönderi)', 9, 'ADET', 95.0, 20]]],
   ['telekom', 3, '2026-09-19', [['Hat ücreti (Eylül)', 1, 'ADET', 289.9, 20]]],
   ['temizlik', 2, '2026-09-22', [['Cam temizliği', 1, 'ADET', 1800.0, 20]]],
-  ['gida', 2, '2026-09-24', [['Kahve 500 gr', 12, 'ADET', 420.0, 1], ['Su 19 lt (damacana)', 30, 'ADET', 85.0, 1]]],
+  ['gida', 2, '2026-09-24', [['Kahve 500 gr', 12, 'ADET', 420.0, 1], ['Yumurta (satış için)', 3000, 'ADET', 4.9, 10]]],
   ['kirtasiye', 3, '2026-09-26', [['Yazıcı kartuşu renkli', 3, 'ADET', 980.0, 20]]],
   ['telekom', 4, '2026-09-29', [['Hat ücreti (Eylül)', 1, 'ADET', 289.9, 20], ['Cihaz taksiti 7/12', 1, 'ADET', 1250.0, 20]]],
   ['kargo', 3, '2026-09-30', [['Kargo hizmeti (15 gönderi)', 15, 'ADET', 95.0, 20]]],
 ];
 const fmt = (n) => n.toFixed(2);
+/** Fatura düzeyinde KDV alt toplamları: oran başına matrah ve vergi */
+const subtotals = (lines) => { const by = new Map(); for (const [, qty, , price, pct] of lines) { const amt = +(qty * price).toFixed(2); const t = +(amt * pct / 100).toFixed(2); const cur = by.get(pct) ?? { net: 0, tax: 0 }; by.set(pct, { net: +(cur.net + amt).toFixed(2), tax: +(cur.tax + t).toFixed(2) }); } return [...by].map(([pct, v]) => `<cac:TaxSubtotal><cbc:TaxableAmount currencyID="TRY">${fmt(v.net)}</cbc:TaxableAmount><cbc:TaxAmount currencyID="TRY">${fmt(v.tax)}</cbc:TaxAmount><cbc:Percent>${pct}</cbc:Percent><cac:TaxCategory><cac:TaxScheme><cbc:Name>KDV</cbc:Name><cbc:TaxTypeCode>0015</cbc:TaxTypeCode></cac:TaxScheme></cac:TaxCategory></cac:TaxSubtotal>`).join(''); };
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
 const uuid = (i) => `a1b2c3d4-0000-4000-8000-${String(i).padStart(12, '0')}`;
 
@@ -97,7 +99,7 @@ INVOICES.forEach(([key, seq, date, lines], idx) => {
 <cac:AdditionalDocumentReference><cbc:ID>1</cbc:ID><cbc:IssueDate>${date}</cbc:IssueDate><cbc:DocumentType>XSLT</cbc:DocumentType><cac:Attachment><cbc:EmbeddedDocumentBinaryObject characterSetCode="UTF-8" encodingCode="Base64" filename="${sup.prefix}.xslt" mimeCode="application/xml">${b64}</cbc:EmbeddedDocumentBinaryObject></cac:Attachment></cac:AdditionalDocumentReference>
 <cac:AccountingSupplierParty><cac:Party>${party}<cac:PostalAddress><cbc:StreetName>Örnek Cad. No:1</cbc:StreetName><cbc:CityName>${esc(sup.city)}</cbc:CityName><cac:Country><cbc:Name>Türkiye</cbc:Name></cac:Country></cac:PostalAddress><cac:PartyTaxScheme><cac:TaxScheme><cbc:Name>${esc(sup.vd)}</cbc:Name></cac:TaxScheme></cac:PartyTaxScheme></cac:Party></cac:AccountingSupplierParty>
 <cac:AccountingCustomerParty><cac:Party><cac:PartyIdentification><cbc:ID schemeID="VKN">${CUSTOMER.vkn}</cbc:ID></cac:PartyIdentification><cac:PartyName><cbc:Name>${esc(CUSTOMER.name)}</cbc:Name></cac:PartyName><cac:PostalAddress><cbc:StreetName>${esc(CUSTOMER.addr)}</cbc:StreetName><cbc:CityName>${esc(CUSTOMER.city)}</cbc:CityName><cac:Country><cbc:Name>Türkiye</cbc:Name></cac:Country></cac:PostalAddress></cac:Party></cac:AccountingCustomerParty>
-<cac:TaxTotal><cbc:TaxAmount currencyID="TRY">${fmt(tax)}</cbc:TaxAmount><cac:TaxSubtotal><cbc:TaxableAmount currencyID="TRY">${fmt(net)}</cbc:TaxableAmount><cbc:TaxAmount currencyID="TRY">${fmt(tax)}</cbc:TaxAmount><cbc:Percent>${lines[0][4]}</cbc:Percent><cac:TaxCategory><cac:TaxScheme><cbc:Name>KDV</cbc:Name><cbc:TaxTypeCode>0015</cbc:TaxTypeCode></cac:TaxScheme></cac:TaxCategory></cac:TaxSubtotal></cac:TaxTotal>
+<cac:TaxTotal><cbc:TaxAmount currencyID="TRY">${fmt(tax)}</cbc:TaxAmount>${subtotals(lines)}</cac:TaxTotal>
 <cac:LegalMonetaryTotal><cbc:LineExtensionAmount currencyID="TRY">${fmt(net)}</cbc:LineExtensionAmount><cbc:TaxExclusiveAmount currencyID="TRY">${fmt(net)}</cbc:TaxExclusiveAmount><cbc:TaxInclusiveAmount currencyID="TRY">${fmt(gross)}</cbc:TaxInclusiveAmount><cbc:PayableAmount currencyID="TRY">${fmt(gross)}</cbc:PayableAmount></cac:LegalMonetaryTotal>
 ${lineXml}
 </Invoice>`;
@@ -112,6 +114,6 @@ writeFileSync(`${OUT}/xml/IRS2026000000001 - irsaliye.xml`, '<?xml version="1.0"
 writeFileSync(`${OUT}/bozuk-fatura.xml`, '<Invoice><cbc:ID>YARIM2026');
 writeFileSync(`${OUT}/edm-faturalar-eylul-2026.zip`, zipSync(zipEntries));
 const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'Sheet0'); XLSX.writeFile(wb, `${OUT}/EDM Gelen Faturalar Eylul 2026.xlsx`);
-writeFileSync(`${OUT}/kurallar-deneme-yayincilik.json`, JSON.stringify({ app: 'fatura-hesap-kodu', kind: 'rules', version: 1, exportedAt: new Date().toISOString(), firmName: 'Deneme Yayıncılık', rules: [{ kind: 'vkn', pattern: '1230000001', code: '770.03', enabled: true }, { kind: 'name', pattern: 'kargo', code: '760.02', enabled: true }] }, null, 2));
+writeFileSync(`${OUT}/kurallar-deneme-yayincilik.json`, JSON.stringify({ app: 'fatura-hesap-kodu', kind: 'rules', version: 2, exportedAt: new Date().toISOString(), firmName: 'Deneme Yayıncılık', rules: [{ conds: [{ kind: 'vkn', text: '1230000001' }], code: '770.03', enabled: true }, { conds: [{ kind: 'name', text: 'kargo' }], code: '760.02', enabled: true }, { conds: [{ kind: 'item', text: 'yumurta' }, { kind: 'qty', min: 1000, max: null }], code: '153', enabled: true }] }, null, 2));
 writeFileSync(`${OUT}/hesap-kodlari.txt`, '153 Ticari mallar\n191 İndirilecek KDV\n740.01 Hizmet üretim: temizlik\n760.02 Pazarlama: kargo ve nakliye\n770.01 Genel yönetim: kırtasiye\n770.02 Genel yönetim: elektrik\n770.03 Genel yönetim: haberleşme\n770.05 Genel yönetim: danışmanlık\n770.09 Genel yönetim: mutfak ve ikram\n');
 console.log(`demo verisi: ${INVOICES.length} XML + irsaliye + bozuk, ZIP, EDM listesi, kural dosyası, hesap kodları → ${OUT}`);

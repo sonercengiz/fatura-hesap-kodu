@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import * as S from './state';
+import { ruleLabel } from '../core/rules';
 import { BulkBar } from './SidePanel';
 import { fmtAmount } from './InvoiceCard';
 import { SORT_LABELS, type SortMode } from '../core/sort';
@@ -66,7 +67,7 @@ export function ListView() {
         </div>
         <div class="spacer" />
         {inv && rule && rule.code !== code && (
-          <button class="hint lv-hint" onClick={() => S.assign(rule.code)} title={`${rule.batchId ? 'Dönem kuralı' : 'Kalıcı kural'}: ${rule.pattern}`}>
+          <button class="hint lv-hint" onClick={() => S.assign(rule.code)} title={`${rule.batchId ? 'Dönem kuralı' : 'Kalıcı kural'}: ${ruleLabel(rule)}`}>
             {rule.batchId ? 'Dönem kuralı' : 'Kural'}: <b>{rule.code}</b> <kbd>Boşluk</kbd>
           </button>
         )}

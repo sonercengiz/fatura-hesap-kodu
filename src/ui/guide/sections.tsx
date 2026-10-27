@@ -162,16 +162,22 @@ export const sections: Section[] = [
     id: 'kurallar', group: 'Kod verme', short: 'Kurallar', title: 'Kurallar: tekrar eden satıcılara kendiliğinden kod',
     body: (
       <>
-        <p>Bir satıcı hep aynı kodu alıyorsa bunu bir kez söyleyin: sonraki aylarda o satıcının faturaları yüklenir yüklenmez kodu alır. Bu bir <T t="kural" />dır.</p>
+        <p>Bir satıcı hep aynı kodu alıyorsa bunu bir kez söyleyin: sonraki aylarda o satıcının faturaları yüklenir yüklenmez kodu alır. Bu bir <T t="kural" />dır. Kurallarınızı bir kez yazdıktan sonra dosyaları bırakmanız yeter; kalan işi uygulama yapar.</p>
         <Shot src="13-kural-yap.png" alt="Kural yap düğmesi" w="narrow" notes={[<>Kod verdiğiniz faturada <b>⚡ Kural yap</b>: satıcının VKN'si ve kodu hazır gelir; <K k="Enter" /> kaydeder ve bu dönemdeki uyan faturalara hemen uygular.</>]} />
+        <p>Tek bilgi her zaman yetmez: aynı satıcıdan farklı kodlara giden alışlar olabilir. Bu yüzden bir kural <b>1–4 <T t="koşul" /></b>dan oluşur ve hepsi birlikte tutmalıdır. Koşul türleri: satıcı VKN/TCKN, unvanda geçen metin, kalem adında geçen metin, KDV oranı, kalem miktarı aralığı, fatura tutarı aralığı, fatura tipi.</p>
         <Shot src="13-kurallar.png" alt="Kurallar penceresi" notes={[
           <><T t="kalıcı kural">Kalıcı</T>: her ay geçerli. <T t="dönem kuralı">Yalnızca bu dönem</T>: o ay için; kalıcının önüne geçer.</>,
-          <>Belirteç türü (VKN/TCKN, unvanda geçen kelime, kalem adında geçen kelime), belirteç ve kod.</>,
-          <>Kurallar; kaç faturaya uyduğu görünür. Kutucukla kapatılır, kod burada düzeltilir.</>,
+          <>Koşul satırları: "Eğer … ve …". Türü seçin, değeri yazın. Aralıklarda alt ya da üst sınırı boş bırakabilirsiniz (örn. "≥ 1000").</>,
+          <><b>+ Koşul ekle</b>: en çok dört koşul.</>,
+          <>"o zaman hesap kodu" ve <b>Kaydet ve uygula</b>; <K k="Enter" /> da kaydeder.</>,
+          <>Canlı önizleme: bu dönemde kaç faturaya uyduğu, ilk birkaçı ve başka bir kuralın önde kaldığı durumlar. Kaydetmeden önce kontrol edin.</>,
+          <>Kayıtlı kurallar koşul rozetleriyle; kaç faturaya uyduğu görünür. Kutucukla kapatılır, kod burada düzeltilir, ✎ ile koşullar değiştirilir.</>,
           <>Dönem kuralı bir kalıcı kuralın yerine geçiyorsa sessizce burada yazar.</>,
           <>Kuralları dosya olarak dışa aktarıp başka kullanıcıya verebilirsiniz.</>,
         ]} />
-        <Tip>Kuralla verilen kodlar "kural" etiketi alır ve gezerken atlanır. Bir faturada kural başka bir şey diyorsa panelde "Kural diyor ki" ipucu çıkar; <K k="Boşluk" /> kuralın kodunu verir.</Tip>
+        <p>Örnek: Lezzet Gıda'dan alınan <b>30'lu yumurta</b> ikramdır (770.09), <b>3000 yumurta</b> ise satış için alınmıştır (153). İki kural: kalem "yumurta" + miktar ≤ 999 → 770.09; kalem "yumurta" + miktar ≥ 1000 → 153. Miktar, aynı kuraldaki kalem adıyla aynı kalemde aranır. Benzer biçimde "unvan ABC Kırtasiye + kalem klasör → 543" ya da "KDV %10 → 153" yazılabilir.</p>
+        <p><b>Birden çok kural uyarsa</b> hangisi kazanır? Önce döneme özel olan, sonra daha çok koşullu (daha belirgin) olan, sonra VKN › unvan › kalem › tip › KDV › miktar › tutar sırası, sonra en son güncellenen. Yani "VKN 123… → 770" ile "VKN 123… + kalem klasör → 543" birlikte varsa klasörlü faturalar 543, diğerleri 770 alır.</p>
+        <Tip>Kuralla verilen kodlar "kural" etiketi alır ve gezerken atlanır. Bir faturada kural başka bir şey diyorsa panelde "Kural diyor ki" ipucu çıkar; <K k="Boşluk" /> kuralın kodunu verir. Bir kuralın kodunu ya da koşullarını değiştirirseniz bu dönemde o kuralla verilmiş kodlar da düzelir (Ctrl+Z geri alır).</Tip>
       </>
     ),
   },

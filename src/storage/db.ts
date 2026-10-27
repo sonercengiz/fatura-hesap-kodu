@@ -4,7 +4,8 @@ import { DEFAULT_SHORTCUT_KEYS } from '../core/types';
 import type { HistoryEntry } from '../core/suggest/engine';
 import { sheetToInvoices, type EdmSheet } from '../core/legacy';
 import type { Rule } from '../core/rules';
-import { itemTextOf } from '../core/xml/parseUbl';
+import { itemTextOf, linesOf, vatRatesOf, type LineInfo } from '../core/xml/parseUbl';
+import { upgradeRule } from '../core/rules';
 
 export interface FirmHistoryEntry extends HistoryEntry {
   firmId: string;
@@ -50,6 +51,10 @@ export interface InvoiceRecord {
   lineCount: number | null;
   /** Kalem adları (normalize); kurallar için. Eski kayıtlarda boş olabilir */
   itemText: string;
+  /** Kalemler (ad, miktar, birim, KDV); kurallar için. Eski kayıtlarda yok */
+  lines?: LineInfo[];
+  /** Faturadaki KDV oranları (yüzde) */
+  vatRates?: number[];
   xml: string | null;
   xsltId: string | null;
   /** EDM Excel listesinden gelen ham sütunlar (başlık → değer) */
@@ -214,6 +219,26 @@ class AppDb extends Dexie {
     // v8: kural kapsamı (kalıcı / döneme özel)
     this.version(8).stores({ rules: 'id, firmId, batchId' }).upgrade(async (tx) => {
       await tx.table('rules').toCollection().modify((r: Rule) => { if (r.batchId === undefined) r.batchId = null; });
+    });
+    // v9: çok koşullu kurallar (kind+pattern → conds); faturalara kalemler ve KDV oranları
+    this.version(9).stores({ rules: 'id, firmId, batchId' }).upgrade(async (tx) => {
+      await tx.table('rules').toCollection().modify((r: Rule & { kind?: string; pattern?: string }, ref: { value: unknown }) => {
+        const up = upgradeRule(r);
+        if (!up) { delete ref.value; return; }
+        delete r.kind; delete r.pattern;
+        r.conds = up.conds; r.code = up.code; r.enabled = up.enabled;
+      });
+      if (typeof DOMParser === 'undefined') return;
+      await tx.table('invoices').toCollection().modify((r: InvoiceRecord) => {
+        if (r.lines !== undefined) return;
+        r.lines = []; r.vatRates = [];
+        if (!r.xml) return;
+        try {
+          const doc = new DOMParser().parseFromString(r.xml, 'application/xml');
+          r.lines = linesOf(doc.documentElement);
+          r.vatRates = vatRatesOf(doc.documentElement);
+        } catch { /* kalem bilgisi boş kalır */ }
+      });
     });
   }
 }

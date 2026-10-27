@@ -2,8 +2,8 @@ import 'fake-indexeddb/auto';
 import { describe, it, expect, beforeAll } from 'vitest';
 import Dexie from 'dexie';
 
-/** Sürüm 3 (firmasız, Excel tabanlı) veritabanı oluşturup uygulamanın sürüm 8 şemasına yükseltilmesini doğrular. */
-describe('veritabanı geçişi v3 → v8', () => {
+/** Sürüm 3 (firmasız, Excel tabanlı) veritabanı oluşturup uygulamanın sürüm 9 şemasına yükseltilmesini doğrular. */
+describe('veritabanı geçişi v3 → v9', () => {
   beforeAll(async () => {
     const old = new Dexie('fatura-hesap-kodu');
     old.version(3).stores({
@@ -29,7 +29,7 @@ describe('veritabanı geçişi v3 → v8', () => {
   it('eski veriler varsayılan firmaya taşınır', async () => {
     const { db, DEFAULT_FIRM_ID } = await import('../src/storage/db');
     await db.open();
-    expect(db.verno).toBe(8);
+    expect(db.verno).toBe(9);
     const firms = await db.firms.toArray();
     expect(firms.length).toBe(1);
     expect(firms[0]).toMatchObject({ id: DEFAULT_FIRM_ID, name: 'Eski Firma', chartName: 'Liste X' });
@@ -53,5 +53,31 @@ describe('veritabanı geçişi v3 → v8', () => {
     expect((await db.settings.get('currentFirmId'))?.value).toBe(DEFAULT_FIRM_ID);
     expect(db.tables.map((t) => t.name)).not.toContain('history');
     expect(db.tables.map((t) => t.name)).not.toContain('accounts');
+  });
+});
+
+/** Sürüm 8'deki tek belirteçli kurallar (kind + pattern) sürüm 9'da koşul listesine (conds) dönüşür. */
+describe('veritabanı geçişi v8 → v9: kurallar', () => {
+  it('kind + pattern → conds; bozuk kayıt silinir', async () => {
+    const { db } = await import('../src/storage/db');
+    db.close();
+    await Dexie.delete('fatura-hesap-kodu');
+    const v8 = new Dexie('fatura-hesap-kodu');
+    v8.version(8).stores({ batches: 'id, updatedAt, firmId', invoices: '[batchId+no], batchId', xslts: 'id', assignments: '[batchId+no], batchId, no', settings: 'key', firms: 'id, name', firmHistory: '[firmId+vkn+code], firmId', firmAccounts: '[firmId+code], firmId', rules: 'id, firmId, batchId' });
+    await v8.open();
+    await v8.table('rules').bulkPut([
+      { id: 'r1', firmId: 'f', batchId: null, kind: 'vkn', pattern: '123 456 7801', code: '770.01', enabled: true, createdAt: 1, updatedAt: 2 },
+      { id: 'r2', firmId: 'f', batchId: 'b1', kind: 'item', pattern: 'Kargo', code: '760.02', enabled: false, createdAt: 1, updatedAt: 2 },
+      { id: 'r3', firmId: 'f', batchId: null, kind: 'bogus', pattern: 'x', code: 'y', enabled: true, createdAt: 1, updatedAt: 2 },
+    ]);
+    v8.close();
+    await db.open();
+    expect(db.verno).toBe(9);
+    const rules = (await db.rules.orderBy('id').toArray()) as unknown as Record<string, unknown>[];
+    expect(rules.map((r) => r.id)).toEqual(['r1', 'r2']);
+    expect(rules[0]).toMatchObject({ conds: [{ kind: 'vkn', text: '1234567801' }], code: '770.01', enabled: true, batchId: null });
+    expect(rules[0].kind).toBeUndefined();
+    expect(rules[0].pattern).toBeUndefined();
+    expect(rules[1]).toMatchObject({ conds: [{ kind: 'item', text: 'Kargo' }], code: '760.02', enabled: false, batchId: 'b1' });
   });
 });

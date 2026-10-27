@@ -41,6 +41,14 @@ describe('UBL-TR XML ayrıştırma', () => {
     expect(u).toMatchObject({ no: 'AYS2026000000007', supplierVkn: '12345678901', supplierName: 'AYŞE YILMAZ', currency: 'USD', payable: 400, profileId: 'TICARIFATURA', typeCode: 'ISTISNA', xslt: null });
     expect(u.xml).toContain('R0lGODlh'); // QR görseli yerinde
   });
+  it('kurallar için kalem özeti ve KDV oranları', () => {
+    const u = parseUbl(read('ubl-sirket.xml'));
+    expect(u.lines).toEqual([
+      { name: 'kalem defteri', qty: 10, unit: 'C62', vat: 20 },
+      { name: 'tükenmez kalem', qty: 50, unit: 'C62', vat: 20 },
+    ]);
+    expect(u.vatRates).toEqual([20]);
+  });
   it('kalemler', () => {
     const lines = parseLines(parseUbl(read('ubl-sirket.xml')).xml);
     expect(lines).toEqual([

@@ -8,7 +8,7 @@ import { db, DEFAULT_FIRM_ID, saveSettings, type BatchRecord, type InvoiceRecord
 import { searchAccounts, type Account } from '../../core/chart';
 import { ensureXslt, transformToHtml, decorateHtml, cachedHtml, rememberHtml } from '../../render/xslt';
 import { fallbackHtml } from '../../render/fallback';
-import { matchRules, matchPermanent, activeRules, type Rule, type RuleKind } from '../../core/rules';
+import { matchRules, matchPermanent, activeRules, type Rule, type Cond } from '../../core/rules';
 import { loadFirmData, notifyOtherTabs, updateFirm } from './firms';
 import { ImportReport } from './importing';
 
@@ -93,7 +93,7 @@ export interface PrintJob { items: Invoice[]; opts: PrintOpts; parts: Invoice[][
 export const printJob = signal<PrintJob | null>(null);
 
 /** Kurallar penceresi açılırken forma önceden doldurulacak değerler */
-export const ruleDraft = signal<{ kind: RuleKind; pattern: string; code: string; scope?: RuleScope } | null>(null);
+export const ruleDraft = signal<{ conds: Cond[]; code: string; scope?: RuleScope } | null>(null);
 
 /** Kural kapsamı: firma geneli (kalıcı) ya da yalnızca açık dönem */
 export type RuleScope = 'firm' | 'batch';
@@ -169,9 +169,12 @@ export function toInvoice(r: InvoiceRecord): Invoice {
     taxAmount: r.taxAmount,
     currency: r.currency || 'TRY',
     invoiceType: typeLabel(r.typeCode),
+    typeCode: r.typeCode,
     profile: profileLabel(r.profileId),
     hasView: !!r.xml,
     itemText: r.itemText ?? '',
+    lines: r.lines ?? [],
+    vatRates: r.vatRates ?? [],
     lineCount: r.lineCount,
     edm: r.edm,
   };

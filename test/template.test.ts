@@ -7,7 +7,7 @@ import type { Invoice } from '../src/core/types';
 
 const mk = (no: string, over: Partial<Invoice> = {}): Invoice => ({
   no, order: 0, date: '10/09/2026', isoDate: '2026-09-10', uuid: 'u-1', supplierVkn: '1234567801', supplierName: 'ÖRNEK KIRTASİYE LTD. ŞTİ.',
-  amount: 1500, taxExclusive: 1250, taxAmount: 250, currency: 'TRY', invoiceType: 'Satış', profile: 'Temel', hasView: true, itemText: '', lineCount: 2, ...over,
+  amount: 1500, taxExclusive: 1250, taxAmount: 250, currency: 'TRY', invoiceType: 'Satış', profile: 'Temel', hasView: true, itemText: '', lineCount: 2, typeCode: 'SATIS', lines: [], vatRates: [], ...over,
 });
 const list = [mk('ABC2026000000001'), mk('ABC2026000000002', { amount: 27000 })];
 const ctx = { codes: new Map([['ABC2026000000001', '600.002']]), accountNames: new Map([['600.002', 'Alıcılar']]), sources: new Map([['ABC2026000000001', 'rule' as const]]), firmName: 'ABC', batchName: 'Eylül 2026' };

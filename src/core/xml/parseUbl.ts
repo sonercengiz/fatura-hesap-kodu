@@ -28,11 +28,25 @@ export interface UblInvoice {
   lineCount: number | null;
   /** Kalem adlarının birleştirilmiş, normalize edilmiş metni (kurallar için; en çok 4000 karakter) */
   itemText: string;
+  /** Kalemler (ad normalize, miktar, birim, KDV oranı); kurallar için */
+  lines: LineInfo[];
+  /** Faturadaki KDV oranları (yüzde), fatura düzeyindeki vergi özetinden */
+  vatRates: number[];
   /** Gömülü görünüm şablonu (metin); yoksa null */
   xslt: string | null;
   xsltFileName: string | null;
   /** XSLT içeriği boşaltılmış, yeniden serileştirilmiş XML */
   xml: string;
+}
+
+/** Kural eşleştirmesi için kalem özeti */
+export interface LineInfo {
+  /** Kalem adı (Name, yoksa Description), küçük harf, tek boşluk */
+  name: string;
+  qty: number | null;
+  unit: string;
+  /** Kalemin KDV oranı (yüzde); yoksa null */
+  vat: number | null;
 }
 
 export interface UblLine {
@@ -190,6 +204,8 @@ export function parseUbl(xmlText: string): UblInvoice {
     taxAmount,
     lineCount: toNum(cbc(root, 'LineCountNumeric')) ?? children(root, NS.cac, 'InvoiceLine').length,
     itemText: itemTextOf(root),
+    lines: linesOf(root),
+    vatRates: vatRatesOf(root),
     xslt,
     xsltFileName,
     xml: new XMLSerializer().serializeToString(doc),
@@ -205,6 +221,47 @@ export function itemTextOf(root: Element | null, max = 4000): string {
     if (name) seen.add(name);
   }
   return Array.from(seen).join(' | ').slice(0, max);
+}
+
+/** Vergi alt toplamları içinden KDV (TaxTypeCode 0015 ya da adı KDV; ikisi de yoksa hepsi) oranları */
+function kdvPercents(taxTotals: Element[]): number[] {
+  const out: number[] = [];
+  for (const tt of taxTotals) {
+    for (const st of children(tt, NS.cac, 'TaxSubtotal')) {
+      const scheme = cac(cac(st, 'TaxCategory'), 'TaxScheme');
+      const code = cbc(scheme, 'TaxTypeCode');
+      const name = cbc(scheme, 'Name').toLocaleUpperCase('tr');
+      const isKdv = code ? code === '0015' : name ? name.includes('KDV') : true;
+      if (!isKdv) continue;
+      const p = toNum(cbc(st, 'Percent'));
+      if (p !== null && !out.some((x) => Math.abs(x - p) < 0.005)) out.push(p);
+    }
+  }
+  return out.sort((a, b) => a - b);
+}
+
+/** Kalem özetleri (kurallar için): ad normalize, miktar sayı, KDV oranı; en çok 500 kalem */
+export function linesOf(root: Element | null, max = 500): LineInfo[] {
+  return children(root, NS.cac, 'InvoiceLine').slice(0, max).map((ln) => {
+    const item = cac(ln, 'Item');
+    const qty = child(ln, NS.cbc, 'InvoicedQuantity');
+    const vats = kdvPercents(children(ln, NS.cac, 'TaxTotal'));
+    return {
+      name: (cbc(item, 'Name') || cbc(item, 'Description')).toLocaleLowerCase('tr').replace(/\s+/g, ' ').trim(),
+      qty: toNum(text(qty)),
+      unit: qty?.getAttribute('unitCode') ?? '',
+      vat: vats.length ? vats[0] : null,
+    };
+  });
+}
+
+/** Faturanın KDV oranları: fatura düzeyindeki TaxTotal özetinden; yoksa kalemlerden */
+export function vatRatesOf(root: Element | null): number[] {
+  const top = kdvPercents(children(root, NS.cac, 'TaxTotal'));
+  if (top.length) return top;
+  const out: number[] = [];
+  for (const l of linesOf(root)) if (l.vat !== null && !out.some((x) => Math.abs(x - l.vat!) < 0.005)) out.push(l.vat);
+  return out.sort((a, b) => a - b);
 }
 
 /** Fatura kalemleri (yedek görünüm için). */

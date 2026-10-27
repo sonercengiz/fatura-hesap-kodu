@@ -16,11 +16,11 @@ const log = (...a) => console.log(...a);
 await page.locator(inp).setInputFiles(turkcell.slice(0, 6)); await page.waitForSelector('.inv-frame'); await page.waitForFunction(() => !document.querySelector('.busy'));
 // kalıcı VKN kuralı
 await page.locator('.toolbar button:has-text("Kurallar")').click(); await page.waitForSelector('.modal.rules');
-await page.locator('.rule-pattern').fill('8770013406'); await page.locator('.rule-code').fill('770.03'); await page.locator('.rule-code').press('Enter'); await page.waitForTimeout(300);
+await page.locator('.cond-text').fill('8770013406'); await page.locator('.rule-code').fill('770.03'); await page.locator('.rule-code').press('Enter'); await page.waitForTimeout(300);
 log('kalıcı:', await page.locator('.toast').innerText());
 // partiye özel unvan kuralı → önde olmalı, ama faturalar zaten atandı → uygulanmaz; kaldırıp dene
 await page.locator('.scope-seg button').nth(1).click();
-await page.locator('.modal.rules select').selectOption('name'); await page.locator('.rule-pattern').fill('turkcell'); await page.locator('.rule-code').fill('740.09'); await page.locator('.rule-code').press('Enter'); await page.waitForTimeout(300);
+await page.locator('.cond-kind').selectOption('name'); await page.locator('.cond-text').fill('turkcell'); await page.locator('.rule-code').fill('740.09'); await page.locator('.rule-code').press('Enter'); await page.waitForTimeout(300);
 log('parti kuralı:', await page.locator('.toast').innerText(), '| satırlar:', (await page.locator('.rule-row').allInnerTexts()).map((t) => t.replace(/\s+/g, ' ')).join(' || '));
 log('üst düğme:', await page.locator('.toolbar button:has-text("Kurallar")').innerText());
 await page.keyboard.press('Escape');

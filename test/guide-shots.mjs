@@ -150,12 +150,19 @@ await page.locator('#search').fill('ay telekom'); await page.keyboard.press('Ent
 await page.keyboard.press('Control+Home'); await wait(150);
 if (await page.locator('.rule-make').count()) { await annotate([{ sel: '.rule-make', n: 1 }]); await shot('13-kural-yap.png', { clip: await clipOf('.detail', 6) }); await clear(); }
 await page.locator('.toolbar button:has-text("Kurallar")').click(); await page.waitForSelector('.modal.rules');
-await page.locator('.modal.rules select').first().selectOption('name'); await page.locator('.rule-pattern').fill('hızlı kargo'); await page.locator('.rule-code').fill('760.02'); await page.locator('.rule-code').press('Enter'); await wait(300); await noToast();
+const kind = async (i, k) => page.locator('.cond-kind').nth(i).selectOption(k);
+// kalıcı: unvan "hızlı kargo" → 760.02
+await kind(0, 'name'); await page.locator('.cond-text').first().fill('hızlı kargo'); await page.locator('.rule-code').fill('760.02'); await page.locator('.rule-code').press('Enter'); await wait(300); await noToast();
+// döneme özel: VKN 5670000005 → 770.09 (kalıcının yerine geçer; not görünür)
 await page.locator('.scope-seg button').nth(1).click();
-await page.locator('.modal.rules select').first().selectOption('vkn'); await page.locator('.rule-pattern').fill('5670000005'); await page.locator('.rule-code').fill('770.09'); await page.locator('.rule-code').press('Enter'); await wait(300); await noToast();
+await kind(0, 'vkn'); await page.locator('.cond-text').first().fill('5670000005'); await page.locator('.rule-code').fill('770.09'); await page.locator('.rule-code').press('Enter'); await wait(300); await noToast();
 await page.locator('.scope-seg button').nth(0).click();
-await page.locator('.modal.rules select').first().selectOption('vkn'); await page.locator('.rule-pattern').fill('2340000002'); await page.locator('.rule-code').fill('740.01');
-await annotate([{ sel: '.scope-seg', n: 1 }, { sel: '.rule-form', n: 2, pad: 2 }, { sel: '.rule-list', n: 3 }, { sel: '.override-note', n: 4, pos: 'tr' }, { sel: 'button:has-text("Kuralları dışa aktar")', n: 5 }]);
+// kalıcı, iki koşullu: kalem "yumurta" + miktar ≥ 1000 → 153 (satış için alınan)
+await kind(0, 'item'); await page.locator('.cond-text').first().fill('yumurta'); await page.locator('.add-cond').click(); await kind(1, 'qty'); await page.locator('.cond-min').fill('1000');
+await page.locator('.rule-code').fill('153'); await page.locator('.rule-code').press('Enter'); await wait(300); await noToast();
+// kurucuda (kaydedilmemiş): kalem "yumurta" + miktar ≤ 999 → 770.09 (ikram)
+await kind(0, 'item'); await page.locator('.cond-text').first().fill('yumurta'); await page.locator('.add-cond').click(); await kind(1, 'qty'); await page.locator('.cond-max').fill('999'); await page.locator('.rule-code').fill('770.09'); await wait(150);
+await annotate([{ sel: '.scope-seg', n: 1 }, { sel: '.cond-row', n: 2, pad: 2 }, { sel: '.add-cond', n: 3 }, { sel: '.rule-then', n: 4, pad: 2 }, { sel: '.rule-preview', n: 5, pad: 2 }, { sel: '.rule-list', n: 6 }, { sel: '.override-note', n: 7, pos: 'tr' }, { sel: 'button:has-text("Kuralları dışa aktar")', n: 8 }]);
 await shot('13-kurallar.png', { clip: await clipOf('.modal.rules', 12) }); await clear();
 await page.locator('.rule-code').press('Enter'); await wait(300); await esc(); await noToast();
 

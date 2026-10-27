@@ -113,6 +113,8 @@ export async function importXml(rawList: File[]): Promise<ImportReport> {
           taxAmount: u.taxAmount,
           lineCount: u.lineCount,
           itemText: u.itemText,
+          lines: u.lines,
+          vatRates: u.vatRates,
           xml: u.xml,
           xsltId,
           fileName: f.name,
@@ -224,7 +226,7 @@ export async function applyEdmList(sheet: EdmSheet, report: ImportReport) {
     if (have.has(f.no)) continue;
     puts.push({
       batchId: b.id, no: f.no, uuid: '', issueDate: f.issueDate, issueTime: '', profileId: f.profileId, typeCode: f.typeCode, currency: f.currency,
-      supplierVkn: f.supplierVkn, supplierName: f.supplierName, payable: f.payable, taxExclusive: null, taxAmount: null, lineCount: null, itemText: '',
+      supplierVkn: f.supplierVkn, supplierName: f.supplierName, payable: f.payable, taxExclusive: null, taxAmount: null, lineCount: null, itemText: '', lines: [], vatRates: [],
       xml: null, xsltId: null, edm: byNo.get(f.no), fileName: sheet.sheetName, addedAt: now, order: order++ });
     have.set(f.no, puts[puts.length - 1]);
     report.edmAdded++;
