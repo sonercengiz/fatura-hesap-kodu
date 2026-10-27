@@ -18,13 +18,13 @@ await page.locator('.toolbar button:has-text("Yazdır")').click(); await page.wa
 log('başlık:', await page.locator('.print-modal .modal-head .muted').innerText(), '| satır:', await page.locator('.print-row').count());
 const first=async()=>(await page.locator('.print-row').first().innerText()).replace(/\s+/g,' ');
 log('tarih sırası ilk:', await first());
-await page.locator('label:has-text("Hesap kodu, sonra tarih") input').check(); await page.waitForTimeout(80); log('hesap kodu sırası ilk:', await first(), '| son:', (await page.locator('.print-row').last().innerText()).replace(/\s+/g,' '));
-await page.locator('label:has-text("Satıcı (A→Z)") input').check(); await page.waitForTimeout(80); log('satıcı sırası ilk:', await first());
-await page.locator('label:has-text("Tersten") input').check(); await page.waitForTimeout(80); log('tersten ilk:', await first());
+await page.locator('.sort-pair select').nth(0).selectOption('code'); await page.waitForTimeout(80); log('hesap kodu sırası ilk:', await first(), '| son:', (await page.locator('.print-row').last().innerText()).replace(/\s+/g,' '));
+await page.locator('.sort-pair select').nth(0).selectOption('supplier'); await page.waitForTimeout(80); log('satıcı sırası ilk:', await first());
+await page.locator('.sort-pair select').nth(1).selectOption('desc'); await page.waitForTimeout(80); log('tersten ilk:', await first());
 // sürükle: 3. satırı 1. satırın üstüne
 const rows=page.locator('.print-row'); const third=(await rows.nth(2).innerText()).replace(/\s+/g,' ').replace(/^\d+ /,'');
 await rows.nth(2).dragTo(rows.nth(0)); await page.waitForTimeout(100);
-log('sürükle sonrası ilk:', await first(), '| eşleşti:', (await first()).replace(/^\d+ /,'')===third, '| elle notu:', await page.locator('.print-opts .muted.small:has-text("Elle")').count());
+log('sürükle sonrası ilk:', await first(), '| eşleşti:', (await first()).replace(/^\d+ /,'')===third, '| elle notu:', await page.locator('.print-opts .muted.small:has-text("elle")').count());
 await page.screenshot({path:`${S}/shots/print-1-plan.png`});
 // görünenler kaynağı + özet aç, yazdır
 await page.locator('#search').fill('').catch(()=>{});

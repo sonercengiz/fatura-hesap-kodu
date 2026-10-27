@@ -12,9 +12,9 @@ for (let i=0;i<3;i++){ await page.keyboard.press('q'); await page.waitForTimeout
 await page.locator('.toolbar button:has-text("Yazdır")').click(); await page.waitForSelector('.print-modal');
 const cnt=async()=>page.locator('.print-row').count(); const btn=async()=>page.locator('.print-modal .modal-head button.primary').innerText();
 console.log('başlangıç:', await cnt(), '|', await btn());
-await page.locator('.print-opts select').selectOption('manual'); await page.waitForTimeout(80); console.log('süz: elle atanmış →', await cnt(), '|', await btn());
-await page.locator('.print-opts select').selectOption('unassigned'); await page.waitForTimeout(80); console.log('süz: atanmamış →', await cnt());
-await page.locator('.print-opts select').selectOption('all');
+await page.locator('.print-opts fieldset:has-text("Süz") select').selectOption('manual'); await page.waitForTimeout(80); console.log('süz: elle atanmış →', await cnt(), '|', await btn());
+await page.locator('.print-opts fieldset:has-text("Süz") select').selectOption('unassigned'); await page.waitForTimeout(80); console.log('süz: atanmamış →', await cnt());
+await page.locator('.print-opts fieldset:has-text("Süz") select').selectOption('all');
 await page.locator('.print-opts input[placeholder^="Ara"]').fill('ceptaş'); await page.waitForTimeout(80); console.log('ara ceptaş →', await cnt());
 await page.locator('.print-opts input[placeholder^="Ara"]').fill('770.01'); await page.waitForTimeout(80); console.log('ara 770.01 (kod) →', await cnt());
 await page.locator('.print-opts input[placeholder^="Ara"]').fill('');

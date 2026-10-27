@@ -12,7 +12,7 @@ const t = () => performance.now();
 const ctx = await browser.newContext({ viewport: { width: 1440, height: 820 }, acceptDownloads: true });
 const page = await ctx.newPage();
 page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
-page.on('console', (m) => { if (m.type() === 'error' && !/srcdoc|sandboxed/.test(m.text())) errors.push('console: ' + m.text()); });
+page.on('console', (m) => { if (m.type() === 'error' && !/srcdoc|sandboxed|net::ERR_/.test(m.text())) errors.push('console: ' + m.text()); }); // şablonların internetten logo çekme denemeleri hata değil
 await page.addInitScript(() => { try { localStorage.setItem('guideSeen', '1'); } catch {} });
 await page.goto('http://localhost:5179/');
 await page.waitForSelector('.welcome');
