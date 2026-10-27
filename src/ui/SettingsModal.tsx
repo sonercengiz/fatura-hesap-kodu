@@ -168,7 +168,7 @@ export function SettingsModal() {
               <div class="keys">
                 <div><kbd>←</kbd><kbd>→</kbd> önceki / sonraki fatura · <kbd>Tab</kbd> / <kbd>Shift+Tab</kbd> (ya da <kbd>Shift+ok</kbd>) sonraki / önceki <b>atanmamış</b> fatura · <kbd>Ctrl+ok</kbd> toplu/kural atananlar dahil</div>
                 <div><kbd>Q</kbd><kbd>W</kbd><kbd>E</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> kısayolla ata{s.autoAdvance ? ', sonrakine geç' : ''} · <kbd>Boşluk</kbd> kural ya da satıcıya önce verilen kod</div>
-                <div><kbd>/</kbd> <kbd>Enter</kbd> <kbd>0–9</kbd> manuel kod girişi · <kbd>Esc</kbd> vazgeç · <kbd>Backspace</kbd> atamayı kaldır</div>
+                <div><kbd>/</kbd> <kbd>Enter</kbd> <kbd>0–9</kbd> manuel kod girişi (boş bırakıp <kbd>Enter</kbd>: kodu kaldır) · <kbd>Esc</kbd> vazgeç · <kbd>Backspace</kbd> atamayı kaldır</div>
                 <div><kbd>Ctrl+F</kbd> ara · <kbd>Ctrl+.</kbd> hesap kodu listesinde ara ve ata · <kbd>Ctrl+Z</kbd> geri al · <kbd>Ctrl+Y</kbd> yinele</div>
                 <div><kbd>F5</kbd> önizle · <kbd>F1</kbd> Excel üret · <kbd>Ctrl+P</kbd> faturayı yazdır · <kbd>Ctrl+Shift+P</kbd> yazdırma planı</div>
                 <div><kbd>Shift+tık</kbd> aralık seç · <kbd>Ctrl+tık</kbd> tekil seç · <kbd>Esc</kbd> seçimi bırak · çift tık: faturayı görselde aç</div>

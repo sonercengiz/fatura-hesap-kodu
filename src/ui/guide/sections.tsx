@@ -106,7 +106,7 @@ export const sections: Section[] = [
         <Shot src="07a-yuva-yaz.png" alt="Yuvaya kod yazma" notes={[<>Boş yuvaya tıklayın, kodu yazın, <K k="Enter" />. Yuvalar yalnızca sizin yazdığınız kodları taşır; kendiliğinden değişmez.</>]} />
         <Shot src="07b-atama.png" alt="Q tuşuyla atama: önce ve sonra" notes={[<>Tuşa basınca kod verilir; kart ve listedeki satır renklenir, fatura ekranda kalır. <K k="→" /> ya da <K k="Tab" /> ile geçersiniz. Hızlı çalışmak isterseniz <b>Ayarlar › Görünüm › Kod verdikten sonra</b> bölümünden kendiliğinden geçişi açın. Yanlışsa <K k="Ctrl+Z" />.</>]} />
         <Shot src="08-manuel.png" alt="Elle giriş" notes={[
-          <>Yuvada olmayan bir kod için <K k="/" /> basıp yazın; <K k="Enter" /> verir, <K k="Esc" /> vazgeçer.</>,
+          <>Yuvada olmayan bir kod için <K k="/" /> basıp yazın; <K k="Enter" /> verir, <K k="Esc" /> vazgeçer. Kodu kaldırmak için kutuyu boş bırakıp <K k="Enter" /> (ya da <K k="Backspace" />).</>,
           <>Daha önce kullandığınız kodlar yazdıkça önerilir; <K k="Tab" /> ilkini alır.</>,
         ]} />
         <Shot src="08b-ipucu.png" alt="Satıcı ipucu" w="narrow" notes={[<>Aynı satıcıya daha önce verdiğiniz kod hatırlatılır; <K k="Boşluk" /> ile tek tuşla verilir.</>]} />
@@ -268,7 +268,7 @@ export const keys: [string, string][] = [
   ['Boşluk', 'Kuralın ya da satıcıya önce verilen kodu ver'],
   ['/  Enter  0–9', 'Elle kod girişi'],
   ['Ctrl+.', 'Hesap kodu listesinde ara ve ver'],
-  ['Backspace', 'Kodu kaldır'],
+  ['Backspace', 'Kodu kaldır (elle girişte boş Enter da kaldırır)'],
   ['Ctrl+Z  Ctrl+Y', 'Geri al / yinele'],
   ['Shift+tık  Ctrl+tık', 'Listede aralık / tekil seçim'],
   ['Esc', 'Pencereyi kapat, seçimi bırak'],

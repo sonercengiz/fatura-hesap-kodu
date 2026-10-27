@@ -127,6 +127,8 @@ export function ShortcutBar() {
     }
   }, [manual]);
 
+  const cur = S.current.value ? S.assignments.value.get(S.current.value.no) : undefined;
+
   const sugg = manual ? completeCode(S.manualText.value, S.knownCodes.value, 6) : [];
 
   return (
@@ -144,14 +146,16 @@ export function ShortcutBar() {
             <input
               ref={input}
               class="manual-input"
-              placeholder="Hesap kodu yazın, Enter ile atayın"
+              placeholder={cur ? 'Hesap kodu yazın, Enter ile atayın · boş bırakıp Enter: kodu kaldır' : 'Hesap kodu yazın, Enter ile atayın'}
               value={S.manualText.value}
               onInput={(e) => (S.manualText.value = (e.currentTarget as HTMLInputElement).value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault();
-                  const v = S.manualText.value.trim() || sugg[0] || '';
+                  const v = S.manualText.value.trim();
                   if (v) S.assign(v);
+                  else if (cur) { S.clearAssignment().then(() => S.showToast('Kod kaldırıldı (Ctrl+Z geri alır)', 2500)); S.exitManual(); }
+                  else S.exitManual();
                 } else if (e.key === 'Escape') {
                   e.preventDefault();
                   S.exitManual();
@@ -166,7 +170,7 @@ export function ShortcutBar() {
               {sugg.map((c) => (
                 <button class="ghost tiny" onMouseDown={(e) => { e.preventDefault(); S.assign(c); }}>{c}</button>
               ))}
-              <span class="muted">Esc: vazgeç · Tab: ilk öneri · Ctrl+.: listede ara</span>
+              <span class="muted">{cur ? 'Boş Enter: kodu kaldır · ' : ''}Esc: vazgeç · Tab: ilk öneri · Ctrl+.: listede ara</span>
             </div>
           </>
         ) : (
