@@ -1,8 +1,9 @@
 import { DEFAULT_SHORTCUT_KEYS, type Settings } from '../../core/types';
+import { isEdmDefault, normalizeTemplate } from '../../core/excel/template';
 import { sheetToInvoices, type EdmSheet } from '../../core/legacy';
 import { db, newId, type BatchRecord, type InvoiceRecord, type AssignmentRecord, type AccountRecord, type FirmRecord, type FirmHistoryEntry } from '../../storage/db';
 import { upgradeRule, type Rule } from '../../core/rules';
-import { batchList, batchRec, busy, currentFirmId, firm, firms, lastExportAt, settings, showToast } from './core';
+import { batchList, batchRec, busy, currentFirmId, firm, firms, lastExportAt, settings, showToast, updateSettings } from './core';
 import { loadFirmData, openBatch, refreshBatchList } from './firms';
 import { mergeRule } from './rules';
 
@@ -137,12 +138,19 @@ export async function importWorkspace(file: File) {
       if (!up) continue;
       nr += await mergeRule({ ...(r as Rule), ...up, batchId: r.batchId ?? null, firmId: fid(r.firmId) }) ? 1 : 0;
     }
+    // Çıktı şablonu: yedekteki özelleştirilmiş şablon, yerel şablon hâlâ EDM varsayılanıysa alınır (özelleştirilmiş yerel şablon ezilmez)
+    let tplNote = '';
+    const srcTpl = raw.settings?.outputTemplate ? normalizeTemplate(raw.settings.outputTemplate) : null;
+    if (srcTpl && !isEdmDefault(srcTpl)) {
+      if (isEdmDefault(settings.value.outputTemplate)) { await updateSettings({ outputTemplate: srcTpl }); tplNote = ', çıktı şablonu'; }
+      else if (JSON.stringify(srcTpl) !== JSON.stringify(settings.value.outputTemplate)) tplNote = '; buradaki özelleştirilmiş çıktı şablonu korundu';
+    }
     firms.value = await db.firms.orderBy('name').toArray();
     await loadFirmData();
     await refreshBatchList();
     const latest = batchList.value[0];
     if (latest) await openBatch(batchRec.value?.id ?? latest.id);
-    showToast(`İçe aktarıldı: ${srcFirms.length} firma, ${nb} yeni dönem, ${ni} fatura, ${na} atama${nr ? `, ${nr} kural` : ''}`, 5000);
+    showToast(`İçe aktarıldı: ${srcFirms.length} firma, ${nb} yeni dönem, ${ni} fatura, ${na} atama${nr ? `, ${nr} kural` : ''}${tplNote}`, 6000);
   } catch (e) {
     showToast((e as Error).message, 5000);
   } finally {

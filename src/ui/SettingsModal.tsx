@@ -112,7 +112,7 @@ export function SettingsModal() {
                   <span class="muted small">{S.firms.value.length} firma kayıtlı.</span>
                   <span>
                     <button onClick={() => askName({ title: 'Yeni firma', label: 'Firma adı', placeholder: 'Örnek Kırtasiye Ltd. Şti.' }).then((n) => { if (n) S.createFirm(n); })}>+ Yeni firma</button>{' '}
-                    {S.firms.value.length > 1 && <button class="danger" onClick={async () => { const f = S.firm.value; if (await askConfirm({ title: 'Firmayı sil', message: `"${f.name}" firması, tüm dönemleri, faturaları, atamaları, hesap listesi ve geçmişiyle silinecek. Bu işlem geri alınamaz.`, okLabel: 'Sil', danger: true })) { S.deleteFirm(f.id); close(); } }}>Firmayı sil</button>}
+                    {S.firms.value.length > 1 && <button class="danger" onClick={async () => { const f = S.firm.value; if (await askConfirm({ title: 'Firmayı sil', message: `"${f.name}" firması, tüm dönemleri, faturaları, atamaları, kuralları, hesap listesi ve geçmişiyle silinecek. Bu işlem geri alınamaz.`, okLabel: 'Sil', danger: true })) { S.deleteFirm(f.id); close(); } }}>Firmayı sil</button>}
                   </span>
                 </div>
               </>
@@ -188,7 +188,7 @@ export function SettingsModal() {
             {tab === 'screen' && <ScreenTab />}
             {tab === 'backup' && (
               <>
-                <div class="muted">Tüm firmalar, dönemler, fatura listeleri, atamalar, hesap kodu listeleri, kurallar, çıktı şablonu ve öneri geçmişi tek bir .json dosyasına yazılır; başka bilgisayarda içe aktarılınca mevcut veriyle <b>birleştirilir</b>, hiçbir şey silinmez.</div>
+                <div class="muted">Tüm firmalar, dönemler, fatura listeleri, atamalar, hesap kodu listeleri, kurallar, çıktı şablonu ve öneri geçmişi tek bir .json dosyasına yazılır; başka bilgisayarda içe aktarılınca mevcut veriyle <b>birleştirilir</b>, hiçbir şey silinmez. Çıktı şablonu da gelir; oradaki şablon özelleştirilmişse o korunur.</div>
                 <div class="muted small">Fatura XML'leri (görseller) dosyaya dahil edilmez; gerekirse XML'ler yeniden yüklenir, atamalar korunur. Veriler yalnızca bu tarayıcıda durur; düzenli yedek alın.</div>
                 <div class="settings-links">
                   <button class="primary" onClick={() => S.exportWorkspace()}>Dışa aktar (.json)</button>

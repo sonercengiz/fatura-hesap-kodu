@@ -137,6 +137,7 @@ export async function deleteFirm(id: string) {
   if (firms.value.length <= 1) { showToast('Son firma silinemez.'); return; }
   const batchIds = await db.batches.where('firmId').equals(id).primaryKeys();
   for (const bid of batchIds) await deleteBatch(bid);
+  await db.rules.where('firmId').equals(id).delete(); // kalıcı kurallar (dönem kuralları deleteBatch ile gitti)
   await db.firmHistory.where('firmId').equals(id).delete();
   await db.firmAccounts.where('firmId').equals(id).delete();
   await db.firms.delete(id);

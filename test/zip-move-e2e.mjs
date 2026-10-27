@@ -32,7 +32,7 @@ await page.locator('.firm-select').selectOption(alfa); await page.waitForTimeout
 console.log('Firma 1 geri:', await page.locator('.progress').innerText());
 // partiyi Beta'ya taşı
 await page.locator('.files button:has-text("taşı")').click(); await page.waitForSelector('.modal:has-text("Başka firmaya taşı")');
-await page.locator('label:has-text("partisinin tamamı") input').check(); await page.locator('.modal button.primary:has-text("Taşı")').click(); await page.waitForTimeout(600);
+await page.locator('label:has-text("döneminin tamamı") input').check(); await page.locator('.modal button.primary:has-text("Taşı")').click(); await page.waitForTimeout(600);
 console.log('taşıma sonrası firma:', await page.locator('.firm-select option:checked').innerText(), '| parti:', await page.locator('.batch-select option:checked').innerText(), '|', await page.locator('.progress').innerText(), '| toast:', await page.locator('.toast').innerText());
 await page.locator('.firm-select').selectOption(alfa); await page.waitForTimeout(400);
 console.log('Firma 1 şimdi:', await page.locator('.welcome').count() ? 'parti yok (karşılama)' : await page.locator('.batch-select option:checked').innerText());

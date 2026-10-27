@@ -55,9 +55,9 @@ export async function moveInvoicesToFirm(nos: string[], targetFirmId: string, ta
   await db.transaction('rw', db.invoices, db.assignments, db.batches, async () => {
     let order = order0;
     for (const r of recs) {
+      if (existing.has(r.no)) { skipped++; continue; } // hedefte zaten var: kaynakta olduğu gibi bırakılır
       await db.invoices.delete([b.id, r.no]);
       await db.assignments.delete([b.id, r.no]);
-      if (existing.has(r.no)) { skipped++; continue; }
       await db.invoices.put({ ...r, batchId: target!.id, order: order++ });
       const a = asg.find((x) => x.no === r.no);
       if (a) await db.assignments.put({ ...a, batchId: target!.id });
@@ -65,11 +65,12 @@ export async function moveInvoicesToFirm(nos: string[], targetFirmId: string, ta
     await db.batches.update(b.id, { updatedAt: now });
     await db.batches.update(target!.id, { updatedAt: now });
   });
-  if (b.firmId !== targetFirmId) await transferHistory(b.firmId, targetFirmId, asg.map((a) => ({ vkn: recs.find((r) => r.no === a.no)?.supplierVkn ?? '', code: a.code })));
-  for (const no of nos) forgetHtml(`${b.id}|${no}`);
+  const moved = recs.filter((r) => !existing.has(r.no));
+  if (b.firmId !== targetFirmId) await transferHistory(b.firmId, targetFirmId, asg.filter((a) => !existing.has(a.no)).map((a) => ({ vkn: recs.find((r) => r.no === a.no)?.supplierVkn ?? '', code: a.code })));
+  for (const r of moved) forgetHtml(`${b.id}|${r.no}`);
   selected.value = new Set();
   const name = firms.value.find((f) => f.id === targetFirmId)?.name ?? '';
   await refreshBatchList();
   await openBatch(b.id);
-  showToast(`${recs.length - skipped} fatura ${name} › "${target.name}" dönemine taşındı${skipped ? ` (${skipped} orada zaten vardı, bırakıldı)` : ''}.`, 5000);
+  showToast(`${moved.length} fatura ${name} › "${target.name}" dönemine taşındı${skipped ? ` · ${skipped} fatura orada zaten vardı, burada bırakıldı` : ''}.`, 5000);
 }

@@ -57,7 +57,7 @@ export function MoveModal() {
                   </select>
                 </label>
               )}
-              <div class="muted small">Taşıma geri alınabilir: hedef firmada aynı pencereyle geri taşıyın. Satıcı bazlı öneri geçmişi de taşınır.</div>
+              <div class="muted small">Taşıma geri alınabilir: hedef firmada aynı pencereyle geri taşıyın. Satıcı bazlı öneri geçmişi de taşınır. Hedefte zaten olan fatura burada bırakılır.</div>
               <div class="row-inline" style="justify-content:flex-end">
                 <button class="primary" onClick={go} disabled={!firmId || (scope === 'selected' && sel.size === 0)}>Taşı</button>
               </div>
