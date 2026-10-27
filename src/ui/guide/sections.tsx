@@ -164,11 +164,11 @@ export const sections: Section[] = [
       <>
         <p>Bir satıcı hep aynı kodu alıyorsa bunu bir kez söyleyin: sonraki aylarda o satıcının faturaları yüklenir yüklenmez kodu alır. Bu bir <T t="kural" />dır. Kurallarınızı bir kez yazdıktan sonra dosyaları bırakmanız yeter; kalan işi uygulama yapar.</p>
         <Shot src="13-kural-yap.png" alt="Kural yap düğmesi" w="narrow" notes={[<>Kod verdiğiniz faturada <b>⚡ Kural yap</b>: satıcının VKN'si ve kodu hazır gelir; <K k="Enter" /> kaydeder ve bu dönemdeki uyan faturalara hemen uygular.</>]} />
-        <p>Tek bilgi her zaman yetmez: aynı satıcıdan farklı kodlara giden alışlar olabilir. Bu yüzden bir kural <b>1–4 <T t="koşul" /></b>dan oluşur ve hepsi birlikte tutmalıdır. Koşul türleri: satıcı VKN/TCKN, unvanda geçen metin, kalem adında geçen metin, KDV oranı, kalem miktarı aralığı, fatura tutarı aralığı, fatura tipi.</p>
+        <p>Tek bilgi her zaman yetmez: aynı satıcıdan farklı kodlara giden alışlar olabilir. Bu yüzden bir kural <b>bir ya da daha çok <T t="koşul" /></b>dan oluşur (sayı sınırı yok) ve hepsi birlikte tutmalıdır. Koşul türleri: satıcı VKN/TCKN, unvanda geçen metin, kalem adında geçen metin, KDV oranı, kalem miktarı aralığı, fatura tutarı aralığı, fatura tipi.</p>
         <Shot src="13-kurallar.png" alt="Kurallar penceresi" notes={[
           <><T t="kalıcı kural">Kalıcı</T>: her ay geçerli. <T t="dönem kuralı">Yalnızca bu dönem</T>: o ay için; kalıcının önüne geçer.</>,
           <>Koşul satırları: "Eğer … ve …". Türü seçin, değeri yazın. Aralıklarda alt ya da üst sınırı boş bırakabilirsiniz (örn. "≥ 1000").</>,
-          <><b>+ Koşul ekle</b>: en çok dört koşul.</>,
+          <><b>+ Koşul ekle</b>: istediğiniz kadar koşul; hepsi birlikte tutmalı. "Ya da" için ayrı bir kural yazın.</>,
           <>"o zaman hesap kodu" ve <b>Kaydet ve uygula</b>; <K k="Enter" /> da kaydeder.</>,
           <>Canlı önizleme: bu dönemde kaç faturaya uyduğu, ilk birkaçı ve başka bir kuralın önde kaldığı durumlar. Kaydetmeden önce kontrol edin.</>,
           <>Kayıtlı kurallar koşul rozetleriyle; kaç faturaya uyduğu görünür. Kutucukla kapatılır, kod burada düzeltilir, ✎ ile koşullar değiştirilir.</>,

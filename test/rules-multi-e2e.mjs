@@ -44,10 +44,10 @@ log('hata (10 > 5):', await page.locator('.issue').innerText().catch(() => '(yok
 await page.locator('.cond-max').fill(''); await page.locator('.cond-min').fill('');
 await page.locator('.rule-code').press('Enter'); await page.waitForTimeout(150);
 log('hata (boş aralık):', await page.locator('.issue').innerText().catch(() => '(yok)'));
-// 5) 5. koşul eklenemez
+// 5) koşul sayısı sınırsız: 6 koşul
 await setKind(0, 'vkn'); await page.locator('.cond-text').nth(0).fill('8770013406');
-for (let i = 0; i < 4; i++) if (await page.locator('.add-cond').isEnabled()) await page.locator('.add-cond').click();
-log('koşul satırı:', await page.locator('.cond-row').count(), '| ekle düğmesi:', await page.locator('.add-cond').innerText());
+for (let i = 0; i < 5; i++) await page.locator('.add-cond').click();
+log('koşul satırı:', await page.locator('.cond-row').count(), '(6 bekleniyor) | ekle düğmesi:', await page.locator('.add-cond').innerText());
 // 6) düzenle: ilk kuralın (turkcell+KDV) kodunu ve koşulunu değiştir
 await page.locator('.rule-row').filter({ hasText: 'turkcell' }).locator('.rule-edit').click(); await page.waitForTimeout(100);
 log('düzenleme modu:', await page.locator('.rule-form.editing .muted.small').first().innerText());

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import * as S from './state';
-import { COND_LABELS, MAX_CONDS, PRIORITY_TEXT, VAT_PRESETS, beats, condLabel, ruleLabel, ruleMatches, toRate, type Cond, type CondKind, type Rule } from '../core/rules';
+import { COND_LABELS, PRIORITY_TEXT, VAT_PRESETS, beats, condLabel, ruleLabel, ruleMatches, toRate, type Cond, type CondKind, type Rule } from '../core/rules';
 import { TYPE_LABELS, type Invoice } from '../core/types';
 import { fmtAmount } from './InvoiceCard';
 
@@ -90,7 +90,6 @@ export function RulesModal() {
   const setCond = (i: number, c: Cond) => setConds((cs) => cs.map((x, k) => (k === i ? c : x)));
   const removeCond = (i: number) => setConds((cs) => cs.filter((_, k) => k !== i));
   const addCond = () => {
-    if (conds.length >= MAX_CONDS) return;
     const used = new Set(conds.map((c) => c.kind));
     const kind = KINDS.find((k) => !used.has(k)) ?? 'item';
     setConds((cs) => [...cs, seedCond(kind, inv)]);
@@ -142,7 +141,7 @@ export function RulesModal() {
             {conds.map((c, i) => (
               <CondRow key={i} c={c} i={i} total={conds.length} inv={inv} onChange={(x) => setCond(i, x)} onRemove={() => removeCond(i)} inputRef={i === 0 ? (el) => { firstInput.current = el; } : undefined} />
             ))}
-            <button class="ghost tiny add-cond" disabled={conds.length >= MAX_CONDS} onClick={addCond} title={`En çok ${MAX_CONDS} koşul`}>+ Koşul ekle{conds.length >= MAX_CONDS ? ` (en çok ${MAX_CONDS})` : ''}</button>
+            <button class="ghost tiny add-cond" onClick={addCond} title="İstediğiniz kadar koşul ekleyebilirsiniz; hepsi birlikte tutmalı">+ Koşul ekle</button>
             <div class="rule-then">
               <span class="then-label">o zaman hesap kodu</span>
               <input ref={codeInput} class="rule-code" placeholder="hesap kodu, örn. 770.01" value={code} onInput={(e) => setCode((e.currentTarget as HTMLInputElement).value)} onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); submit(); } }} />

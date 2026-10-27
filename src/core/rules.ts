@@ -1,7 +1,7 @@
 /**
  * Otomatik atama kuralları: firmaya özel "koşullar → hesap kodu" tanımları.
  *
- * Bir kural 1–4 koşuldan oluşur; hepsi tutmalıdır (VE). Koşul türleri: satıcı VKN/TCKN, unvanda geçen metin,
+ * Bir kural bir ya da daha çok koşuldan oluşur (sayı sınırı yok); hepsi tutmalıdır (VE). Koşul türleri: satıcı VKN/TCKN, unvanda geçen metin,
  * kalem adında geçen metin, KDV oranı, kalem miktarı aralığı, fatura tutarı aralığı, fatura tipi.
  * Aynı faturaya birden çok kural uyarsa en belirgin olan kazanır (bkz. `beats`).
  * Eşleştirme yerelde, düz metin karşılaştırmasıyla yapılır (ağ yok, düzenli ifade yok).
@@ -30,8 +30,6 @@ export interface Rule {
   createdAt: number;
   updatedAt: number;
 }
-
-export const MAX_CONDS = 4;
 
 export const COND_LABELS: Record<CondKind, string> = {
   vkn: 'Satıcı VKN / TCKN',
@@ -231,7 +229,6 @@ export function validateCond(c: Cond): string | null {
 export function validateRule(conds: Cond[], code: string): string | null {
   if (!code.trim()) return 'Hesap kodu boş olamaz.';
   if (!conds.length) return 'En az bir koşul gerekir.';
-  if (conds.length > MAX_CONDS) return `En çok ${MAX_CONDS} koşul olabilir.`;
   for (const c of conds) { const e = validateCond(c); if (e) return e; }
   const keys = conds.map(condKey);
   if (new Set(keys).size !== keys.length) return 'Aynı koşul iki kez yazılmış.';

@@ -59,7 +59,7 @@ describe('otomatik atama kuralları (çok koşullu)', () => {
     expect(ruleMatches(one('item', 'yumurta', 'x'), noLines)).toBe(true);
     expect(ruleMatches(mk([{ kind: 'qty', min: 1, max: 5 }], 'x'), noLines)).toBe(false);
   });
-  it('VE: dört koşula kadar hepsi tutmalı', () => {
+  it('VE: koşulların hepsi tutmalı (sayı sınırı yok)', () => {
     const r = mk([{ kind: 'name', text: 'abc kırtasiye' }, { kind: 'item', text: 'klasör' }, { kind: 'vat', text: '20' }, { kind: 'amount', min: 100, max: 50000 }], '543');
     const abc: RuleTarget = { supplierVkn: '1', supplierName: 'ABC KIRTASİYE A.Ş.', itemText: 'klasör geniş sırt', typeCode: 'SATIS', amount: 1632, vatRates: [20], lines: [{ name: 'klasör geniş sırt', qty: 24, unit: 'C62', vat: 20 }] };
     expect(ruleMatches(r, abc)).toBe(true);
@@ -100,7 +100,7 @@ describe('otomatik atama kuralları (çok koşullu)', () => {
     expect(validateCond({ kind: 'qty', min: 10, max: 5 })).toMatch(/büyük olamaz/);
     expect(validateCond({ kind: 'amount', min: null, max: 500 })).toBeNull();
     expect(validateRule([{ kind: 'vkn', text: '1234567801' }, { kind: 'vkn', text: '1234567801' }], '770')).toMatch(/iki kez/);
-    expect(validateRule(Array(5).fill({ kind: 'item', text: 'abc' }), '770')).toMatch(/En çok/);
+    expect(validateRule([{ kind: 'item', text: 'abc' }, { kind: 'item', text: 'def' }, { kind: 'item', text: 'ghi' }, { kind: 'vat', text: '10' }, { kind: 'qty', min: 1, max: null }, { kind: 'amount', min: 1, max: null }], '770')).toBeNull(); // koşul sayısı sınırsız
     expect(validateRule([{ kind: 'name', text: 'güneş' }, { kind: 'qty', min: 1, max: null }], '770')).toBeNull();
   });
   it('etiket ve anahtar', () => {
