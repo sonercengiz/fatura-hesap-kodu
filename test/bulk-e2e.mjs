@@ -13,7 +13,7 @@ await page.waitForSelector('.inv-frame');
 const no = () => page.locator('.detail-row b').first().innerText();
 // elle 2 atama (770.01 x2) → Q'ya kaydet
 for (const c of ['770.01', '770.01', '770.01']) { await page.keyboard.press('/'); await page.waitForSelector('.manual-input'); await page.keyboard.type(c); await page.keyboard.press('Enter'); await page.waitForTimeout(100); }
-await page.locator('.slot').nth(0).locator('.slot-icon.save').click();
+await page.locator('.slot').nth(0).hover(); await page.locator('.slot').nth(0).locator('.slot-icon.edit').click(); await page.keyboard.type('770.01'); await page.keyboard.press('Enter');
 await page.keyboard.press('Home');
 console.log('başlangıç:', await no());
 await page.locator('.bulk-toggle').click(); // seçim yardımcılarını aç

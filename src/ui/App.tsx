@@ -201,7 +201,7 @@ export function App() {
         e.preventDefault();
         const c = S.slots.value[i];
         if (c) S.assign(c);
-        else S.showToast(`${k.toUpperCase()} yuvası boş. Alttaki 💾 ya da ✎ ile bir kod kaydedin.`);
+        else S.showToast(`${k.toUpperCase()} yuvası boş. Alttaki yuvaya tıklayıp bir kod yazın.`);
       }
     };
     window.addEventListener('keydown', onKey);

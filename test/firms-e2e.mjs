@@ -14,7 +14,7 @@ await a.waitForSelector('.firm-select');
 console.log('varsayılan firma:', await a.locator('.firm-select option:checked').innerText());
 await a.locator('input[accept=".xml,text/xml,application/xml"]').setInputFiles(XMLS); await a.waitForSelector('.inv-frame');
 for (const c of ['770.01', '770.01', '770.01']) { await a.keyboard.press('/'); await a.waitForSelector('.manual-input'); await a.keyboard.type(c); await a.keyboard.press('Enter'); await a.waitForTimeout(80); }
-await a.locator('.slot').nth(0).locator('.slot-icon.save').click(); await a.waitForTimeout(150);
+await a.locator('.slot').nth(0).hover(); await a.locator('.slot').nth(0).locator('.slot-icon.edit').click(); await a.keyboard.type('770.01'); await a.keyboard.press('Enter'); await a.waitForTimeout(150);
 await a.locator('button[title="Ayarlar"]').click();
 await a.locator('input[placeholder="ABC LTD"]').fill('Alfa AŞ');
 await a.locator('.acc-text').fill('770.01 Kırtasiye'); await a.locator('button:has-text("Listeye ekle")').click(); await a.waitForTimeout(150);

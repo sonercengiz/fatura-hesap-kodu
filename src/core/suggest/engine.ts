@@ -5,26 +5,6 @@ export interface HistoryEntry {
   lastUsed: number;
 }
 
-/**
- * Boş kısayol yuvalarında "hayalet" olarak gösterilecek adaylar: genel kullanım sayısı eşiği aşan,
- * henüz bir yuvaya kaydedilmemiş kodlar; en sık kullanılan önce. Sıralama yalnızca kullanıcı
- * kaydedince yuvaya işlendiği için kısayollar kendiliğinden yer değiştirmez.
- */
-export function ghostCandidates(history: HistoryEntry[], pinned: (string | null)[], minCount = 3): { code: string; count: number }[] {
-  const taken = new Set(pinned.filter((c): c is string => !!c));
-  const total = new Map<string, { count: number; lastUsed: number }>();
-  for (const h of history) {
-    const t = total.get(h.code) ?? { count: 0, lastUsed: 0 };
-    t.count += h.count;
-    t.lastUsed = Math.max(t.lastUsed, h.lastUsed);
-    total.set(h.code, t);
-  }
-  return Array.from(total.entries())
-    .filter(([code, t]) => !taken.has(code) && t.count >= minCount)
-    .sort((a, b) => b[1].count - a[1].count || b[1].lastUsed - a[1].lastUsed || a[0].localeCompare(b[0]))
-    .map(([code, t]) => ({ code, count: t.count }));
-}
-
 /** Bu satıcıya daha önce en çok verilen kod (varsa). */
 export function supplierHint(history: HistoryEntry[], vkn: string): { code: string; count: number } | null {
   let best: HistoryEntry | null = null;

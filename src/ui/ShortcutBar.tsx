@@ -5,7 +5,6 @@ import { completeCode } from '../core/suggest/engine';
 function SlotButton({ i }: { i: number }) {
   const sc = S.firm.value.shortcuts[i];
   const code = S.slots.value[i];
-  const ghost = S.ghost.value;
   const inv = S.current.value;
   const cur = inv ? S.assignments.value.get(inv.no) : undefined;
   const editing = S.editingSlot.value === i;
@@ -56,17 +55,10 @@ function SlotButton({ i }: { i: number }) {
   }
 
   return (
-    <div class={`slot slot-${i} empty ${ghost ? 'has-ghost' : ''}`}>
+    <div class={`slot slot-${i} empty`} onClick={startEdit} title={`${sc.key.toUpperCase()} yuvası boş: tıklayıp bir hesap kodu yazın`}>
       <kbd>{sc.key.toUpperCase()}</kbd>
-      {ghost ? (
-        <>
-          <span class="slot-code ghost" title={`${ghost.code} ${ghost.count} kez kullanıldı. Kaydederseniz ${sc.key.toUpperCase()} tuşuna bağlanır.`} onClick={() => S.pinSlot(i, ghost.code)}>{ghost.code}</span>
-          <button class="slot-icon save" title={`${ghost.code} kodunu ${sc.key.toUpperCase()} tuşuna kaydet`} onClick={() => S.pinSlot(i, ghost.code)}>💾</button>
-        </>
-      ) : (
-        <span class="slot-code ghost muted">—</span>
-      )}
-      <span class="slot-icon edit" role="button" title="Bu yuvaya kod yaz" onClick={startEdit}>✎</span>
+      <span class="slot-code muted">—</span>
+      <span class="slot-icon edit" role="button" title="Bu yuvaya kod yaz">✎</span>
     </div>
   );
 }

@@ -82,7 +82,7 @@ await annotate([{ sel: '.backup-hint', n: 1, pad: -2, pos: 'tr' }]);
 await shot('15-yedek-serit.png', { clip: { x: 0, y: 0, width: 1440, height: 100 } }); await clear();
 await page.locator('.backup-hint button:has-text("Bugün değil")').click(); await wait(100);
 // Q ← 760.02 (hayaletten), E ← 153 (✎), A ← 770.03 (✎); W,S,D boş (hayalet 770.01)
-await page.locator('.slot').nth(0).locator('.slot-icon.save').click(); await wait(150);
+await page.locator('.slot').nth(0).hover(); await page.locator('.slot').nth(0).locator('.slot-icon.edit').click(); await page.keyboard.type('770.01'); await page.keyboard.press('Enter'); await wait(150);
 for (const [i, c] of [[2, '153'], [3, '770.03']]) { await page.locator('.slot').nth(i).hover(); await page.locator('.slot').nth(i).locator('.slot-icon.edit').click(); await page.keyboard.type(c); await page.keyboard.press('Enter'); await wait(150); }
 await page.mouse.move(700, 300); await noToast();
 await page.keyboard.press('Control+Home'); await wait(200);

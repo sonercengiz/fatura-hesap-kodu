@@ -168,14 +168,11 @@ button.danger { color: #b91c1c; border-color: #fca5a5; } button.danger:hover { b
 
 .slot { position: relative; }
 .slot.empty { cursor: default; }
-.slot-code.ghost { opacity: .5; font-style: italic; cursor: pointer; }
-.slot-code.ghost.muted { font-style: normal; cursor: default; }
-.slot.empty.has-ghost { opacity: .9; }
+.slot.empty { cursor: pointer; }
 .slot-icon { margin-left: auto; font-size: 13px; line-height: 1; padding: 3px 6px; border-radius: 6px; background: rgba(255,255,255,.55); color: inherit; border: none; cursor: pointer; opacity: .85; }
 :root[data-theme="dark"] .slot-icon { background: rgba(0,0,0,.28); }
 .slot-icon.edit { opacity: 0; transition: opacity .15s; }
 .slot:hover .slot-icon.edit, .slot:focus-within .slot-icon.edit { opacity: .8; }
-.slot-icon.save { font-size: 14px; }
 .slot.editing { border-color: var(--accent); }
 .slot-input { flex: 1; min-width: 0; font: inherit; font-size: 15px; padding: 3px 8px; }
 button.hint { width: 100%; text-align: left; margin-top: 8px; padding: 6px 10px; border-style: dashed; }

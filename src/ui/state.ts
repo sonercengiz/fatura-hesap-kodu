@@ -5,7 +5,7 @@ import { buildTemplateRows, normalizeTemplate, edmTemplate, codeColumnIndexOf, t
 import { parseUbl, decodeBytes, dominantMonth, UblParseError } from '../core/xml/parseUbl';
 import { sha256 } from '../core/hash';
 import { sheetToInvoices, type EdmSheet } from '../core/legacy';
-import { ghostCandidates, supplierHint, type HistoryEntry } from '../core/suggest/engine';
+import { supplierHint, type HistoryEntry } from '../core/suggest/engine';
 import { sortInvoices, SORT_LABELS } from '../core/sort';
 import { db, DEFAULT_FIRM_ID, loadSettings, saveSettings, newId, type BatchRecord, type InvoiceRecord, type AssignmentRecord, type AccountRecord, type AssignmentSource, type FirmRecord, type FirmHistoryEntry } from '../storage/db';
 import { searchAccounts, type Account } from '../core/chart';
@@ -140,8 +140,6 @@ export const slots = computed<(string | null)[]>(() => {
   while (arr.length < 6) arr.push(null);
   return arr.slice(0, 6);
 });
-/** Boş yuvalarda hayalet olarak gösterilecek aday (en sık kullanılan, kaydedilmemiş kod). */
-export const ghost = computed(() => ghostCandidates(history.value, slots.value)[0] ?? null);
 /** Seçili faturanın satıcısına daha önce en çok verilen kod. */
 export const hint = computed(() => (current.value ? supplierHint(history.value, current.value.supplierVkn) : null));
 export const knownCodes = computed(() => {
