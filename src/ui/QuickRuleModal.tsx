@@ -111,14 +111,16 @@ export function QuickRuleModal() {
           <b>⚡ Bu faturadan kural</b>
           <span class="muted">{inv.supplierName} · {inv.no}</span>
           <div class="spacer" />
-          <div class="scope-seg" role="radiogroup" aria-label="Kural kapsamı">
-            <button class={scope === 'firm' ? 'on' : ''} onClick={() => setScope('firm')} title="Firmanın bütün dönemlerinde geçerli">Kalıcı</button>
-            <button class={scope === 'batch' ? 'on' : ''} disabled={!batch} onClick={() => setScope('batch')} title="Yalnızca açık dönemde geçerli">Yalnızca {batch?.name ?? 'bu dönem'}</button>
-          </div>
           <button class="ghost" onClick={close}>Kapat <kbd>Esc</kbd></button>
         </div>
         <div class="form">
-          <div class="muted small">İşaretlediğiniz bilgilerin <b>hepsi</b> tutan faturalar bu kodu alır. Sayıları ve kelimeleri düzeltebilirsiniz (örn. 3.000 → 1.000). Tek rozet de yeter.</div>
+          <div class="row-inline" style="justify-content:flex-start; gap:12px; flex-wrap:wrap">
+            <div class="scope-seg" role="radiogroup" aria-label="Kural kapsamı">
+              <button class={scope === 'firm' ? 'on' : ''} onClick={() => setScope('firm')} title="Firmanın bütün dönemlerinde geçerli">Kalıcı · {S.firm.value.name}</button>
+              <button class={scope === 'batch' ? 'on' : ''} disabled={!batch} onClick={() => setScope('batch')} title="Yalnızca açık dönemde geçerli">Yalnızca bu dönem · {batch?.name ?? '—'}</button>
+            </div>
+            <span class="muted small">İşaretlediğiniz bilgilerin <b>hepsi</b> tutan faturalar bu kodu alır. Sayıları ve kelimeleri düzeltebilirsiniz (örn. 3.000 → 1.000). Tek rozet de yeter.</span>
+          </div>
           <div class="qgroup"><span class="qgroup-label">Satıcı</span><div class="qchips">{head.map(chip)}</div></div>
           <div class="qgroup"><span class="qgroup-label">Fatura</span><div class="qchips">{facts.map(chip)}</div></div>
           {shownLines.map((k) => (

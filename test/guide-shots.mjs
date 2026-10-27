@@ -58,6 +58,16 @@ async function compose(outName, left, right, labels = ['Önce', 'Sonra']) {
   const b = await p2.locator('body > div').boundingBox(); await p2.screenshot({ path: `${OUT}/${outName}`, clip: { x: 0, y: 0, width: W, height: Math.ceil(b.height + 24) } });
   await p2.close(); unlinkSync(f);
 }
+async function composeSide(outName, left, right, labels = ['Önce', 'Sonra'], leftW = 380) {
+  const html = `<!doctype html><meta charset="utf-8"><body style="margin:0;background:#fff;font:600 16px system-ui"><div style="display:flex;gap:14px;padding:12px;width:1416px;align-items:flex-start">
+  <figure style="margin:0;flex:0 0 ${leftW}px"><div style="margin:0 0 6px;color:#6b7280">${labels[0]}</div><img src="${left}" style="width:100%;display:block;border:1px solid #e3e6ea;border-radius:8px"></figure>
+  <div style="font-size:34px;line-height:1;color:#2f6fed;align-self:center">→</div>
+  <figure style="margin:0;flex:1;min-width:0"><div style="margin:0 0 6px;color:#6b7280">${labels[1]}</div><img src="${right}" style="width:100%;display:block;border:1px solid #e3e6ea;border-radius:8px"></figure></div></body>`;
+  const f = `${OUT}/__c.html`; writeFileSync(f, html);
+  const p2 = await ctx.newPage(); await p2.setViewportSize({ width: W, height: 1400 }); await p2.goto('file://' + f); await p2.waitForTimeout(300);
+  const b = await p2.locator('body > div').boundingBox(); await p2.screenshot({ path: `${OUT}/${outName}`, clip: { x: 0, y: 0, width: W, height: Math.ceil(b.height + 24) } });
+  await p2.close(); unlinkSync(f);
+}
 const up = 'input[accept*=".zip"]';
 const manual = async (code) => { await page.keyboard.press('/'); await page.waitForSelector('.manual-input'); await page.keyboard.type(code); await page.keyboard.press('Enter'); await wait(150); };
 const nameDialog = async (text) => { await page.waitForSelector('.modal.dialog input'); await page.locator('.modal.dialog input').fill(text); await page.keyboard.press('Enter'); await wait(300); };
@@ -153,7 +163,7 @@ await page.locator('#search').fill('LZT2026000000002'); await page.keyboard.pres
 await annotate([{ sel: '.line-rule >> nth=1', n: 1 }]); await shot('__a.png', { clip: await clipOf('.detail', 6) }); await clear();
 await page.locator('.line-rule').nth(1).click(); await page.waitForSelector('.modal.quick-rule'); await wait(200);
 await annotate([{ sel: '.qgroup', n: 2, pad: 2 }, { sel: '.qgroup.qline >> nth=1', n: 3, pad: 2 }, { sel: '.qsummary', n: 4, pad: 2 }, { sel: '.modal.quick-rule .rule-then', n: 5, pad: 2 }, { sel: '.quick-advanced', n: 6 }]); await shot('__b.png', { clip: await clipOf('.modal.quick-rule', 12) }); await clear();
-await compose('13b-kalemden-kural.png', '__a.png', '__b.png', ['Panelde kalemler: 3.000 adet yumurtanın yanındaki ⚡', '"Bu faturadan kural": kalem "Yumurta" + miktar ≥ 3.000 işaretli geldi; eşiği, rozetleri ve kodu siz tamamlarsınız']); unlinkSync(`${OUT}/__a.png`); unlinkSync(`${OUT}/__b.png`);
+await composeSide('13b-kalemden-kural.png', '__a.png', '__b.png', ['Panelde kalemler: yumurtanın yanındaki ⚡', '"Bu faturadan kural": kalem "Yumurta" + miktar ≥ 3.000 işaretli geldi; eşiği, rozetleri ve kodu siz tamamlarsınız']); unlinkSync(`${OUT}/__a.png`); unlinkSync(`${OUT}/__b.png`);
 await esc(); await wait(150); await page.keyboard.press('Control+Home'); await wait(150);
 await page.locator('.toolbar button:has-text("Kurallar")').click(); await page.waitForSelector('.modal.rules');
 const kind = async (i, k) => page.locator('.cond-kind').nth(i).locator(`[data-k="${k}"]`).click();

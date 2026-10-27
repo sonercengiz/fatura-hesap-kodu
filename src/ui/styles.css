@@ -478,12 +478,11 @@ tr.iss-chart td.code-col { color: var(--warn); text-decoration: underline wavy v
 .line-sub { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
 /* Hızlı kural penceresi (rozetler) */
 .modal.quick-rule { width: min(760px, 96vw); }
-.modal.quick-rule .modal-head .scope-seg { margin-right: 8px; }
 .qgroup { display: grid; grid-template-columns: 150px 1fr; gap: 8px; align-items: start; }
 .qgroup-label { font-size: 12px; color: var(--muted); padding-top: 5px; display: flex; flex-direction: column; min-width: 0; }
 .qline-name { font-size: 12px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .qchips { display: flex; flex-wrap: wrap; gap: 6px; }
-.qchip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border: 1px solid var(--line); border-radius: 999px; font-size: 12px; cursor: pointer; background: var(--panel); max-width: 100%; }
+.form .qchip, .qchip { display: inline-flex; flex-direction: row; align-items: center; gap: 5px; padding: 3px 8px; border: 1px solid var(--line); border-radius: 999px; font-size: 12px; cursor: pointer; background: var(--panel); max-width: 100%; }
 .qchip input[type="checkbox"] { margin: 0; }
 .qchip.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--panel)); }
 .qchip-kind { color: var(--muted); font-size: 11px; }
