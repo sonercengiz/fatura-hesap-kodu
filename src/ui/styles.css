@@ -37,7 +37,7 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 0;
 .progress { color: var(--muted); } .progress b { color: var(--ink); } .dirty { color: var(--warn); } .saved { color: var(--ok); }
 
 .welcome { display: grid; place-content: center; text-align: center; padding: 24px; max-width: 640px; margin: 0 auto; }
-.work { display: grid; grid-template-columns: 1fr 340px; min-height: 0; }
+.work { display: grid; grid-template-columns: 1fr 400px; min-height: 0; }
 .viewer { position: relative; min-height: 0; display: flex; background: var(--neutral); transition: background .25s; }
 .viewer.slot-bg-0 { background: var(--s0); } .viewer.slot-bg-1 { background: var(--s1); } .viewer.slot-bg-2 { background: var(--s2); }
 .viewer.slot-bg-3 { background: var(--s3); } .viewer.slot-bg-4 { background: var(--s4); } .viewer.slot-bg-5 { background: var(--s5); }
@@ -492,3 +492,9 @@ tr.iss-chart td.code-col { color: var(--warn); text-decoration: underline wavy v
 .line-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .line-sub { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px; font-variant-numeric: tabular-nums; }
 .line-rule { padding: 0 5px; line-height: 18px; }
+
+/* Fatura görüntüsü: yakınlaştırma düğmeleri (sağ altta) */
+.view-zoom { position: absolute; right: 22px; bottom: 14px; display: flex; gap: 2px; align-items: center; background: color-mix(in srgb, var(--panel) 88%, transparent); border: 1px solid var(--line); border-radius: 999px; padding: 2px 4px; }
+.view-zoom button { min-width: 26px; }
+.view-zoom .zoom-pct { font-variant-numeric: tabular-nums; min-width: 60px; }
+.view-zoom .zoom-pct.auto { color: var(--muted); }

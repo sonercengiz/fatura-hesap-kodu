@@ -85,6 +85,8 @@ export interface Settings {
   sortMode: SortMode;
   /** Kod verince sıradaki faturaya kendiliğinden geç (varsayılan kapalı: kullanıcı atamayı görüp kendisi geçer) */
   autoAdvance: boolean;
+  /** Fatura görüntüsü yakınlaştırması; null = kendiliğinden (sayfanın üst yarısı ekranı doldurur) */
+  viewZoom: number | null;
 }
 
 export const DEFAULT_SHORTCUT_KEYS = ['q', 'w', 'e', 'a', 's', 'd'] as const;
@@ -98,6 +100,7 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: 'light',
   sortMode: 'date-supplier',
   autoAdvance: false,
+  viewZoom: null,
 };
 
 /** UBL-TR InvoiceTypeCode → EDM listesindeki "Fatura Tipi" etiketi */

@@ -89,7 +89,7 @@ await page.waitForSelector('.modal:has-text("Yükleme sonucu")'); await wait(200
 await shot('04-yukleme-sonucu.png', { clip: await clipOf('.modal:has-text("Yükleme sonucu")', 24) }); await esc();
 await page.waitForSelector('.inv-frame'); await busyDone(); await noToast();
 await page.waitForFunction(() => document.querySelector('.inv-frame')?.contentDocument?.body?.innerText?.length > 50);
-await annotate([{ sel: '.toolbar', n: 1, pad: 2 }, { sel: '.viewer', n: 2, pad: -6, pos: 'in' }, { sel: '.side', n: 3, pad: -6, pos: 'in' }, { sel: '.bar', n: 4, pad: 2 }]);
+await annotate([{ sel: '.toolbar', n: 1, pad: 2 }, { sel: '.viewer', n: 2, pad: -6, pos: 'in' }, { sel: '.side', n: 3, pad: -6, pos: 'in' }, { sel: '.bar', n: 4, pad: 2 }, { sel: '.view-zoom', n: 5 }]);
 await shot('02-ekran.png'); await clear();
 await annotate([{ sel: '.firm-select', n: 1 }, { sel: '.batch-select', n: 2 }, { sel: '.toolbar button:has-text("Yükle")', n: 3 }, { sel: '.progress', n: 4 }, { sel: '.layout-btn', n: 5 }, { sel: '.toolbar button:has-text("Önizle")', n: 6 }, { sel: '.toolbar button:has-text("Excel üret")', n: 7 }, { sel: '.toolbar button:has-text("Yazdır")', n: 8 }, { sel: '.toolbar button:has-text("Kurallar")', n: 9 }, { sel: '.toolbar button:has-text("Rehber")', n: 10 }, { sel: '.theme-btn', n: 11 }, { sel: 'button[title="Ayarlar"]', n: 12 }]);
 await shot('03-ustcubuk.png', { clip: await clipOf('.toolbar', 6, { height: 72 }) }); await clear();

@@ -31,6 +31,7 @@ export const sections: Section[] = [
           <><b>Fatura</b>: XML'in içindeki resmî şablonla çizilir; EDM'deki PDF ile aynı görünür. Zemin rengi, verilen kodun yuva rengidir.</>,
           <><b>Sağ panel</b>: seçili faturanın bilgileri, verilen kod, arama ve liste.</>,
           <><b>Alt çubuk</b>: altı <T t="kısayol" /> yuvası, <T t="durum kartı" />, <T t="ilerleme kartı" />, elle giriş.</>,
+                  <>Fatura görüntüsü: şablonun kenar boşlukları kırpılır, sayfa ekran genişliğini doldurur (A4'te üst yarısı görünür). <K k="Ctrl" /> + fare tekerleği ya da sağ alttaki − / + ile yakınlaştırın; seçiminiz bütün faturalarda korunur, "oto" kendiliğindene döndürür.</>,
         ]} />
         <Shot src="03-ustcubuk.png" alt="Üst çubuk" notes={[
           <>Firma menüsü; en altta <b>+ Yeni firma…</b></>,
@@ -276,10 +277,12 @@ export const keys: [string, string][] = [
   ['F5', 'Önizleme'],
   ['F1', 'Excel üret'],
   ['Ctrl+P  Ctrl+Shift+P', 'Açık faturayı yazdır / yazdırma planı'],
+  ['Ctrl+tekerlek', 'Fatura görüntüsünü yakınlaştır / uzaklaştır (sağ alttaki − / + de olur)'],
 ];
 
 export const troubles: [string, string][] = [
   ['Yükledim, bazı dosyalar "okunamadı"', 'Fatura olmayan XML\'ler (irsaliye, yanıt, zarf) normaldir. Bozuk görünen bir fatura varsa EDM\'den yeniden indirin.'],
+  ['Fatura görüntüsü küçük ya da kesik görünüyor', 'Ctrl + fare tekerleği ile yakınlaştırın; sağ alttaki "oto" kendiliğinden ölçüye döndürür. Ayarlar › Görünüm\'den yeni faturaya geçince en üstten mi, kaldığınız yerden mi başlayacağını seçin.'],
   ['Fatura görüntüsü yerine kart görünüyor', 'O faturanın XML\'i yok (EDM listesinden ya da arşivden geldi). XML\'ini yükleyin, görüntü gelir; atama korunur.'],
   ['Q tuşu "yuva boş" diyor', 'Alt çubukta o yuvaya tıklayıp bir kod yazın. Yuvalar kendiliğinden dolmaz.'],
   ['Kod verdim ama listede göremiyorum', 'Süzgeç "Atanmamış" olabilir; "Tümü" yapın. Toplu/kural atananlar gezerken atlanır; Ctrl+ok ile görülür.'],

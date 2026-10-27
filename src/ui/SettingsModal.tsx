@@ -106,6 +106,14 @@ export function SettingsModal() {
                   <div class="muted small">Üst çubuktaki ☰ Liste / ▣ Görsel düğmesiyle de değişir. Liste görünümünde satıra çift tıklamak o faturayı görsel görünümde açar.</div>
                 </fieldset>
                 <fieldset>
+                  <legend>Fatura görüntüsü: yakınlaştırma</legend>
+                  <div class="row-inline" style="justify-content:flex-start; gap:10px; flex-wrap:wrap">
+                    <span>{s.viewZoom == null ? 'Kendiliğinden: kenar boşlukları kırpılır, sayfanın üst yarısı ekranı doldurur.' : `Sabit: %${Math.round(s.viewZoom * 100)}`}</span>
+                    {s.viewZoom != null && <button class="tiny" onClick={() => S.updateSettings({ viewZoom: null })}>Kendiliğinden'e dön</button>}
+                  </div>
+                  <div class="muted small">Görüntü üstünde <kbd>Ctrl</kbd> + fare tekerleği ya da sağ alttaki − / + ile değiştirilir; seçiminiz bütün faturalarda ve sonraki açılışta korunur.</div>
+                </fieldset>
+                <fieldset>
                   <legend>Fatura görüntüsü: yeni faturaya geçince</legend>
                   {([['top', 'En üstten başlasın'], ['last', 'Son kaldığım yerden başlasın'], ['margin', 'Belirli bir yükseklikten başlasın']] as [ViewMode, string][]).map(([v, label]) => (
                     <label class="radio">
