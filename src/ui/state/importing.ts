@@ -5,7 +5,7 @@ import { readEdmSheet, edmRowsByNo } from '../../core/excel/readEdm';
 import { db, type BatchRecord, type InvoiceRecord, type AssignmentRecord } from '../../storage/db';
 import { forgetHtml } from '../../render/xslt';
 import { readZip, ZipError } from '../../core/zip';
-import { batchRec, bumpHistory, busy, historyDelta, importReport, invoiceRecs, lastImportReport, settingsOpen, settingsTab, showToast } from './core';
+import { batchRec, bumpHistory, busy, historyDelta, importReport, invoiceRecs, settingsOpen, settingsTab, showToast } from './core';
 import { createBatch, isQuotaError, notifyOtherTabs, refreshBatchList, reloadBatch } from './firms';
 import { applyRules } from './rules';
 
@@ -184,7 +184,6 @@ export async function importXml(rawList: File[]): Promise<ImportReport> {
     if (report.failed.length) parts.push(`${report.failed.length} dosya okunamadı`);
     showToast(parts.join(' · '), 3500);
     if (report.failed.length) { console.warn('Okunamayan XML dosyaları', report.failed); importReport.value = report; }
-    else lastImportReport.value = report;
     notifyOtherTabs();
   } catch (e) {
     if (isQuotaError(e)) {

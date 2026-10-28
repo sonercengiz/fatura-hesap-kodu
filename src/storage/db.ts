@@ -29,7 +29,6 @@ export interface BatchRecord {
   autoName: boolean;
   createdAt: number;
   updatedAt: number;
-  savedAt: number | null;
 }
 
 /** Bir fatura; XML'i (XSLT'si ayrılmış) ve başlık alanları. Eski Excel dönemlerinde xml null. */

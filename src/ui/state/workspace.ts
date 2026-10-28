@@ -101,7 +101,7 @@ export async function importWorkspace(file: File) {
         await db.batches.put(b2);
         nb++;
       } else if (b2.updatedAt > cur.updatedAt) {
-        await db.batches.put({ ...b2, savedAt: cur.savedAt ?? b2.savedAt });
+        await db.batches.put(b2);
       }
       // Faturalar: yerelde olmayanlar eklenir (XML'siz); yereldekiler korunur
       const metas: InvoiceMeta[] = invs ?? (sheet ? sheetToInvoices(sheet).map((f) => ({

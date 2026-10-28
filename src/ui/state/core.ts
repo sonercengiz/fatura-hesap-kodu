@@ -40,8 +40,6 @@ export const manualText = signal('');
 
 export const history = signal<HistoryEntry[]>([]);
 
-export const recentCodes = signal<string[]>([]);
-
 export const toast = signal<string | null>(null);
 
 export const previewOpen = signal(false);
@@ -86,8 +84,6 @@ export const templateOpen = signal(false);
 
 /** Yükleme sonucu penceresi (okunamayan dosya varsa kendiliğinden açılır) ve son yükleme özeti */
 export const importReport = signal<ImportReport | null>(null);
-
-export const lastImportReport = signal<ImportReport | null>(null);
 
 export interface PrintOpts { pageBreak: boolean; strip: boolean; summary: boolean; /** parça başına fatura; 0 = tek parça */ chunk: number }
 
@@ -526,7 +522,6 @@ export async function assign(codeRaw: string, advance?: boolean) {
   const inverse = await applyChanges([change]);
   pushUndo(`${inv.no} → ${code}`, inverse, [change]);
   sbatch(() => {
-    recentCodes.value = [...recentCodes.value.slice(-9), code];
     mode.value = 'nav';
     manualText.value = '';
   });

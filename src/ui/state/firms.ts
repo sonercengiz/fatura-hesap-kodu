@@ -4,7 +4,7 @@ import { normalizeTemplate, edmTemplate, type OutputTemplate } from '../../core/
 import { SORT_LABELS } from '../../core/sort';
 import { db, DEFAULT_FIRM_ID, loadSettings, newId, type BatchRecord, type FirmRecord } from '../../storage/db';
 import { ensureXslt, forgetHtml } from '../../render/xslt';
-import { ready, accounts, assignments, backupDismissedAt, batchList, batchRec, bulkNos, bumpHistory, historyDelta, current, currentFirmId, currentIndex, filterMode, firm, firms, firstNavigable, goTo, history, invoiceRecs, invoices, lastClicked, lastExportAt, mode, recentCodes, redoStack, ruleNos, rules, searchText, selected, settings, showToast, undoStack } from './core';
+import { ready, accounts, assignments, backupDismissedAt, batchList, batchRec, bulkNos, bumpHistory, historyDelta, current, currentFirmId, currentIndex, filterMode, firm, firms, firstNavigable, goTo, history, invoiceRecs, invoices, lastClicked, lastExportAt, mode, redoStack, ruleNos, rules, searchText, selected, settings, showToast, undoStack } from './core';
 
 /** Diğer sekmelere "veri değişti" sinyali; alan sekme görünürse yeniler, değilse görünür olunca yeniler */
 export const channel: BroadcastChannel | null = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('fatura-hesap-kodu') : null;
@@ -161,7 +161,6 @@ export async function openBatch(id: string) {
     filterMode.value = 'all';
     undoStack.value = [];
     redoStack.value = [];
-    recentCodes.value = asg.sort((a, b) => a.at - b.at).slice(-10).map((a) => a.code);
     mode.value = 'nav';
     searchText.value = '';
   });
@@ -212,7 +211,6 @@ export async function createBatch(name?: string) {
     autoName: !n,
     createdAt: now,
     updatedAt: now,
-    savedAt: null,
   };
   await db.batches.put(rec);
   await refreshBatchList();

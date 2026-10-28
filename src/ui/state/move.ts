@@ -46,7 +46,7 @@ export async function moveInvoicesToFirm(nos: string[], targetFirmId: string, ta
   const now = Date.now();
   let target = targetBatchId ? await db.batches.get(targetBatchId) : undefined;
   if (!target || target.firmId !== targetFirmId) {
-    target = { id: newId(), firmId: targetFirmId, name: dominantMonth(recs.map((r) => r.issueDate)) ?? `Yeni dönem ${new Date(now).toLocaleDateString('tr-TR')}`, autoName: true, createdAt: now, updatedAt: now, savedAt: null };
+    target = { id: newId(), firmId: targetFirmId, name: dominantMonth(recs.map((r) => r.issueDate)) ?? `Yeni dönem ${new Date(now).toLocaleDateString('tr-TR')}`, autoName: true, createdAt: now, updatedAt: now };
     await db.batches.put(target);
   }
   const existing = new Set((await db.invoices.where('batchId').equals(target.id).primaryKeys()).map((k) => k[1]));
