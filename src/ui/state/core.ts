@@ -1,7 +1,7 @@
 import { signal, computed, batch as sbatch } from '@preact/signals';
 import { DEFAULT_SETTINGS, DEFAULT_SHORTCUT_KEYS, typeLabel, profileLabel, toDisplayDate, type Settings, type Invoice, type FilterMode, type ListColumnId } from '../../core/types';
 import { buildTemplateWorkbook, buildFileName } from '../../core/excel/writeOutput';
-import { buildTemplateRows, normalizeTemplate, codeColumnIndexOf, type OutputTemplate, type RowContext } from '../../core/excel/template';
+import { buildTemplateRows, normalizeTemplate, codeColumnIndexOf, vatUncovered, type OutputTemplate, type RowContext } from '../../core/excel/template';
 import { supplierHint, type HistoryEntry } from '../../core/suggest/engine';
 import { sortInvoices } from '../../core/sort';
 import { db, DEFAULT_FIRM_ID, saveSettings, type BatchRecord, type InvoiceRecord, type AssignmentRecord, type AccountRecord, type AssignmentSource, type FirmRecord } from '../../storage/db';
@@ -24,7 +24,7 @@ export const EMPTY_FIRM: FirmRecord = { id: DEFAULT_FIRM_ID, name: '', createdAt
 export const firm = computed<FirmRecord>(() => firms.value.find((f) => f.id === currentFirmId.value) ?? firms.value[0] ?? EMPTY_FIRM);
 
 /** Açık firmanın çıktı şablonu (eski kayıtlarda genel ayardaki şablon) */
-export const outputTemplate = computed<OutputTemplate>(() => firm.value.outputTemplate ?? settings.value.outputTemplate);
+export const outputTemplate = computed<OutputTemplate>(() => normalizeTemplate(firm.value.outputTemplate ?? settings.value.outputTemplate));
 
 export const batchRec = signal<BatchRecord | null>(null);
 
@@ -266,7 +266,7 @@ export function overriddenBy(rule: Rule): { count: number; codes: string[] } {
 /** Dönemde kurala uyan ama henüz kod almamış faturalar */
 export const rulePending = computed(() => invoices.value.filter((i) => !assignments.value.has(i.no) && ruleFor.value.has(i.no)));
 
-export type IssueKind = 'no-code' | 'not-in-chart' | 'type' | 'no-view';
+export type IssueKind = 'no-code' | 'not-in-chart' | 'type' | 'vat-gap' | 'no-view';
 
 export function issuesFor(inv: Invoice): IssueKind[] {
   const out: IssueKind[] = [];
@@ -274,6 +274,7 @@ export function issuesFor(inv: Invoice): IssueKind[] {
   if (!code) out.push('no-code');
   else if (accounts.value.length > 0 && !accountMap.value.has(code)) out.push('not-in-chart');
   if (/tevkifat|iade/i.test(inv.invoiceType)) out.push('type');
+  if (vatUncovered(inv, outputTemplate.value).length) out.push('vat-gap');
   if (!inv.hasView) out.push('no-view');
   return out;
 }
@@ -282,6 +283,7 @@ export const ISSUE_LABEL: Record<IssueKind, string> = {
   'no-code': 'Hesap kodu atanmamış',
   'not-in-chart': 'Kod hesap kodu listesinde yok',
   type: 'Tevkifat / İade faturası, kontrol edin',
+  'vat-gap': 'KDV oranının Excel şablonunda sütunu yok',
   'no-view': 'XML yok (eski Excel dönemi); görsel çizilemez',
 };
 
@@ -625,9 +627,9 @@ export async function setLayout(layout: Settings['layout'], no?: string) {
   }
 }
 
-/** Liste görünümü sütunları (kendi seçimim): sıra korunur, Hesap Kodu çıkarılamaz */
+/** Liste görünümü sütunları (kendi seçimim): sıra korunur */
 export async function setListColumns(ids: ListColumnId[]) {
-  await updateSettings({ listColumns: ids.includes('code') ? ids : [...ids, 'code'] });
+  await updateSettings({ listColumns: ids });
 }
 
 export async function setListFollowsTemplate(on: boolean) {

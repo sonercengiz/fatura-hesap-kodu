@@ -8,10 +8,10 @@ describe('liste görünümü sütunları', () => {
   it('eski 15 sütunlu seçim yeni alan kimliklerine çevrilir, sıra korunur', () => {
     expect(normalizeListColumns(['no', 'supplier', 'lines', 'code', 'account', 'issues'], valid)).toEqual(['no', 'name', 'lineCount', 'code', 'accountName', 'issues']);
   });
-  it('bilinmeyen, yinelenen ve boş sütun atılır; Hesap Kodu yoksa eklenir', () => {
-    expect(normalizeListColumns(['no', 'xyz', 'no', 'blank', 'vat20Tax'], valid)).toEqual(['no', 'vat20Tax', 'code']);
+  it('bilinmeyen, yinelenen ve boş sütun atılır; Hesap Kodu zorunlu değil; "KDV Diğer" çevrilir', () => {
+    expect(normalizeListColumns(['no', 'xyz', 'no', 'blank', 'vat20Tax', 'vatOtherTax', 'vatOtherBase'], valid)).toEqual(['no', 'vat20Tax', 'vatOddTax']);
   });
-  it('dizi değilse ya da yalnızca kod kalırsa varsayılan', () => {
+  it('dizi değilse ya da hiç geçerli sütun kalmazsa varsayılan', () => {
     expect(normalizeListColumns(undefined, valid)).toEqual(DEFAULT_LIST_COLUMNS);
     expect(normalizeListColumns(['bogus'], valid)).toEqual(DEFAULT_LIST_COLUMNS);
   });

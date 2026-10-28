@@ -53,13 +53,13 @@ export type SortMode = 'date-supplier' | 'added';
 export type FilterMode = 'all' | 'unassigned' | 'manual' | 'bulk' | 'rule';
 
 export type Layout = 'hybrid' | 'list';
-/** Liste görünümü sütunu: Excel çıktısının alanlarından biri ya da yalnızca listede olan "Dikkat" (uyarılar). Hesap Kodu hep vardır. */
+/** Liste görünümü sütunu: Excel çıktısının alanlarından biri ya da yalnızca listede olan "Dikkat" (uyarılar). */
 export type ListColumnId = OutputFieldId | 'issues';
 export const DEFAULT_LIST_COLUMNS: ListColumnId[] = ['no', 'date', 'name', 'vkn', 'type', 'amount', 'code', 'accountName', 'issues'];
 /** Eski (15 sabit sütunlu) liste seçimindeki kimliklerin karşılıkları */
-const LEGACY_LIST_IDS: Record<string, ListColumnId> = { supplier: 'name', lines: 'lineCount', account: 'accountName' };
+const LEGACY_LIST_IDS: Record<string, ListColumnId> = { supplier: 'name', lines: 'lineCount', account: 'accountName', vatOtherTax: 'vatOddTax' };
 
-/** Kayıtlı liste seçimini toparlar: eski kimlikler çevrilir, bilinmeyen/yinelenen atılır, Hesap Kodu yoksa eklenir */
+/** Kayıtlı liste seçimini toparlar: eski kimlikler çevrilir, bilinmeyen/yinelenen atılır; boşsa varsayılan */
 export function normalizeListColumns(ids: unknown, valid: (id: string) => boolean): ListColumnId[] {
   if (!Array.isArray(ids)) return DEFAULT_LIST_COLUMNS;
   const out: ListColumnId[] = [];
@@ -67,8 +67,7 @@ export function normalizeListColumns(ids: unknown, valid: (id: string) => boolea
     const id = (LEGACY_LIST_IDS[String(raw)] ?? raw) as ListColumnId;
     if ((id === 'issues' || (valid(id) && id !== 'blank')) && !out.includes(id)) out.push(id);
   }
-  if (!out.includes('code')) out.push('code');
-  return out.length > 1 ? out : DEFAULT_LIST_COLUMNS;
+  return out.length ? out : DEFAULT_LIST_COLUMNS;
 }
 
 export interface Settings {

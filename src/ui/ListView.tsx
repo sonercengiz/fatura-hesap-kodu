@@ -100,7 +100,7 @@ export function ListView() {
                         <span class="cols-name" title={id === 'issues' ? 'Uyarılar (yalnızca listede)' : FIELD_DEFS[id].label}>{colLabel(id)}</span>
                         <button class="ghost tiny" title="Sola (yukarı)" disabled={k === 0} onClick={() => moveCol(k, -1)}>↑</button>
                         <button class="ghost tiny" title="Sağa (aşağı)" disabled={k === own.length - 1} onClick={() => moveCol(k, 1)}>↓</button>
-                        <button class="ghost tiny" title={id === 'code' ? 'Hesap Kodu sütunu kaldırılamaz' : 'Sütunu kaldır'} disabled={id === 'code'} onClick={() => S.setListColumns(own.filter((x) => x !== id))}>✕</button>
+                        <button class="ghost tiny" title="Sütunu kaldır" disabled={own.length === 1} onClick={() => S.setListColumns(own.filter((x) => x !== id))}>✕</button>
                       </div>
                     ))}
                   </div>

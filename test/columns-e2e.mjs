@@ -50,7 +50,7 @@ await a.locator('.toolbar button:has-text("Liste")').click(); await a.waitForSel
 check('varsayılan liste sütunları', (await heads()).join('|') === 'Fatura No|Tarih|Satıcı|VKN / TCKN|Tip|Tutar|Hesap Kodu|Hesap adı|Dikkat', (await heads()).join('|'));
 await a.locator('.cols-btn').click(); await a.waitForSelector('.cols-pop');
 await colRow('Tip').locator('button[title="Sütunu kaldır"]').click();
-check('Hesap Kodu kaldırılamaz', await colRow('Hesap Kodu').locator('button[title^="Hesap Kodu"]').isDisabled(), 'etkin');
+check('Hesap Kodu da kaldırılabilir (zorunlu değil)', await colRow('Hesap Kodu').locator('button[title="Sütunu kaldır"]').isEnabled(), 'kilitli');
 await a.locator('.cols-add').selectOption('uuid');
 await colRow('ETTN').locator('button[title^="Sola"]').click();
 await a.locator('.cols-add').selectOption('vat20Base');
@@ -66,10 +66,22 @@ check('yenilemeden sonra seçim kalıcı', (await heads()).join('|') === h, (awa
 await a.locator('.cols-btn').click(); await a.locator('.cols-mode label:has-text("Excel şablonuyla aynı") input').check(); await a.waitForTimeout(200);
 await a.mouse.click(700, 880); await a.waitForTimeout(200);
 h = await heads();
-check('şablonla aynı: 30 şablon sütunu + Dikkat, ilk başlık Belge No, sonda KDV dökümü', h[0] === 'Belge No' && h[h.length - 2] === 'KDV Diğer' && h[h.length - 1] === 'Dikkat' && h.length === 31, `${h.length} sütun: ${h.slice(0, 2).join('|')} … ${h.slice(-3).join('|')}`);
+check('şablonla aynı: 29 şablon sütunu + Dikkat, ilk başlık Belge No, sonda KDV dökümü', h[0] === 'Belge No' && h[h.length - 2] === 'Oranı Uyuşmayan KDV' && h[h.length - 1] === 'Dikkat' && h.length === 30, `${h.length} sütun: ${h.slice(0, 2).join('|')} … ${h.slice(-3).join('|')}`);
 const widths = await a.evaluate(() => ({ doc: document.documentElement.scrollWidth, vw: innerWidth, box: document.querySelector('.lv-table').scrollWidth }));
 check('geniş tablo sayfayı genişletmez, kendi kutusunda kayar', widths.doc === widths.vw && widths.box > widths.vw, JSON.stringify(widths));
 check('üst çubukta Excel üret ve Şablon görünür', await a.locator('.toolbar .excel-btn').isVisible() && await a.locator('.toolbar .excel-tpl').isVisible(), 'görünmüyor');
+
+// 4b) Hesap Kodu'suz şablon (yalnızca veri toplama): kaydedilir, önizleme kod sütunu olmadığını söyler, kodsuzluk uyarısı yok
+await openTpl();
+await a.locator('.tpl-row.is-code button[title="Sütunu kaldır"]').click();
+check('kod sütunu kaldırılınca Kaydet etkin', await a.locator('.tpl-modal button.primary:has-text("Kaydet")').isEnabled(), 'pasif');
+await saveTpl();
+h = await heads();
+check('şablonla aynı liste kod sütunsuz', !h.includes('Hesap Kodu') && h.length === 29, `${h.length}: ${h.join('|').slice(0, 80)}`);
+await a.keyboard.press('F5'); await a.waitForSelector('.modal.wide .legend');
+const pv = await a.locator('.modal.wide .modal-head').innerText();
+check('önizleme: "Hesap Kodu sütunu yok", kodsuzluk uyarısı yok', pv.includes('Hesap Kodu sütunu yok') && !pv.includes('Hesap kodu atanmamış'), pv.replace(/\s+/g, ' ').slice(0, 160));
+await a.keyboard.press('Escape'); await a.waitForTimeout(200);
 
 // 5) Eski kayıtlar: firma şablonsuz + genel şablon özelleştirilmiş + eski liste kimlikleri → açılışta taşınır
 await a.evaluate(() => new Promise((res) => {

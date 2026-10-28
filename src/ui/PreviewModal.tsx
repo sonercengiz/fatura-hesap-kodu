@@ -7,10 +7,12 @@ export function PreviewModal() {
   const byRow = new Map(invs.map((i, k) => [k, i]));
   const at = S.outputCodeAt.value;
   const box = useRef<HTMLDivElement>(null);
-  const counts = { 'no-code': 0, 'not-in-chart': 0, type: 0, 'no-view': 0 } as Record<S.IssueKind, number>;
+  const counts = { 'no-code': 0, 'not-in-chart': 0, type: 0, 'vat-gap': 0, 'no-view': 0 } as Record<S.IssueKind, number>;
+  // Şablonda Hesap Kodu sütunu yoksa (yalnızca veri toplama) kodsuzluk çıktı için sorun değildir
+  const skip = new Set<S.IssueKind>(at < 0 ? ['no-view', 'no-code', 'not-in-chart'] : ['no-view']);
   const rowIssues = rows.slice(1).map((_, i) => {
     const inv = byRow.get(i);
-    const iss = inv ? S.issuesFor(inv).filter((k) => k !== 'no-view') : [];
+    const iss = inv ? S.issuesFor(inv).filter((k) => !skip.has(k)) : [];
     for (const k of iss) counts[k]++;
     return iss;
   });
@@ -25,7 +27,7 @@ export function PreviewModal() {
       <div class="modal wide" onClick={(e) => e.stopPropagation()}>
         <div class="modal-head">
           <b>Çıktı önizlemesi</b>
-          <span class="muted">{rows.length - 1} satır · {rows[0]?.length ?? 0} sütun · Hesap Kodu {colName(at)} sütununda</span>
+          <span class="muted">{rows.length - 1} satır · {rows[0]?.length ?? 0} sütun · {at >= 0 ? `Hesap Kodu ${colName(at)} sütununda` : 'Hesap Kodu sütunu yok'}</span>
           <button class="ghost tiny" onClick={() => { S.previewOpen.value = false; S.templateOpen.value = true; }} title="Çıktı sütunlarını ve sırasını düzenle">Şablonu düzenle</button>
           <div class="spacer" />
           <span class="legend">

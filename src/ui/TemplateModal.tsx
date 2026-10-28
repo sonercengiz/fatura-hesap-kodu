@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks';
 import * as S from './state';
-import { FIELD_DEFS, KDV_FIELD_IDS, ROW_ORDER_LABELS, DEFAULT_OUTPUT_TEMPLATE, isEdmDefault, buildTemplateRows, type OutputTemplate, type OutputFieldId, type RowOrder } from '../core/excel/template';
+import { FIELD_DEFS, KDV_FIELD_IDS, vatFieldsFor, vatUncovered, ROW_ORDER_LABELS, DEFAULT_OUTPUT_TEMPLATE, isEdmDefault, buildTemplateRows, type OutputTemplate, type OutputFieldId, type RowOrder } from '../core/excel/template';
 
 const colName = (i: number) => { let s = ''; let n = i; do { s = String.fromCharCode(65 + (n % 26)) + s; n = Math.floor(n / 26) - 1; } while (n >= 0); return s; };
 
@@ -20,10 +20,14 @@ export function TemplateModal() {
   const move = (from: number, to: number) => { if (from === to) return; const cols = t.columns.slice(); const [c] = cols.splice(from, 1); cols.splice(to, 0, c); setT({ ...t, columns: cols }); };
   const add = () => { if (!addId) return; setT({ ...t, columns: [...t.columns, { id: addId, header: FIELD_DEFS[addId].header }] }); const next = addable.filter((x) => x !== addId)[0]; if (next) setAddId(next); };
   const missingKdv = KDV_FIELD_IDS.filter((id) => !used.has(id));
+  // Açık dönemde şablonun KDV dökümüne yazılamayan oranlar (örn. eski %8/%18): söylenir, tek tıkla eklenir
+  const gapCount = new Map<string, number>();
+  for (const inv of S.invoices.value) for (const r of new Set(vatUncovered(inv, t))) { const k = r === null ? 'odd' : String(r); gapCount.set(k, (gapCount.get(k) ?? 0) + 1); }
+  const gapFields = [...gapCount.keys()].flatMap((k) => vatFieldsFor(k === 'odd' ? null : Number(k))).filter((id) => !used.has(id));
+  const gapText = [...gapCount].map(([k, n]) => `${k === 'odd' ? 'oranı uyuşmayan KDV' : `%${k}`} (${n} fatura)`).join(', ');
   const addKdv = () => setT({ ...t, columns: [...t.columns, ...missingKdv.map((id) => ({ id, header: FIELD_DEFS[id].header }))] });
   const sample = S.outputOrder.value.slice(0, 3);
   const preview = buildTemplateRows(sample, t, S.outputContext());
-  const codeOk = t.columns.some((c) => c.id === 'code');
 
   return (
     <div class="modal-backdrop" onClick={close}>
@@ -40,7 +44,7 @@ export function TemplateModal() {
             </select>
           )}
           <button class="ghost" onClick={() => setT(JSON.parse(JSON.stringify(DEFAULT_OUTPUT_TEMPLATE)))} title="EDM fatura listesinin 20 sütunu + C'de Hesap Kodu">EDM varsayılanına dön</button>
-          <button class="primary" onClick={save} disabled={!codeOk || t.columns.length === 0}>Kaydet</button>
+          <button class="primary" onClick={save} disabled={t.columns.length === 0}>Kaydet</button>
           <button class="ghost" onClick={close}>Vazgeç <kbd>Esc</kbd></button>
         </div>
         <div class="tpl-body">
@@ -60,7 +64,7 @@ export function TemplateModal() {
                 <span class="tpl-field muted small" title={FIELD_DEFS[c.id].label}>{FIELD_DEFS[c.id].label}</span>
                 <button class="ghost tiny" title="Yukarı" disabled={k === 0} onClick={() => move(k, k - 1)}>↑</button>
                 <button class="ghost tiny" title="Aşağı" disabled={k === t.columns.length - 1} onClick={() => move(k, k + 1)}>↓</button>
-                <button class="ghost tiny" title={c.id === 'code' ? 'Hesap Kodu sütunu kaldırılamaz' : 'Sütunu kaldır'} disabled={c.id === 'code'} onClick={() => remove(k)}>✕</button>
+                <button class="ghost tiny" title="Sütunu kaldır" onClick={() => remove(k)}>✕</button>
               </div>
             ))}
             <div class="tpl-add">
@@ -70,6 +74,12 @@ export function TemplateModal() {
               <button onClick={add} disabled={!addable.length}>+ Sütun ekle</button>
               <button class="tpl-add-kdv" onClick={addKdv} disabled={!missingKdv.length} title="KDV oranına göre matrah ve KDV tutarı sütunları: %0, %1, %10, %20 ve diğer oranlar (%8, %18 gibi). Faturada o oran yoksa hücre boş kalır.">{missingKdv.length ? `+ KDV dökümü (${missingKdv.length} sütun)` : 'KDV dökümü ekli'}</button>
             </div>
+            {gapText && (
+              <div class="tpl-gap warn small">
+                Bu dönemde şablonda sütunu olmayan KDV var: {gapText}. Eklenmezse bu tutarlar Excel'e yazılmaz.
+                {gapFields.length > 0 && <button class="tiny" onClick={() => setT({ ...t, columns: [...t.columns, ...gapFields.map((id) => ({ id, header: FIELD_DEFS[id].header }))] })}>+ Ekle ({gapFields.length} sütun)</button>}
+              </div>
+            )}
           </div>
           <div class="tpl-side">
             <label><span>Satır sırası</span>

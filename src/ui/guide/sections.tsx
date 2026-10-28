@@ -204,14 +204,14 @@ export const sections: Section[] = [
         ]} />
         <p><K k="F1" /> dosyayı indirir: <code>AY YIL FİRMA_ADI FATURA.xlsx</code>. Ay, faturaların ayıdır. GMS'te "Excel içe aktar" ile açılır.</p>
         <Shot src="15-sablon.png" alt="Çıktı şablonu" notes={[
-          <>Hesap Kodu sütunu; sürükleyerek yerini değiştirin, başlığını yazın.</>,
+          <>Hesap Kodu sütunu; sürükleyerek yerini değiştirin, başlığını yazın. İsterseniz kaldırın: uygulamayı yalnızca fatura verisi toplamak için de kullanabilirsiniz.</>,
           <>Sütun ekleyin: ETTN, matrah, vergi, hesap adı, boş sütun… <b>+ KDV dökümü</b> oran başına matrah ve KDV sütunlarını tek seferde ekler.</>,
           <>Satır sırası ve sayfa adı.</>,
           <>Canlı önizleme.</>,
           <>Karıştıysa <b>EDM varsayılanına dön</b>.</>,
         ]} />
         <Tip>Her firmanın kendi Excel şablonu vardır: firmalar farklı GMS düzenleriyle çalışıyorsa her birini ayrı ayarlayın. Yeni firma, açık firmanın şablonuyla başlar; şablon penceresindeki <b>Başka firmadan al</b> bir firmanın şablonunu kopyalar.</Tip>
-        <Tip><b>KDV dökümü</b> sütunları: Matrah %0 · Matrah ve KDV %1, %10, %20 · Matrah ve KDV Diğer. Değerler faturanın XML'indeki KDV özetinden gelir; faturada o oran yoksa hücre boş kalır. "Diğer" eski oranları (%8, %18) ve bazı operatör faturalarında oranı tutarıyla uyuşmayan KDV satırlarının vergisini toplar. ÖİV, ÖTV gibi KDV dışı vergiler bu sütunlara girmez; bu yüzden matrah + KDV her faturada Tutar'ı vermeyebilir.</Tip>
+        <Tip><b>KDV dökümü</b> sütunları: Matrah %0 · Matrah ve KDV %1, %10, %20 · Oranı Uyuşmayan KDV. Değerler faturanın XML'indeki KDV özetinden gelir; faturada o oran yoksa hücre boş kalır. Temmuz 2023 öncesi oranlar (%8, %18) için sütunları <b>+ Sütun ekle</b>'den ekleyin; açık dönemde sütunu olmayan bir oran varsa pencere söyler ve tek tıkla ekler, önizleme de uyarır. <b>Oranı Uyuşmayan KDV</b>: bazı operatör faturalarında (ör. GSM) KDV satırının oran alanına tutar yazılmış; bu satırların vergisi burada toplanır, matrahları başka satırın tekrarı olduğu için sayılmaz. ÖİV, ÖTV gibi KDV dışı vergiler bu sütunlara girmez; bu yüzden matrah + KDV her faturada Tutar'ı vermeyebilir.</Tip>
         <Warn>İlk kez GMS'e verirken küçük bir dönemle deneyin. GMS bazı sütunları bekliyorsa <T t="edm listesi" />ni de yükleyin; çıktı EDM'nin dosyasıyla birebir olur.</Warn>
       </>
     ),

@@ -234,7 +234,8 @@ button.hint { width: 100%; text-align: left; margin-top: 8px; padding: 6px 10px;
 .acc-row { display: flex; gap: 8px; align-items: center; padding: 3px 8px; border-bottom: 1px solid var(--line); }
 .acc-row:last-child { border-bottom: none; }
 .acc-name { flex: 1; min-width: 0; padding: 3px 6px; font-size: 13px; }
-.lg-not-in-chart { background: var(--warn-bg); color: var(--warn); }
+.lg-not-in-chart, .lg-vat-gap { background: var(--warn-bg); color: var(--warn); }
+.tpl-gap { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; padding: 6px 10px; border-radius: 8px; background: var(--warn-bg); color: var(--warn); }
 tr.iss-chart td.code-col { color: var(--warn); text-decoration: underline wavy var(--warn); }
 .bulk-toggle { flex: none; } .bulk-toggle.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 
