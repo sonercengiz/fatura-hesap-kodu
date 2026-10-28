@@ -118,7 +118,7 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 0;
 :root[data-theme="dark"] .slot kbd { background: rgba(0,0,0,.3); }
 .slot.active { border-color: currentColor; }
 .slot.empty { opacity: .75; } .slot.empty .slot-code { opacity: .55; }
-.slot:disabled { cursor: default; }
+.slot.disabled { cursor: default; opacity: .6; } .slot:not(.empty):not(.disabled):not(.editing) { cursor: pointer; } .slot:focus-visible { outline: 2px solid var(--accent); }
 .slot .pin { margin-left: auto; font-size: 9px; opacity: .7; }
 .manual-box { display: flex; flex-direction: column; gap: 4px; }
 .manual-input { font-size: 18px; font-family: ui-monospace, Menlo, monospace; padding: 8px 10px; }
@@ -179,7 +179,7 @@ button.danger { color: #b91c1c; border-color: #fca5a5; } button.danger:hover { b
 .slot { position: relative; }
 .slot.empty { cursor: default; }
 .slot.empty { cursor: pointer; }
-.slot-icon { margin-left: auto; font-size: 13px; line-height: 1; padding: 3px 6px; border-radius: 6px; background: rgba(255,255,255,.55); color: inherit; border: none; cursor: pointer; opacity: .85; }
+.slot-icon { margin-left: auto; font: inherit; font-size: 13px; line-height: 1; padding: 3px 6px; border-radius: 6px; background: rgba(255,255,255,.55); color: inherit; border: none; cursor: pointer; opacity: .85; }
 :root[data-theme="dark"] .slot-icon { background: rgba(0,0,0,.28); }
 .slot-icon.edit { opacity: 0; transition: opacity .15s; }
 .slot:hover .slot-icon.edit, .slot:focus-within .slot-icon.edit { opacity: .8; }

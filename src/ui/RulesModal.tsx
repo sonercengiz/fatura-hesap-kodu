@@ -134,7 +134,7 @@ export function RulesModal() {
 
   return (
     <div class="modal-backdrop" onClick={() => S.closeRules()}>
-      <div class="modal rules" onClick={(e) => e.stopPropagation()} onKeyDownCapture={(e) => { if (e.key === 'Escape') { e.stopPropagation(); e.preventDefault(); if (editing) reset(); else S.closeRules(); } }}>
+      <div class="modal rules" tabIndex={-1} onClick={(e) => e.stopPropagation()} onMouseUp={(e) => { if (document.activeElement === document.body) (e.currentTarget as HTMLElement).focus(); }} onKeyDownCapture={(e) => { if (e.key === 'Escape') { e.stopPropagation(); e.preventDefault(); if (editing) reset(); else S.closeRules(); } }}>
         <div class="modal-head">
           <b>Otomatik atama kuralları</b>
           <span class="muted">{S.firm.value.name} · {S.rules.value.length} kural</span>

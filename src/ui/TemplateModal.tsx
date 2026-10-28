@@ -41,7 +41,7 @@ export function TemplateModal() {
                 draggable
                 onDragStart={(e) => { setDragIdx(k); e.dataTransfer?.setData('text/plain', String(k)); }}
                 onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => { e.preventDefault(); const from = Number(e.dataTransfer?.getData('text/plain') ?? dragIdx); if (!Number.isNaN(from)) move(from, k); setDragIdx(null); }}
+                onDrop={(e) => { e.preventDefault(); const from = Number(e.dataTransfer?.getData('text/plain') || String(dragIdx)); if (!Number.isNaN(from)) move(from, k); setDragIdx(null); }}
                 onDragEnd={() => setDragIdx(null)}
               >
                 <span class="tpl-letter">{colName(k)}</span>

@@ -75,7 +75,7 @@ export function PrintModal() {
 
   return (
     <div class="modal-backdrop" onClick={() => S.closePrint()}>
-      <div class="modal print-modal" onClick={(e) => e.stopPropagation()} onKeyDownCapture={(e) => { if (e.key === 'Escape') { e.stopPropagation(); e.preventDefault(); S.closePrint(); } }}>
+      <div class="modal print-modal" onClick={(e) => e.stopPropagation()} onKeyDownCapture={(e) => { if (e.key === 'Escape') { const t = e.target as HTMLInputElement; e.stopPropagation(); e.preventDefault(); if (t?.tagName === 'INPUT' && t.type !== 'checkbox' && t.type !== 'radio' && t.value) { setPsearch(''); setManual(null); return; } S.closePrint(); } }}>
         <div class="modal-head">
           <b>Yazdırma planı</b>
           <span class="muted">{toPrint.length}{toPrint.length !== items.length ? ` / ${items.length}` : ''} fatura{noView ? ` · ${noView} görselsiz (özet basılır)` : ''}</span>

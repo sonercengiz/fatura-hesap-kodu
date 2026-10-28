@@ -37,9 +37,13 @@ export function App() {
     } catch { /* yoksay */ }
   }, []);
 
+  // Tema: ayarlar veritabanından gelene kadar dokunma (index.html'deki satır içi betik localStorage'dan ilk kareyi doğru çizer)
+  const themeReady = S.ready.value;
   useEffect(() => {
+    if (!themeReady) return;
     document.documentElement.dataset.theme = S.settings.value.theme;
-  }, [S.settings.value.theme]);
+    try { localStorage.setItem('theme', S.settings.value.theme); } catch { /* yok say */ }
+  }, [S.settings.value.theme, themeReady]);
 
   // Arayüz ölçeği: kök öğede CSS zoom (pencere ölçüsünden kendiliğinden ya da Ayarlar › Ekran'dan sabit)
   const scale = S.uiScale.value;
@@ -107,8 +111,10 @@ export function App() {
         return;
       }
       if (S.printOpen.value) {
+        // Enter yalnızca odak bir seçimde/kutuda değilken yazdırır (açılır listede ya da onay kutusunda Enter seçim demektir)
+        const onControl = !!t && (t.tagName === 'SELECT' || t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'BUTTON');
         if (e.key === 'Escape') S.closePrint();
-        else if (e.key === 'Enter' && !inInput) { e.preventDefault(); document.querySelector<HTMLButtonElement>('.print-modal .modal-head button.primary')?.click(); }
+        else if (e.key === 'Enter' && !onControl) { e.preventDefault(); document.querySelector<HTMLButtonElement>('.print-modal .modal-head button.primary')?.click(); }
         return;
       }
       if (dialog.value) return; // küçük pencere kendi tuşlarını işler
@@ -260,7 +266,9 @@ export function App() {
           <button class="tiny ghost" onClick={() => S.dismissBackup()}>Bugün değil</button>
         </div>
       )}
-      {!S.batchRec.value ? (
+      {!S.ready.value ? (
+        <main class="welcome loading"><p class="muted">Açılıyor…</p></main>
+      ) : !S.batchRec.value ? (
         <main class="welcome">
           <h1>e-Fatura XML dosyalarını yükleyin</h1>
           <p>EDM'den indirdiğiniz fatura XML'lerini, ZIP'ini ya da klasörünü buraya sürükleyin ya da üstteki <b>Yükle</b> düğmesini kullanın. Faturalar kendi resmî görünümüyle çizilir; tek tuşla hesap kodu verirsiniz.</p>

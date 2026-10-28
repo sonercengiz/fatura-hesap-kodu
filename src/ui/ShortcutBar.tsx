@@ -45,20 +45,21 @@ function SlotButton({ i }: { i: number }) {
   }
 
   if (code) {
+    // Dış öğe düğme değil: ✎ ayrı bir düğme olarak her zaman tıklanabilir (fatura yokken de); atama yalnızca fatura varken
     return (
-      <button class={`slot slot-${i} ${code === cur ? 'active' : ''}`} disabled={!inv} onClick={() => S.assign(code)} title={`${sc.key.toUpperCase()}: ${code} ata`}>
+      <div class={`slot slot-${i} ${code === cur ? 'active' : ''} ${inv ? '' : 'disabled'}`} role="button" tabIndex={0} onClick={() => { if (inv) S.assign(code); }} onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && inv) { e.preventDefault(); e.stopPropagation(); S.assign(code); } }} title={inv ? `${sc.key.toUpperCase()}: ${code} ata` : `${sc.key.toUpperCase()}: ${code} (fatura seçilince atanır)`}>
         <kbd>{sc.key.toUpperCase()}</kbd>
         <span class="slot-code">{code}</span>
-        <span class="slot-icon edit" role="button" title="Bu yuvanın kodunu değiştir" onClick={startEdit}>✎</span>
-      </button>
+        <button class="slot-icon edit" title="Bu yuvanın kodunu değiştir" onClick={startEdit}>✎</button>
+      </div>
     );
   }
 
   return (
-    <div class={`slot slot-${i} empty`} onClick={startEdit} title={`${sc.key.toUpperCase()} yuvası boş: tıklayıp bir hesap kodu yazın`}>
+    <div class={`slot slot-${i} empty`} role="button" tabIndex={0} onClick={startEdit} onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); startEdit(e); } }} title={`${sc.key.toUpperCase()} yuvası boş: tıklayıp bir hesap kodu yazın`}>
       <kbd>{sc.key.toUpperCase()}</kbd>
       <span class="slot-code muted">—</span>
-      <span class="slot-icon edit" role="button" title="Bu yuvaya kod yaz">✎</span>
+      <button class="slot-icon edit" title="Bu yuvaya kod yaz" onClick={startEdit}>✎</button>
     </div>
   );
 }

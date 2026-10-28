@@ -62,6 +62,9 @@ export const editingText = signal('');
 
 export const busy = signal<string | null>(null);
 
+/** Veritabanı okunup firma/dönem açıldı mı (açılışta karşılama ekranı bir an yanlış görünmesin) */
+export const ready = signal(false);
+
 export const searchText = signal('');
 
 /** Toplu atama ile kod alan faturalar (doğal gezinti bunları atlar) */
@@ -354,13 +357,19 @@ export function passesFilter(inv: Invoice): boolean {
   return !q || matchesSearch(inv, q);
 }
 
+/** Tutarın aranabilir yazımları: "5748", "5748.5", "5.748,50", "5748,50" — kullanıcı nasıl yazarsa yazsın bulunsun */
+function amountTexts(n: number): string[] {
+  const tr = n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return [String(n), tr, tr.replace(/\./g, '')];
+}
+
 export function matchesSearch(i: Invoice, q: string): boolean {
   return (
     i.no.toLocaleLowerCase('tr').includes(q) ||
     i.supplierName.toLocaleLowerCase('tr').includes(q) ||
     i.supplierVkn.includes(q) ||
     i.uuid.toLocaleLowerCase('tr').includes(q) ||
-    (i.amount != null && String(i.amount).includes(q.replace(',', '.')))
+    (i.amount != null && amountTexts(i.amount).some((x) => x.includes(q)))
   );
 }
 

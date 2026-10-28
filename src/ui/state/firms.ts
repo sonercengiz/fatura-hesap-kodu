@@ -4,7 +4,7 @@ import { normalizeTemplate, edmTemplate, type OutputTemplate } from '../../core/
 import { SORT_LABELS } from '../../core/sort';
 import { db, DEFAULT_FIRM_ID, loadSettings, newId, type BatchRecord, type FirmRecord } from '../../storage/db';
 import { ensureXslt, forgetHtml } from '../../render/xslt';
-import { accounts, assignments, backupDismissedAt, batchList, batchRec, bulkNos, current, currentFirmId, currentIndex, filterMode, firm, firms, firstNavigable, goTo, history, invoiceRecs, invoices, lastClicked, lastExportAt, mode, recentCodes, redoStack, ruleNos, rules, searchText, selected, settings, showToast, undoStack } from './core';
+import { ready, accounts, assignments, backupDismissedAt, batchList, batchRec, bulkNos, current, currentFirmId, currentIndex, filterMode, firm, firms, firstNavigable, goTo, history, invoiceRecs, invoices, lastClicked, lastExportAt, mode, recentCodes, redoStack, ruleNos, rules, searchText, selected, settings, showToast, undoStack } from './core';
 
 /** Diğer sekmelere "veri değişti" sinyali; alan sekme görünürse yeniler, değilse görünür olunca yeniler */
 export const channel: BroadcastChannel | null = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('fatura-hesap-kodu') : null;
@@ -69,6 +69,7 @@ export async function init() {
   await refreshBatchList();
   const latest = batchList.value[0];
   if (latest) await openBatch(latest.id);
+  ready.value = true;
   // Motoru arka planda ısıt (polyfill gerekiyorsa ilk fatura beklemesin)
   ensureXslt().catch(() => undefined);
 }
