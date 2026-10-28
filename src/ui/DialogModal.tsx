@@ -7,13 +7,15 @@ export function DialogModal() {
   const [value, setValue] = useState(d?.kind === 'name' ? d.initial ?? '' : '');
   useEffect(() => { input.current?.focus(); input.current?.select(); }, []);
   if (!d) return null;
+  // Yıkıcı onayda (Sil, Çıkar) odak Vazgeç'te açılır ve Enter yalnızca odaktaki düğmeyi çalıştırır: dalgın bir Enter silmez
+  const danger = d.kind === 'confirm' && !!d.danger;
   const ok = () => {
     if (d.kind === 'name') { const v = value.trim(); if (!v && !d.allowEmpty) return; closeDialog(v); }
     else closeDialog(true);
   };
   return (
     <div class="modal-backdrop dialog-backdrop" onClick={() => closeDialog(null)}>
-      <div class="modal dialog" role="dialog" onClick={(e) => e.stopPropagation()} onKeyDownCapture={(e) => { if (e.key === 'Escape') { e.stopPropagation(); e.preventDefault(); closeDialog(null); } else if (e.key === 'Enter') { e.stopPropagation(); e.preventDefault(); ok(); } e.stopPropagation(); }}>
+      <div class="modal dialog" role="dialog" onClick={(e) => e.stopPropagation()} onKeyDownCapture={(e) => { if (e.key === 'Escape') { e.stopPropagation(); e.preventDefault(); closeDialog(null); } else if (e.key === 'Enter') { e.stopPropagation(); e.preventDefault(); if (!danger) ok(); else if (document.activeElement instanceof HTMLButtonElement && e.currentTarget.contains(document.activeElement)) document.activeElement.click(); } e.stopPropagation(); }}>
         <div class="modal-head"><b>{d.title}</b></div>
         <div class="form">
           {d.kind === 'name' ? (
@@ -26,8 +28,8 @@ export function DialogModal() {
             <div class="dialog-msg">{d.message}</div>
           )}
           <div class="row-inline" style="justify-content:flex-end; gap:8px">
-            <button class="ghost" onClick={() => closeDialog(null)}>Vazgeç <kbd>Esc</kbd></button>
-            <button ref={d.kind === 'confirm' ? (el) => el?.focus() : undefined} class={d.kind === 'confirm' && d.danger ? 'danger' : 'primary'} disabled={d.kind === 'name' && !value.trim() && !d.allowEmpty} onClick={ok}>{d.okLabel ?? (d.kind === 'name' ? 'Tamam' : 'Evet')} <kbd>Enter</kbd></button>
+            <button ref={danger ? (el) => el?.focus() : undefined} class="ghost" onClick={() => closeDialog(null)}>Vazgeç <kbd>Esc</kbd></button>
+            <button ref={d.kind === 'confirm' && !danger ? (el) => el?.focus() : undefined} class={danger ? 'danger' : 'primary'} disabled={d.kind === 'name' && !value.trim() && !d.allowEmpty} onClick={ok}>{d.okLabel ?? (d.kind === 'name' ? 'Tamam' : 'Evet')}{!danger && <> <kbd>Enter</kbd></>}</button>
           </div>
         </div>
       </div>
