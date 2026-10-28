@@ -12,7 +12,8 @@ concurrency:
   cancel-in-progress: true
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # Sabit sürüm: Playwright 1.58 ubuntu-latest'in yeni sürümünü (26.04) desteklemiyor
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
