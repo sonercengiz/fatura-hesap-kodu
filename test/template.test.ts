@@ -1,13 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import * as XLSX from 'xlsx';
-import { edmTemplate, DEFAULT_OUTPUT_TEMPLATE, normalizeTemplate, buildTemplateRows, isEdmDefault, codeColumnIndexOf, moneyColumns, FIELD_DEFS, KDV_FIELD_IDS, vatUncovered, vatFieldsFor, type OutputTemplate } from '../src/core/excel/template';
+import { edmTemplate, DEFAULT_OUTPUT_TEMPLATE, normalizeTemplate, buildTemplateRows, isEdmDefault, codeColumnIndexOf, moneyColumns, FIELD_DEFS, KDV_FIELD_IDS, vatUncovered, vatFieldsFor, excelDateSerial, dateColumns, type OutputTemplate } from '../src/core/excel/template';
 import { buildTemplateWorkbook, EDM_HEADERS } from '../src/core/excel/writeOutput';
 import { unzipSync, strFromU8 } from 'fflate';
 import type { Invoice } from '../src/core/types';
 
 const mk = (no: string, over: Partial<Invoice> = {}): Invoice => ({
   no, order: 0, date: '10/09/2026', isoDate: '2026-09-10', uuid: 'u-1', supplierVkn: '1234567801', supplierName: 'ÖRNEK KIRTASİYE LTD. ŞTİ.',
-  amount: 1500, taxExclusive: 1250, taxAmount: 250, currency: 'TRY', invoiceType: 'Satış', profile: 'Temel', hasView: true, itemText: '', lineCount: 2, typeCode: 'SATIS', lines: [], vatRates: [], vatBreakdown: [], excluded: false, ...over,
+  amount: 1500, taxInclusive: 1500, taxExclusive: 1250, taxAmount: 250, currency: 'TRY', invoiceType: 'Satış', profile: 'Temel', hasView: true, itemText: '', lineCount: 2, typeCode: 'SATIS', lines: [], vatRates: [], vatBreakdown: [], excluded: false, ...over,
 });
 const list = [mk('ABC2026000000001'), mk('ABC2026000000002', { amount: 27000 })];
 const ctx = { codes: new Map([['ABC2026000000001', '600.002']]), accountNames: new Map([['600.002', 'Alıcılar']]), sources: new Map([['ABC2026000000001', 'rule' as const]]), firmName: 'ABC', batchName: 'Eylül 2026' };
@@ -98,5 +98,40 @@ describe('çıktı şablonu', () => {
     expect(codeColumnIndexOf(n)).toBe(-1);
     // kullanıcının yazdığı başlık korunur
     expect(normalizeTemplate({ columns: [{ id: 'vatOtherTax' as never, header: 'Ek KDV' }], rowOrder: 'date-no', sheetName: 'S' }).columns).toEqual([{ id: 'vatOddTax', header: 'Ek KDV' }]);
+  });
+  it('başlıklar her zaman metin: "%20", "0,2", "20" sayıya dönmez; boş başlık boş metin', async () => {
+    const t: OutputTemplate = { columns: [{ id: 'no', header: '%20' }, { id: 'vat20Base', header: '0,2' }, { id: 'vat20Tax', header: '20' }, { id: 'blank', header: '' }], rowOrder: 'date-no', sheetName: 'S' };
+    const wb = XLSX.read(await buildTemplateWorkbook(list, t, ctx));
+    const ws = wb.Sheets.S;
+    expect(['A1', 'B1', 'C1', 'D1'].map((a) => ws[a]?.t)).toEqual(['s', 's', 's', 's']);
+    expect(['A1', 'B1', 'C1'].map((a) => ws[a].v)).toEqual(['%20', '0,2', '20']);
+  });
+  it('aynı alan birden çok sütunda (GMS: Tarih C ve Belge Tarihi H); fatura toplamı ödenecekten ayrı alan', () => {
+    const t: OutputTemplate = { columns: [{ id: 'date', header: 'Tarih' }, { id: 'no', header: 'No' }, { id: 'date', header: 'Belge Tarihi' }, { id: 'amount', header: 'Tutar' }, { id: 'taxInclusive', header: 'Genel Toplam' }], rowOrder: 'date-no', sheetName: 'S' };
+    const rows = buildTemplateRows([mk('OPR1', { amount: 562.25, taxInclusive: 496.26 })], t, ctx);
+    expect(rows[1]).toEqual(['10/09/2026', 'OPR1', '10/09/2026', 562.25, 496.26]);
+    expect(normalizeTemplate(t).columns.map((c) => c.id)).toEqual(['date', 'no', 'date', 'amount', 'taxInclusive']);
+  });
+  it('tarih hücreleri: varsayılan metin; seçilirse gerçek Excel tarihi (02.09.2026 = 46267, GMS şablonundaki gibi)', async () => {
+    expect(excelDateSerial('02/09/2026')).toEqual({ serial: 46267, time: false });
+    expect(excelDateSerial('02.09.2026 14:30')).toEqual({ serial: 46267 + 14.5 / 24, time: true });
+    expect(excelDateSerial('2026-09-02')).toEqual({ serial: 46267, time: false });
+    expect(excelDateSerial('')).toBeNull();
+    expect(excelDateSerial('31/13/2026')).toBeNull();
+    const cols: OutputTemplate['columns'] = [{ id: 'no', header: 'No' }, { id: 'date', header: 'Tarih' }, { id: 'arrival', header: 'Geliş' }];
+    const text: OutputTemplate = { columns: cols, rowOrder: 'date-no', sheetName: 'S' };
+    expect(dateColumns(text)).toEqual([]);
+    const two = [mk('A1', { date: '02/09/2026' }), mk('A2', { date: '30/09/2026', edm: { 'Geliş Zamanı': '30.09.2026 09:15' } })];
+    let ws = XLSX.read(await buildTemplateWorkbook(two, text, ctx)).Sheets.S;
+    expect([ws.B2.t, ws.B2.v]).toEqual(['s', '02/09/2026']);
+    const asDate = normalizeTemplate({ ...text, dateCells: 'date' });
+    expect(asDate.dateCells).toBe('date');
+    expect(normalizeTemplate({ ...text, dateCells: 'x' as never }).dateCells).toBeUndefined();
+    expect(dateColumns(asDate)).toEqual([1, 2]);
+    ws = XLSX.read(await buildTemplateWorkbook(two, asDate, ctx), { cellNF: true }).Sheets.S;
+    expect([ws.B2.t, ws.B2.v, ws.B2.z]).toEqual(['n', 46267, 'dd.mm.yyyy']);
+    expect(ws.C2?.v ?? '').toBe(''); // geliş zamanı yok: boş kalır
+    expect([ws.C3.t, ws.C3.z]).toEqual(['n', 'dd.mm.yyyy hh:mm']);
+    expect(ws.A2.t).toBe('s');
   });
 });

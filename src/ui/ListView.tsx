@@ -168,7 +168,7 @@ export function ListView() {
                         <span class="row-code">{i.excluded && <span class="excl-tag" title="Excel'e girmez">hariç</span>}{c ?? <span class="muted">—</span>}</span>
                       </td>
                     );
-                    if (id === 'issues') return <td class="lv-issues">{iss.length > 0 && <span class="warn" title={iss.map((x) => S.ISSUE_LABEL[x]).join('\n')}>! {iss.map((x) => S.ISSUE_LABEL[x]).join(' · ')}</span>}</td>;
+                    if (id === 'issues') return <td class="lv-issues">{iss.length > 0 && <span class="warn" title={iss.map((x) => S.issueText(i, x)).join('\n')}>! {iss.map((x) => S.ISSUE_LABEL[x]).join(' · ')}</span>}</td>;
                     if (id === 'source') return <td class="muted">{src}</td>;
                     return cell(id, FIELD_DEFS[id].value(i, ctx));
                   })}

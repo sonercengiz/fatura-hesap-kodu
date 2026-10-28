@@ -66,6 +66,8 @@ export interface VatPart {
   rate: number | null;
   base: number;
   tax: number;
+  /** Matrah faturada yazmıyordu; vergiden ya da vergiler hariç toplamdan hesaplandı */
+  derived?: boolean;
 }
 
 export interface UblLine {
@@ -176,7 +178,7 @@ export function parseUbl(xmlText: string): UblInvoice {
   const taxTotals = children(root, NS.cac, 'TaxTotal');
   const taxAmount = taxTotals.length ? taxTotals.reduce((s, t) => s + (toNum(cbc(t, 'TaxAmount')) ?? 0), 0) : null;
   const payable = toNum(cbc(total, 'PayableAmount'));
-  const taxInclusive = toNum(cbc(total, 'TaxInclusiveAmount'));
+  const taxInclusive = taxInclusiveOf(root);
   const currency = cbc(root, 'DocumentCurrencyCode') || child(total, NS.cbc, 'PayableAmount')?.getAttribute('currencyID') || 'TRY';
 
   // Gömülü XSLT: AdditionalDocumentReference içindeki ikili nesnelerden stylesheet olanı
@@ -292,33 +294,64 @@ export function vatRatesOf(root: Element | null): number[] {
   return out.sort((a, b) => a - b);
 }
 
-/** KDV alt toplamlarını orana göre toplar (aynı oran birden çok satırda olabilir) */
-function addKdvParts(taxTotals: Element[], into: Map<number | null, VatPart>): void {
+/** Vergiler dahil fatura toplamı (LegalMonetaryTotal/TaxInclusiveAmount) */
+export function taxInclusiveOf(root: Element | null): number | null {
+  return toNum(cbc(cac(root, 'LegalMonetaryTotal'), 'TaxInclusiveAmount'));
+}
+
+interface KdvSub { rate: number; base: number | null; tax: number }
+
+/** KDV alt toplamları (oranı olanlar); matrahı yazılmamışsa base null */
+function kdvSubtotals(taxTotals: Element[]): KdvSub[] {
+  const out: KdvSub[] = [];
   for (const tt of taxTotals) {
     for (const st of children(tt, NS.cac, 'TaxSubtotal')) {
       if (!isKdvSubtotal(st)) continue;
       const rate = toNum(cbc(st, 'Percent'));
       if (rate === null) continue;
-      const base = toNum(cbc(st, 'TaxableAmount')) ?? 0;
-      const tax = toNum(cbc(st, 'TaxAmount')) ?? 0;
-      // Oran vergiyi açıklamıyorsa (kuruş yuvarlamasından fazla) oran sütununa yazılmaz
-      const fits = Math.abs((base * rate) / 100 - tax) <= Math.max(0.02, Math.abs(base) * 0.0001);
-      const key = fits ? Math.round(rate * 100) / 100 : null;
-      const p = into.get(key) ?? { rate: key, base: 0, tax: 0 };
-      if (fits) p.base += base;
-      p.tax += tax;
-      into.set(key, p);
+      out.push({ rate, base: toNum(cbc(st, 'TaxableAmount')), tax: toNum(cbc(st, 'TaxAmount')) ?? 0 });
     }
   }
+  return out;
 }
 
-/** KDV oranına göre matrah ve vergi: fatura düzeyindeki vergi özetinden; yoksa kalemlerden */
+/** Oran vergiyi açıklıyor mu (kuruş yuvarlamasından fazla sapma yok) */
+const rateFits = (base: number, rate: number, tax: number) => Math.abs((base * rate) / 100 - tax) <= Math.max(0.02, Math.abs(base) * 0.0001);
+
+/**
+ * KDV oranına göre matrah ve vergi: fatura düzeyindeki vergi özetinden; yoksa (ya da matrahı yazılmamışsa) kalemlerden.
+ * Matrah hiçbir yerde yazılmamışsa (bazı operatör faturaları) türetilir ve `derived` işaretlenir: tek KDV oranı varsa ve
+ * vergiler hariç toplam o oranın vergisini açıklıyorsa o toplam, yoksa vergi ÷ oran.
+ */
 export function vatBreakdownOf(root: Element | null): VatPart[] {
-  const m = new Map<number | null, VatPart>();
-  addKdvParts(children(root, NS.cac, 'TaxTotal'), m);
-  if (m.size === 0) for (const ln of children(root, NS.cac, 'InvoiceLine')) addKdvParts(children(ln, NS.cac, 'TaxTotal'), m);
+  let subs = kdvSubtotals(children(root, NS.cac, 'TaxTotal'));
+  if (subs.length === 0 || subs.some((s) => s.base === null)) {
+    const fromLines = children(root, NS.cac, 'InvoiceLine').flatMap((ln) => kdvSubtotals(children(ln, NS.cac, 'TaxTotal')));
+    if (fromLines.length && fromLines.every((s) => s.base !== null)) subs = fromLines;
+  }
   const r2 = (n: number) => Math.round(n * 100) / 100;
-  return [...m.values()].map((p) => ({ rate: p.rate, base: r2(p.base), tax: r2(p.tax) })).sort((a, b) => (a.rate ?? 1e9) - (b.rate ?? 1e9));
+  const exclusive = toNum(cbc(cac(root, 'LegalMonetaryTotal'), 'TaxExclusiveAmount'));
+  const m = new Map<number | null, VatPart>();
+  for (const s of subs) {
+    let base = s.base;
+    let derived = false;
+    if (base === null) {
+      derived = true;
+      if (subs.length === 1 && exclusive !== null && rateFits(exclusive, s.rate, s.tax)) base = exclusive;
+      else base = s.rate > 0 ? r2((s.tax * 100) / s.rate) : 0;
+    }
+    // Oran vergiyi açıklamıyorsa (Turkcell oran alanına tutar yazıyor) oran sütununa yazılmaz, matrahı sayılmaz
+    const fits = rateFits(base, s.rate, s.tax);
+    const key = fits ? Math.round(s.rate * 100) / 100 : null;
+    const p = m.get(key) ?? { rate: key, base: 0, tax: 0 };
+    if (fits) p.base += base;
+    p.tax += s.tax;
+    if (derived && fits) p.derived = true;
+    m.set(key, p);
+  }
+  return [...m.values()]
+    .map((p) => ({ rate: p.rate, base: r2(p.base), tax: r2(p.tax), ...(p.derived ? { derived: true } : {}) }))
+    .sort((a, b) => (a.rate ?? 1e9) - (b.rate ?? 1e9));
 }
 
 /** Fatura kalemleri (yedek görünüm için). */

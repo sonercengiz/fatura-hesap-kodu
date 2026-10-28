@@ -1,5 +1,5 @@
 import type { Invoice } from '../types';
-import { buildTemplateRows, textColumns, moneyColumns, type OutputTemplate, type RowContext } from './template';
+import { buildTemplateRows, textColumns, moneyColumns, dateColumns, excelDateSerial, type OutputTemplate, type RowContext } from './template';
 
 export { EDM_HEADERS, EDM_SHEET_NAME } from './edm';
 import { EDM_SHEET_NAME } from './edm';
@@ -14,10 +14,11 @@ export async function buildTemplateWorkbook(invoices: Invoice[], t: OutputTempla
   const ws = XLSX.utils.aoa_to_sheet(aoa);
   const textCols = textColumns(t);
   const moneyCols = new Set(moneyColumns(t));
-  // EDM dosyasıyla aynı görünüm: kalın başlık, 18,43 genişlik, tutarlar #,##0.00
+  const dateCols = dateColumns(t);
+  // EDM dosyasıyla aynı görünüm: kalın başlık, 18,43 genişlik, tutarlar #,##0.00.
+  // Başlık her zaman metin: "%20" gibi başlıklar sayıya (0,2) dönmez
   for (let c = 0; c < aoa[0].length; c++) {
-    const h = ws[XLSX.utils.encode_cell({ r: 0, c })];
-    if (h) h.s = { font: { bold: true, name: 'Calibri', sz: 11 } };
+    ws[XLSX.utils.encode_cell({ r: 0, c })] = { t: 's', v: String(aoa[0][c] ?? ''), s: { font: { bold: true, name: 'Calibri', sz: 11 } } };
   }
   ws['!cols'] = aoa[0].map(() => ({ wch: 17.6 })); // Excel'de 18,43 görünür (EDM dosyasıyla aynı)
   for (let r = 1; r < aoa.length; r++) {
@@ -29,6 +30,11 @@ export async function buildTemplateWorkbook(invoices: Invoice[], t: OutputTempla
     for (const c of moneyCols) {
       const cell = ws[XLSX.utils.encode_cell({ r, c })];
       if (cell && cell.t === 'n') cell.z = '#,##0.00\\ ';
+    }
+    // Gerçek tarih: Excel seri günü + tarih biçimi (saat dilimi kayması olmaz); tanınmayan değer olduğu gibi kalır
+    for (const c of dateCols) {
+      const d = excelDateSerial(aoa[r][c]);
+      if (d) ws[XLSX.utils.encode_cell({ r, c })] = { t: 'n', v: d.serial, z: d.time ? 'dd.mm.yyyy hh:mm' : 'dd.mm.yyyy' };
     }
   }
   const wb = XLSX.utils.book_new();

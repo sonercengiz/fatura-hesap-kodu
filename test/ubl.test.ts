@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { parseUbl, parseLines, dominantMonth, sniffEncoding, UblParseError } from '../src/core/xml/parseUbl';
 import { typeLabel, profileLabel, toDisplayDate } from '../src/core/types';
+import { operatorXml } from './e2e-helpers.mjs';
 
 const read = (f: string) => readFileSync(resolve(process.cwd(), 'test/fixtures', f), 'utf8');
 
@@ -90,5 +91,22 @@ describe('UBL-TR XML ayrıştırma', () => {
     expect(parseUbl(base.replace(top, odd)).vatBreakdown).toEqual([{ rate: 20, base: 148.85, tax: 29.77 }, { rate: null, base: 0, tax: 1.55 }]);
     // Fatura düzeyinde özet yok: kalemlerin vergileri toplanır
     expect(parseUbl(base.replace(top, '')).vatBreakdown).toEqual([{ rate: 20, base: 1250, tax: 250 }]);
+  });
+  it('matrahı yazılmamış KDV (operatör faturası): vergiler hariç toplamdan ya da vergi ÷ orandan türetilir; ödenecek ≠ fatura toplamı', () => {
+    const base = read('ubl-sirket.xml');
+    const u = parseUbl(operatorXml(base));
+    // Tek KDV oranı ve vergiler hariç toplam vergiyi açıklıyor: matrah = 360,98 (ÖİV ve telsiz ücreti KDV değildir)
+    expect(u.vatBreakdown).toEqual([{ rate: 20, base: 360.98, tax: 72.2, derived: true }]);
+    expect(u.payable).toBe(562.25);
+    expect(u.taxInclusive).toBe(496.26);
+    // İki oran, matrah yok: vergi ÷ oran
+    const sub = (t: string, p: string) => `<cac:TaxSubtotal><cbc:TaxAmount currencyID="TRY">${t}</cbc:TaxAmount><cbc:Percent>${p}</cbc:Percent><cac:TaxCategory><cac:TaxScheme><cbc:Name>KDV</cbc:Name><cbc:TaxTypeCode>0015</cbc:TaxTypeCode></cac:TaxScheme></cac:TaxCategory></cac:TaxSubtotal>`;
+    const top = base.match(/<cac:TaxTotal><cbc:TaxAmount currencyID="TRY">250.00<\/cbc:TaxAmount><cac:TaxSubtotal>.*?<\/cac:TaxTotal>\n/)![0];
+    const noLineTax = base.replace(/<cac:TaxTotal><cbc:TaxAmount currencyID="TRY">(200|50)\.00<\/cbc:TaxAmount>.*?<\/cac:TaxTotal>/g, '');
+    expect(parseUbl(noLineTax.replace(top, `<cac:TaxTotal><cbc:TaxAmount currencyID="TRY">0</cbc:TaxAmount>${sub('20', '20')}${sub('10.01', '10')}</cac:TaxTotal>\n`)).vatBreakdown).toEqual([
+      { rate: 10, base: 100.1, tax: 10.01, derived: true }, { rate: 20, base: 100, tax: 20, derived: true },
+    ]);
+    // Özette matrah yok ama kalemlerde var: kalemlerden (türetilmiş sayılmaz)
+    expect(parseUbl(base.replace(top, `<cac:TaxTotal><cbc:TaxAmount currencyID="TRY">250</cbc:TaxAmount>${sub('250', '20')}</cac:TaxTotal>\n`)).vatBreakdown).toEqual([{ rate: 20, base: 1250, tax: 250 }]);
   });
 });

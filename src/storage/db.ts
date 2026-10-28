@@ -5,7 +5,7 @@ import type { HistoryEntry } from '../core/suggest/engine';
 import { sheetToInvoices, type EdmSheet } from '../core/legacy';
 import type { Rule } from '../core/rules';
 import type { OutputTemplate } from '../core/excel/template';
-import { itemTextOf, linesOf, vatBreakdownOf, vatRatesOf, type LineInfo, type VatPart } from '../core/xml/parseUbl';
+import { itemTextOf, linesOf, taxInclusiveOf, vatBreakdownOf, vatRatesOf, type LineInfo, type VatPart } from '../core/xml/parseUbl';
 import { upgradeRule } from '../core/rules';
 
 export interface FirmHistoryEntry extends HistoryEntry {
@@ -48,6 +48,8 @@ export interface InvoiceRecord {
   supplierVkn: string;
   supplierName: string;
   payable: number | null;
+  /** Vergiler dahil fatura toplamı; eski kayıtlarda v13 XML'den tamamlar */
+  taxInclusive?: number | null;
   taxExclusive: number | null;
   taxAmount: number | null;
   lineCount: number | null;
@@ -266,6 +268,18 @@ class AppDb extends Dexie {
         if (!r.xml || r.vatBreakdown) return;
         try {
           r.vatBreakdown = vatBreakdownOf(new DOMParser().parseFromString(r.xml, 'application/xml').documentElement);
+        } catch { /* olduğu gibi kalır */ }
+      });
+    });
+    // v13: vergiler dahil fatura toplamı (ödenecekten ayrı) ve matrahı yazılmamış KDV satırları için türetilmiş matrah
+    this.version(13).stores({}).upgrade(async (tx) => {
+      if (typeof DOMParser === 'undefined') return;
+      await tx.table('invoices').toCollection().modify((r: InvoiceRecord) => {
+        if (!r.xml) return;
+        try {
+          const root = new DOMParser().parseFromString(r.xml, 'application/xml').documentElement;
+          r.vatBreakdown = vatBreakdownOf(root);
+          r.taxInclusive = taxInclusiveOf(root);
         } catch { /* olduğu gibi kalır */ }
       });
     });

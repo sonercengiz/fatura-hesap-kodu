@@ -3,7 +3,7 @@ import { EDM_HEADERS } from './edm';
 
 /** Çıktı Excel'ine yazılabilecek alanlar */
 export type OutputFieldId =
-  | 'no' | 'date' | 'arrival' | 'type' | 'profile' | 'vkn' | 'name' | 'amount' | 'currency'
+  | 'no' | 'date' | 'arrival' | 'type' | 'profile' | 'vkn' | 'name' | 'amount' | 'taxInclusive' | 'currency'
   | 'status' | 'responseStatus' | 'localStatus' | 'envelope' | 'kepObjection' | 'gibCancel' | 'officialObjection' | 'gibObjection' | 'branch' | 'hash' | 'tag'
   | 'code' | 'uuid' | 'taxExclusive' | 'tax' | 'lineCount' | 'source' | 'accountName' | 'firm' | 'batch' | 'blank'
   | 'vat0Base' | 'vat1Base' | 'vat1Tax' | 'vat8Base' | 'vat8Tax' | 'vat10Base' | 'vat10Tax' | 'vat18Base' | 'vat18Tax' | 'vat20Base' | 'vat20Tax' | 'vatOddTax';
@@ -15,10 +15,28 @@ export interface OutputColumn {
 
 export type RowOrder = 'date-no' | 'date-supplier' | 'added';
 
+/** Tarih sütunları Excel'e nasıl yazılır: metin (GG/AA/YYYY, EDM dosyası gibi) ya da gerçek Excel tarihi */
+export type DateCells = 'text' | 'date';
+
 export interface OutputTemplate {
   columns: OutputColumn[];
   rowOrder: RowOrder;
   sheetName: string;
+  /** Yoksa metin */
+  dateCells?: DateCells;
+}
+
+export const DATE_CELLS_LABELS: Record<DateCells, string> = {
+  text: 'Metin (GG/AA/YYYY, EDM listesi gibi)',
+  date: 'Gerçek Excel tarihi (GG.AA.YYYY)',
+};
+
+/** Sütun harfi: 0 → A, 25 → Z, 26 → AA */
+export function colName(i: number): string {
+  let s = '';
+  let n = i;
+  do { s = String.fromCharCode(65 + (n % 26)) + s; n = Math.floor(n / 26) - 1; } while (n >= 0);
+  return s;
 }
 
 export const ROW_ORDER_LABELS: Record<RowOrder, string> = {
@@ -45,6 +63,8 @@ interface FieldDef {
   text?: boolean;
   /** Para biçimi (#,##0.00) */
   money?: boolean;
+  /** Tarih: şablon seçerse gerçek Excel tarihi olarak yazılır */
+  date?: boolean;
   value: (inv: Invoice, ctx: RowContext) => CellValue;
 }
 
@@ -66,13 +86,14 @@ const vatOdd = (i: Invoice): CellValue => {
 
 export const FIELD_DEFS: Record<OutputFieldId, FieldDef> = {
   no: { label: 'Fatura No', header: 'Fatura No', edm: true, value: edmOr('Fatura No', (i) => i.no) },
-  date: { label: 'Fatura Tarihi (GG/AA/YYYY)', header: 'Fatura Tarihi', edm: true, value: edmOr('Fatura Tarihi', (i) => i.date) },
-  arrival: { label: 'Geliş Zamanı (EDM listesinden; yoksa boş)', header: 'Geliş Zamanı', edm: true, value: edmOr('Geliş Zamanı', () => '') },
+  date: { label: 'Fatura Tarihi', header: 'Fatura Tarihi', edm: true, date: true, value: edmOr('Fatura Tarihi', (i) => i.date) },
+  arrival: { label: 'Geliş Zamanı (EDM listesinden; yoksa boş)', header: 'Geliş Zamanı', edm: true, date: true, value: edmOr('Geliş Zamanı', () => '') },
   type: { label: 'Fatura Tipi (Satış, İstisna…)', header: 'Fatura Tipi', edm: true, value: edmOr('Fatura Tipi', (i) => i.invoiceType) },
   profile: { label: 'Fatura Türü (Temel, Ticari…)', header: 'Fatura Türü', edm: true, value: edmOr('Fatura Türü', (i) => i.profile) },
   vkn: { label: 'Gönderen VKN/TCKN', header: 'Gönderen VKN/TCKN', edm: true, text: true, value: edmOr('Gönderen VKN/TCKN', (i) => i.supplierVkn) },
   name: { label: 'Gönderen Unvan/Ad Soyad', header: 'Gönderen Unvan/Ad Soyad', edm: true, value: edmOr('Gönderen Unvan/Ad Soyad', (i) => i.supplierName) },
   amount: { label: 'Tutar (ödenecek)', header: 'Tutar', edm: true, money: true, value: edmOr('Tutar', (i) => i.amount) },
+  taxInclusive: { label: 'Fatura toplamı (vergiler dahil; ödenecekten farklı olabilir)', header: 'Fatura Toplamı', edm: false, money: true, value: (i) => i.taxInclusive },
   currency: { label: 'Döviz Cinsi', header: 'Döviz Cinsi', edm: true, value: edmOr('Döviz Cinsi', (i) => i.currency || 'TRY') },
   status: { label: 'Durum (EDM listesinden; yoksa boş)', header: 'Durum', edm: true, value: edmOr('Durum', () => '') },
   responseStatus: { label: 'Yanıt Durumu (EDM listesinden; yoksa boş)', header: 'Yanıt Durumu', edm: true, value: edmOr('Yanıt Durumu', () => '') },
@@ -122,7 +143,7 @@ const ALL_VAT_IDS = new Set<OutputFieldId>([...RATE_FIELDS.flatMap(([, ids]) => 
  */
 export function vatUncovered(inv: Invoice, t: OutputTemplate): (number | null)[] {
   const ids = new Set(t.columns.map((c) => c.id));
-  if (![...ids].some((id) => ALL_VAT_IDS.has(id))) return [];
+  if (!usesVat(t)) return [];
   const out: (number | null)[] = [];
   for (const p of inv.vatBreakdown) {
     if (p.rate === null) { if (p.tax && !ids.has('vatOddTax')) out.push(null); continue; }
@@ -166,7 +187,7 @@ export function normalizeTemplate(t: Partial<OutputTemplate> | undefined | null)
   // Hesap Kodu zorunlu değil: uygulama yalnızca veri toplamak için de kullanılabilir
   if (cols.length === 0) return DEFAULT_OUTPUT_TEMPLATE;
   const rowOrder: RowOrder = t?.rowOrder && t.rowOrder in ROW_ORDER_LABELS ? t.rowOrder : 'date-no';
-  return { columns: cols, rowOrder, sheetName: (t?.sheetName ?? '').trim() || 'Sheet0' };
+  return { columns: cols, rowOrder, sheetName: (t?.sheetName ?? '').trim() || 'Sheet0', ...(t?.dateCells === 'date' ? { dateCells: 'date' as const } : {}) };
 }
 
 /** Şablonun EDM varsayılanıyla aynı olup olmadığı (bilgi amaçlı) */
@@ -185,6 +206,35 @@ export function buildTemplateRows(invoices: Invoice[], t: OutputTemplate, ctx: R
 /** Metin tipinde yazılması gereken sütun indeksleri (0 tabanlı) */
 export function textColumns(t: OutputTemplate): number[] {
   return t.columns.map((c, k) => (FIELD_DEFS[c.id].text ? k : -1)).filter((k) => k >= 0);
+}
+
+/** Gerçek Excel tarihi olarak yazılacak sütunlar (şablon metin istiyorsa boş) */
+export function dateColumns(t: OutputTemplate): number[] {
+  if (t.dateCells !== 'date') return [];
+  return t.columns.map((c, k) => (FIELD_DEFS[c.id].date ? k : -1)).filter((k) => k >= 0);
+}
+
+/** "GG/AA/YYYY", "GG.AA.YYYY", "YYYY-AA-GG" (isteğe bağlı saatle) → Excel seri günü; tanınmazsa null */
+export function excelDateSerial(v: CellValue): { serial: number; time: boolean } | null {
+  if (typeof v !== 'string') return null;
+  const s = v.trim();
+  let m = s.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+  let y: number, mo: number, d: number;
+  if (m) { d = +m[1]; mo = +m[2]; y = +m[3]; } else {
+    m = s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+    if (!m) return null;
+    y = +m[1]; mo = +m[2]; d = +m[3];
+  }
+  if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+  const day = (Date.UTC(y, mo - 1, d) - Date.UTC(1899, 11, 30)) / 864e5;
+  const time = m[4] !== undefined;
+  const frac = time ? (+m[4] * 3600 + +m[5] * 60 + +(m[6] ?? 0)) / 86400 : 0;
+  return { serial: day + frac, time };
+}
+
+/** Şablonda KDV dökümü sütunu var mı */
+export function usesVat(t: OutputTemplate): boolean {
+  return t.columns.some((c) => ALL_VAT_IDS.has(c.id));
 }
 
 export function moneyColumns(t: OutputTemplate): number[] {

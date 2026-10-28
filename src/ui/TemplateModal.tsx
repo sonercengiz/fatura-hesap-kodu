@@ -2,9 +2,7 @@ import { useState } from 'preact/hooks';
 import * as S from './state';
 import { askConfirm } from './dialog';
 import { fmtCell } from '../core/num';
-import { FIELD_DEFS, KDV_FIELD_IDS, vatFieldsFor, vatUncovered, ROW_ORDER_LABELS, DEFAULT_OUTPUT_TEMPLATE, isEdmDefault, buildTemplateRows, type OutputTemplate, type OutputFieldId, type RowOrder } from '../core/excel/template';
-
-const colName = (i: number) => { let s = ''; let n = i; do { s = String.fromCharCode(65 + (n % 26)) + s; n = Math.floor(n / 26) - 1; } while (n >= 0); return s; };
+import { FIELD_DEFS, KDV_FIELD_IDS, DATE_CELLS_LABELS, colName, type DateCells, vatFieldsFor, vatUncovered, ROW_ORDER_LABELS, DEFAULT_OUTPUT_TEMPLATE, isEdmDefault, buildTemplateRows, type OutputTemplate, type OutputFieldId, type RowOrder } from '../core/excel/template';
 
 /** Çıktı Excel şablonu: sütunlar (sıra, başlık), satır sırası, sayfa adı; canlı önizleme. */
 export function TemplateModal() {
@@ -22,11 +20,13 @@ export function TemplateModal() {
   const others = S.firms.value.filter((f) => f.id !== S.firm.value.id && f.outputTemplate);
   const copyFrom = (id: string) => { const f = others.find((x) => x.id === id); if (f?.outputTemplate) setT(JSON.parse(JSON.stringify(f.outputTemplate))); };
   const used = new Set(t.columns.map((c) => c.id));
-  const addable = (Object.keys(FIELD_DEFS) as OutputFieldId[]).filter((id) => id === 'blank' || !used.has(id));
+  // Aynı alan birden çok sütunda olabilir (GMS şablonunda Tarih C ve Belge Tarihi H aynı değer); eklenmişse harfi söylenir
+  const addable = Object.keys(FIELD_DEFS) as OutputFieldId[];
+  const lettersOf = (id: OutputFieldId) => t.columns.map((c, k) => (c.id === id ? colName(k) : '')).filter(Boolean).join(', ');
   const update = (k: number, patch: Partial<typeof t.columns[number]>) => setT({ ...t, columns: t.columns.map((c, i) => (i === k ? { ...c, ...patch } : c)) });
   const remove = (k: number) => setT({ ...t, columns: t.columns.filter((_, i) => i !== k) });
   const move = (from: number, to: number) => { if (from === to) return; const cols = t.columns.slice(); const [c] = cols.splice(from, 1); cols.splice(to, 0, c); setT({ ...t, columns: cols }); };
-  const add = () => { if (!addId) return; setT({ ...t, columns: [...t.columns, { id: addId, header: FIELD_DEFS[addId].header }] }); const next = addable.filter((x) => x !== addId)[0]; if (next) setAddId(next); };
+  const add = () => { if (!addId) return; setT({ ...t, columns: [...t.columns, { id: addId, header: FIELD_DEFS[addId].header }] }); const next = addable.find((x) => x !== addId && x !== 'blank' && !used.has(x)); if (next && addId !== 'blank') setAddId(next); };
   const missingKdv = KDV_FIELD_IDS.filter((id) => !used.has(id));
   // Açık dönemde şablonun KDV dökümüne yazılamayan oranlar (örn. eski %8/%18): söylenir, tek tıkla eklenir
   const gapCount = new Map<string, number>();
@@ -80,7 +80,7 @@ export function TemplateModal() {
             ))}
             <div class="tpl-add">
               <select value={addId} onChange={(e) => setAddId((e.currentTarget as HTMLSelectElement).value as OutputFieldId)} onKeyDown={(e) => e.stopPropagation()}>
-                {addable.map((id) => <option value={id}>{FIELD_DEFS[id].label}</option>)}
+                {addable.map((id) => <option value={id}>{FIELD_DEFS[id].label}{id !== 'blank' && used.has(id) ? ` · ekli: ${lettersOf(id)}` : ''}</option>)}
               </select>
               <button onClick={add} disabled={!addable.length}>+ Sütun ekle</button>
               <button class="tpl-add-kdv" onClick={addKdv} disabled={!missingKdv.length} title="KDV oranına göre matrah ve KDV tutarı sütunları: %0, %1, %10, %20 ve diğer oranlar (%8, %18 gibi). Faturada o oran yoksa hücre boş kalır.">{missingKdv.length ? `+ KDV dökümü (${missingKdv.length} sütun)` : 'KDV dökümü ekli'}</button>
@@ -101,12 +101,17 @@ export function TemplateModal() {
             <label><span>Sayfa adı</span>
               <input value={t.sheetName} onInput={(e) => setT({ ...t, sheetName: (e.currentTarget as HTMLInputElement).value })} onKeyDown={(e) => e.stopPropagation()} placeholder="Sheet0" />
             </label>
-            <div class="muted small">Hesap kodu, VKN ve ETTN metin tipinde yazılır (Excel sayıya çevirmez). Tutar, matrah, vergi sayıdır. Şablon bu firmaya özeldir ve çalışma alanı yedeğine girer; yeni firma açık firmanın şablonuyla başlar.</div>
+            <label><span>Tarih hücreleri</span>
+              <select class="tpl-date-cells" value={t.dateCells ?? 'text'} onChange={(e) => { const v = (e.currentTarget as HTMLSelectElement).value as DateCells; const { dateCells: _, ...rest } = t; setT(v === 'date' ? { ...rest, dateCells: 'date' } : rest); }} onKeyDown={(e) => e.stopPropagation()} title="GMS'nin kendi içe aktarma şablonu gerçek tarih kullanır; EDM listesi metin">
+                {(Object.keys(DATE_CELLS_LABELS) as DateCells[]).map((o) => <option value={o}>{DATE_CELLS_LABELS[o]}</option>)}
+              </select>
+            </label>
+            <div class="muted small">Başlıklar, hesap kodu, VKN ve ETTN metin tipinde yazılır (Excel sayıya çevirmez; "%20" başlığı "0,2" olmaz). Tutar, matrah, vergi sayıdır. Şablon bu firmaya özeldir ve çalışma alanı yedeğine girer; yeni firma açık firmanın şablonuyla başlar.</div>
             <div class="tpl-preview">
               <div class="muted small">Önizleme (ilk {sample.length} satır)</div>
               <div class="table-box">
                 <table>
-                  <thead><tr>{preview[0]?.map((h, c) => <th class={t.columns[c].id === 'code' ? 'code-col' : FIELD_DEFS[t.columns[c].id]?.money ? 'r' : ''}>{String(h ?? '') || <span class="muted">(boş)</span>}</th>)}</tr></thead>
+                  <thead><tr>{preview[0]?.map((h, c) => <th class={t.columns[c].id === 'code' ? 'code-col' : FIELD_DEFS[t.columns[c].id]?.money ? 'r' : ''}><span class="col-letter">{colName(c)}</span>{String(h ?? '') || <span class="muted">(boş)</span>}</th>)}</tr></thead>
                   <tbody>{preview.slice(1).map((r) => <tr>{r.map((v, c) => <td class={t.columns[c].id === 'code' ? 'code-col' : FIELD_DEFS[t.columns[c].id]?.money ? 'r' : ''}>{fmtCell(v, !!FIELD_DEFS[t.columns[c].id]?.money)}</td>)}</tr>)}</tbody>
                 </table>
               </div>

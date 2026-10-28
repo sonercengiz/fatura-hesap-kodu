@@ -17,6 +17,8 @@ export interface Invoice {
   supplierName: string;
   /** Ödenecek tutar */
   amount: number | null;
+  /** Fatura toplamı, vergiler dahil (TaxInclusiveAmount); ödenecekten farklı olabilir (yuvarlama, önceki dönem borcu). XML'siz kayıtlarda null */
+  taxInclusive: number | null;
   /** Vergiler hariç toplam */
   taxExclusive: number | null;
   /** Toplam vergi */

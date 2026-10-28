@@ -198,7 +198,7 @@ export const sections: Section[] = [
     body: (
       <>
         <Shot src="14-onizleme.png" alt="Önizleme" notes={[
-          <>Dikkat sayacı: kod almamış, listede olmayan kod, tevkifat/iade.</>,
+          <>Dikkat sayacı: kod almamış, listede olmayan kod, tevkifat/iade, KDV matrahı faturada yazmayıp vergiden hesaplanan, ödenecek tutarı fatura toplamından farklı (yuvarlama, önceki dönem borcu).</>,
           <>Hesap Kodu sütunu (varsayılan C). Diğer sütunlar EDM listesiyle aynı düzendedir.</>,
           <>Sarı satır = kod yok. Çift tıklayınca o faturaya gidersiniz.</>,
           <>Sütunları GMS'inize göre düzenlemek için <b>Şablonu düzenle</b> (ya da üst çubukta Excel üret'in yanındaki <b>Şablon</b>).</>,

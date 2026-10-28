@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'preact/hooks';
 import * as S from './state';
-import { FIELD_DEFS } from '../core/excel/template';
+import { FIELD_DEFS, colName } from '../core/excel/template';
 import { fmtCell } from '../core/num';
 
 export function PreviewModal() {
@@ -13,7 +13,7 @@ export function PreviewModal() {
   const at = S.outputCodeAt.value;
   const money = S.outputTemplate.value.columns.map((c) => !!FIELD_DEFS[c.id]?.money);
   const box = useRef<HTMLDivElement>(null);
-  const counts = { 'no-code': 0, 'not-in-chart': 0, type: 0, 'vat-gap': 0, 'no-view': 0 } as Record<S.IssueKind, number>;
+  const counts = Object.fromEntries(Object.keys(S.ISSUE_LABEL).map((k) => [k, 0])) as Record<S.IssueKind, number>;
   // Şablonda Hesap Kodu sütunu yoksa (yalnızca veri toplama) kodsuzluk çıktı için sorun değildir
   const skip = new Set<S.IssueKind>(at < 0 ? ['no-view', 'no-code', 'not-in-chart'] : ['no-view']);
   const rowIssues = rows.slice(1).map((_, i) => {
@@ -38,7 +38,7 @@ export function PreviewModal() {
           <div class="spacer" />
           <span class="legend">
             {(Object.keys(counts) as S.IssueKind[]).filter((k) => counts[k] > 0).map((k) => (
-              <span class={`lg lg-${k}`}>{S.ISSUE_LABEL[k]}: {counts[k]}</span>
+              <span class={`lg lg-${k}`} title={S.ISSUE_LABEL[k]}>{S.ISSUE_SHORT[k] ?? S.ISSUE_LABEL[k]}: {counts[k]}</span>
             ))}
             {firstIssue < 0 && <span class="lg ok">Sorun yok</span>}
           </span>
@@ -51,7 +51,8 @@ export function PreviewModal() {
               <tr>
                 <th class="num">#</th>
                 <th class="pv-incl" title="İşareti kaldırılan fatura Excel'e yazılmaz (istisnai faturalar). Ctrl+Z geri alır.">Excel</th>
-                {rows[0]?.map((h, c) => <th class={c === at ? 'code-col' : money[c] ? 'r' : ''}>{String(h ?? '')}</th>)}
+                {/* Sütun harfi GMS şablon tanımıyla (Fatura Tarih Kolonu C gibi) karşılaştırmak için */}
+                {rows[0]?.map((h, c) => <th class={c === at ? 'code-col' : money[c] ? 'r' : ''}><span class="col-letter">{colName(c)}</span>{String(h ?? '') || <span class="muted">(boş)</span>}</th>)}
               </tr>
             </thead>
             <tbody>
@@ -61,7 +62,7 @@ export function PreviewModal() {
                 const out = !!inv?.excluded;
                 const cls = out ? 'excluded' : iss.includes('no-code') ? 'iss-code' : iss.includes('not-in-chart') ? 'iss-other iss-chart' : iss.length ? 'iss-other' : '';
                 return (
-                  <tr data-i={i} class={cls} title={out ? 'Excel\'e girmez' : iss.map((k) => S.ISSUE_LABEL[k]).join('\n')} onDblClick={() => { if (inv) { S.goTo(S.invoices.value.indexOf(inv)); S.previewOpen.value = false; } }}>
+                  <tr data-i={i} class={cls} title={out ? 'Excel\'e girmez' : inv ? iss.map((k) => S.issueText(inv, k)).join('\n') : ''} onDblClick={() => { if (inv) { S.goTo(S.invoices.value.indexOf(inv)); S.previewOpen.value = false; } }}>
                     <td class="num">{out ? '—' : excelRow++}</td>
                     <td class="pv-incl"><input type="checkbox" checked={!out} title={out ? 'Excel\'e geri al' : 'Excel\'den çıkar'} onClick={(e) => e.stopPropagation()} onChange={(e) => inv && S.setExcluded([inv.no], !(e.currentTarget as HTMLInputElement).checked)} /></td>
                     {r.map((v, c) => <td class={c === at ? 'code-col' : money[c] ? 'r' : ''}>{fmtCell(v, money[c])}</td>)}
@@ -74,14 +75,4 @@ export function PreviewModal() {
       </div>
     </div>
   );
-}
-
-function colName(i: number) {
-  let s = '';
-  let n = i;
-  do {
-    s = String.fromCharCode(65 + (n % 26)) + s;
-    n = Math.floor(n / 26) - 1;
-  } while (n >= 0);
-  return s;
 }

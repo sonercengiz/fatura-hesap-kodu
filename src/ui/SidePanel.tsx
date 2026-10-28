@@ -87,7 +87,7 @@ export function SidePanel() {
           )}
           {inv.lines.length > 0 && <Lines inv={inv} />}
           {S.issuesFor(inv).filter((k) => k !== 'no-code').map((k) => (
-            <div class="issue">{S.ISSUE_LABEL[k]}</div>
+            <div class="issue">{S.issueText(inv, k)}</div>
           ))}
         </div>
       )}
@@ -145,7 +145,7 @@ export function SidePanel() {
                 <span class="row-name">{i.supplierName}</span>
                 <span class="row-sub">{i.no} · {i.date}</span>
               </span>
-              <span class="row-code">{i.excluded && <span class="excl-tag" title="Excel'e girmez">hariç</span>}{bulk && <span class="bulk-tag" title="Toplu atandı (doğal gezintide atlanır, Ctrl+ok ile görülür)">toplu</span>}{ruled && <span class="bulk-tag" title="Kuralla atandı (doğal gezintide atlanır, Ctrl+ok ile görülür)">kural</span>}{c ?? ''}{iss.length > 0 && <span class="warn-dot" title={iss.map((x) => S.ISSUE_LABEL[x]).join('\n')}>!</span>}</span>
+              <span class="row-code">{i.excluded && <span class="excl-tag" title="Excel'e girmez">hariç</span>}{bulk && <span class="bulk-tag" title="Toplu atandı (doğal gezintide atlanır, Ctrl+ok ile görülür)">toplu</span>}{ruled && <span class="bulk-tag" title="Kuralla atandı (doğal gezintide atlanır, Ctrl+ok ile görülür)">kural</span>}{c ?? ''}{iss.length > 0 && <span class="warn-dot" title={iss.map((x) => S.issueText(i, x)).join('\n')}>!</span>}</span>
             </div>
           );
         })}
