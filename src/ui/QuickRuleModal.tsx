@@ -19,6 +19,18 @@ interface Chip {
 
 const fmtN = fmtTrNumber;
 
+type DateSpan = 'day' | 'month' | 'year';
+const MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+/** Fatura tarihinden gün, ay ya da yıl aralığı */
+function dateSpan(iso: string, span: DateSpan): { from: string; to: string } {
+  const y = iso.slice(0, 4), m = iso.slice(5, 7);
+  if (span === 'day') return { from: iso, to: iso };
+  if (span === 'year') return { from: `${y}-01-01`, to: `${y}-12-31` };
+  const last = new Date(Date.UTC(Number(y), Number(m), 0)).getUTCDate();
+  return { from: `${y}-${m}-01`, to: `${y}-${m}-${String(last).padStart(2, '0')}` };
+}
+const spanOf = (c: Cond): DateSpan => (c.from === c.to ? 'day' : c.from?.endsWith('-01-01') && c.to?.endsWith('-12-31') ? 'year' : 'month');
+
 /**
  * "Bu faturadan kural": seçili faturanın bütün bilgileri rozet olarak; kullanıcı işaretler, eşiği/kelimeyi düzeltir,
  * kodu yazar, kaydeder. Kural penceresine girmeden çok koşullu kural kurar; "Gelişmiş…" aynı taslakla büyük pencereyi açar.
@@ -94,7 +106,13 @@ function QuickRuleBody({ inv, origin }: { inv: Invoice; origin: { lineIndex: num
         {(k === 'vkn' || k === 'name') && <span class="qchip-val">{c.cond.text}</span>}
         {k === 'type' && <span class="qchip-val">{TYPE_LABELS[(c.cond.text ?? '').toUpperCase()] ?? c.cond.text}</span>}
         {k === 'vat' && <span class="qchip-val">%{c.cond.text}</span>}
-        {k === 'date' && <span class="qchip-val">{fmtDateTr(c.cond.from ?? '')}</span>}
+        {k === 'date' && (c.on && inv.isoDate ? (
+          <select class="qchip-span" value={spanOf(c.cond)} title="Kural hangi tarih aralığındaki faturalara uysun" onKeyDown={stop} onClick={(e) => e.preventDefault()} onChange={(e) => { const sp = (e.currentTarget as HTMLSelectElement).value as DateSpan; update(c.id, (x) => ({ ...x, cond: { ...x.cond, ...dateSpan(inv.isoDate!, sp) } })); }}>
+            <option value="day">{fmtDateTr(inv.isoDate)} (o gün)</option>
+            <option value="month">{MONTHS[Number(inv.isoDate.slice(5, 7)) - 1]} {inv.isoDate.slice(0, 4)} (o ay)</option>
+            <option value="year">{inv.isoDate.slice(0, 4)} (o yıl)</option>
+          </select>
+        ) : <span class="qchip-val">{fmtDateTr(c.cond.from ?? '')}</span>)}
         {isRange(k) && (
           c.on ? (
             <>

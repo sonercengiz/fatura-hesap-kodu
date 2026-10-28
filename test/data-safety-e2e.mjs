@@ -39,7 +39,7 @@ await a.locator('.firm-select').selectOption(firm1); await a.waitForSelector('.i
 await a.locator('.sort-select').selectOption('added'); await a.waitForTimeout(200);
 const before = await a.locator('.progress').innerText();
 for (let i = 0; i < 5; i++) await a.locator('.list .row').nth(i).locator('.row-check').click();
-await a.locator('.files button:has-text("taşı")').click(); await a.waitForSelector('.modal:has-text("Başka firmaya taşı")');
+await a.locator('.files button:has-text("taşı")').click(); await a.waitForSelector('.modal:has-text("ya da döneme taşı")');
 await a.locator('label:has-text("Seçili faturalar") input').check();
 await a.locator('label:has-text("Hedef firma") select').selectOption(gamma); await a.waitForTimeout(150);
 await a.locator('label:has-text("Hedef dönem") select').selectOption(gammaBatch).catch(() => {});

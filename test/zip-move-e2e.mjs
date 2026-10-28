@@ -31,7 +31,7 @@ const alfa=await page.locator('.firm-select option:has-text("Firma 1")').getAttr
 await page.locator('.firm-select').selectOption(alfa); await page.waitForTimeout(400);
 console.log('Firma 1 geri:', await page.locator('.progress').innerText());
 // partiyi Beta'ya taşı
-await page.locator('.files button:has-text("taşı")').click(); await page.waitForSelector('.modal:has-text("Başka firmaya taşı")');
+await page.locator('.files button:has-text("taşı")').click(); await page.waitForSelector('.modal:has-text("ya da döneme taşı")');
 await page.locator('label:has-text("döneminin tamamı") input').check(); await page.locator('.modal button.primary:has-text("Taşı")').click(); await page.waitForTimeout(600);
 console.log('taşıma sonrası firma:', await page.locator('.firm-select option:checked').innerText(), '| parti:', await page.locator('.batch-select option:checked').innerText(), '|', await page.locator('.progress').innerText(), '| toast:', await page.locator('.toast').innerText());
 await page.locator('.firm-select').selectOption(alfa); await page.waitForTimeout(400);
@@ -40,7 +40,7 @@ console.log('Firma 1 şimdi:', await page.locator('.welcome').count() ? 'parti y
 const beta=await page.locator('.firm-select option:has-text("Beta")').getAttribute('value');
 await page.locator('.firm-select').selectOption(beta); await page.waitForTimeout(400);
 await page.locator('.side .row').nth(0).locator('.row-check').click(); await page.locator('.side .row').nth(2).locator('.row-check').click({modifiers:['Shift']});
-await page.locator('.files button:has-text("taşı")').click(); await page.waitForSelector('.modal:has-text("Başka firmaya taşı")');
+await page.locator('.files button:has-text("taşı")').click(); await page.waitForSelector('.modal:has-text("ya da döneme taşı")');
 console.log('kapsam seçili varsayılan:', await page.locator('label:has-text("Seçili faturalar") input').isChecked());
 await page.locator('.modal button.primary:has-text("Taşı")').click(); await page.waitForTimeout(600);
 console.log('Beta kalan:', await page.locator('.progress').innerText(), '| toast:', await page.locator('.toast').innerText());

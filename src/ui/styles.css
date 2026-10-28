@@ -172,6 +172,7 @@ button.danger { color: #b91c1c; border-color: #fca5a5; } button.danger:hover { b
 /* Karanlık temada beyaz fatura çerçevesi ve rehber görselleri hafifçe kısılır */
 :root[data-theme="dark"] .card { box-shadow: 0 4px 24px rgba(0,0,0,.35); }
 :root[data-theme="dark"] .toast { background: #e6e8ec; color: #26282c; }
+.toast-act { margin-left: 12px; padding: 2px 10px; border-radius: 999px; border: 1px solid currentColor; background: transparent; color: inherit; font: inherit; font-weight: 600; cursor: pointer; }
 :root[data-theme="dark"] .modal-backdrop { background: rgba(0,0,0,.55); }
 :root[data-theme="dark"] .drop-hint { background: rgba(109,156,255,.08); }
 :root[data-theme="dark"] button.danger { color: #f1a0a0; border-color: #7a4242; } :root[data-theme="dark"] button.danger:hover { background: #4a2d2d; }
@@ -306,6 +307,7 @@ tr.iss-chart td.code-col { color: var(--warn); text-decoration: underline wavy v
 .lv-head .lv-search { margin: 0; width: 280px; }
 .lv-head select { font-size: 12px; padding: 4px 6px; }
 .lv-hint { width: auto !important; margin: 0 !important; padding: 4px 10px !important; font-size: 13px; }
+.lv-head .rule-make, .lv-head .rule-note { width: auto; margin: 0; } /* listede panel kutusu değil, satır içi */
 .lv-bulk .bulk-bar { margin: 6px 12px 0; } .lv-bulk .bulk-bar:empty { display: none; }
 .lv-table { flex: 1; position: relative; }
 .lv-table table { width: 100%; font-size: 13px; }
@@ -502,6 +504,7 @@ tr.iss-chart td.code-col { color: var(--warn); text-decoration: underline wavy v
 .qchip-val { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 260px; }
 .qchip-text { width: 120px; padding: 1px 6px; font-size: 12px; }
 .qchip-num { width: 90px; padding: 1px 6px; font-size: 12px; text-align: right; font-variant-numeric: tabular-nums; }
+.qchip-span { padding: 1px 4px; font-size: 12px; }
 .qchip-dir { border: 1px solid var(--line); background: transparent; border-radius: 6px; padding: 0 6px; font-size: 12px; line-height: 18px; }
 .qchip-unit { font-size: 11px; color: var(--muted); }
 .qsummary { padding: 6px 0; }

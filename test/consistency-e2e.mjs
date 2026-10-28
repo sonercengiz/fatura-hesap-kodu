@@ -115,13 +115,13 @@ await a.locator('.firm-select').selectOption('__new'); await a.waitForSelector('
 await a.locator('.firm-select').selectOption(firm1); await a.waitForSelector('.list .row'); await a.waitForTimeout(400);
 const before = await count();
 await a.locator('.list .row').nth(0).locator('.row-check').click();
-await a.locator('.files button:has-text("taşı")').click(); await a.waitForSelector('.modal:has-text("Başka firmaya taşı")');
+await a.locator('.files button:has-text("taşı")').click(); await a.waitForSelector('.modal:has-text("ya da döneme taşı")');
 check('taşı penceresi açılınca odak pencerede', await a.evaluate(() => !!document.activeElement?.closest('.modal')), await a.evaluate(() => document.activeElement?.outerHTML.slice(0, 60)));
-const mv = a.locator('.modal:has-text("Başka firmaya taşı")');
+const mv = a.locator('.modal:has-text("ya da döneme taşı")');
 check('taşı: başlıkta düğme yok, altta Vazgeç + Taşı (Enter)', (await mv.locator('.modal-head button').count()) === 0 && (await mv.locator('button.ghost:has-text("Vazgeç")').count()) === 1 && (await mv.locator('button.primary:has-text("Taşı")').innerText()).includes('Enter'), await mv.innerText());
 await a.locator('label:has-text("Seçili faturalar") input').check();
 await a.keyboard.press('Enter'); await a.waitForTimeout(800);
-check('Enter seçili faturayı taşır', (await a.locator('.modal:has-text("Başka firmaya taşı")').count()) === 0 && (await count()) === before - 1, `${await count()} / ${before}`);
+check('Enter seçili faturayı taşır', (await a.locator('.modal:has-text("ya da döneme taşı")').count()) === 0 && (await count()) === before - 1, `${await count()} / ${before}`);
 
 check('sayfa hatası yok', errors.length === 0, errors.join('; '));
 await browser.close();

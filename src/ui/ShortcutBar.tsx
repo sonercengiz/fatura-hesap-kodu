@@ -47,7 +47,7 @@ function SlotButton({ i }: { i: number }) {
   if (code) {
     // Dış öğe düğme değil: ✎ ayrı bir düğme olarak her zaman tıklanabilir (fatura yokken de); atama yalnızca fatura varken
     return (
-      <div class={`slot slot-${i} ${code === cur ? 'active' : ''} ${inv ? '' : 'disabled'}`} role="button" tabIndex={0} onClick={() => { if (inv) S.assign(code); }} onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && inv) { e.preventDefault(); e.stopPropagation(); S.assign(code); } }} title={inv ? `${sc.key.toUpperCase()}: ${code} ata` : `${sc.key.toUpperCase()}: ${code} (fatura seçilince atanır)`}>
+      <div class={`slot slot-${i} ${code === cur ? 'active' : ''} ${inv ? '' : 'disabled'}`} role="button" tabIndex={0} onClick={() => { if (inv) S.giveCode(code); }} onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && inv) { e.preventDefault(); e.stopPropagation(); S.giveCode(code); } }} title={inv ? (S.selected.value.size ? `${sc.key.toUpperCase()}: ${code} kodunu ${S.selected.value.size} seçili faturaya ver` : `${sc.key.toUpperCase()}: ${code} ata`) : `${sc.key.toUpperCase()}: ${code} (fatura seçilince atanır)`}>
         <kbd>{sc.key.toUpperCase()}</kbd>
         <span class="slot-code">{code}</span>
         <button class="slot-icon edit" title="Bu yuvanın kodunu değiştir" onClick={startEdit}>✎</button>
@@ -129,6 +129,7 @@ export function ShortcutBar() {
   }, [manual]);
 
   const cur = S.current.value ? S.assignments.value.get(S.current.value.no) : undefined;
+  const nSel = S.selected.value.size;
 
   const sugg = manual ? completeCode(S.manualText.value, S.knownCodes.value, 6) : [];
 
@@ -147,15 +148,15 @@ export function ShortcutBar() {
             <input
               ref={input}
               class="manual-input"
-              placeholder={cur ? 'Hesap kodu yazın, Enter ile atayın · boş bırakıp Enter: kodu kaldır' : 'Hesap kodu yazın, Enter ile atayın'}
+              placeholder={nSel ? `${nSel} seçiliye kod` : cur ? 'Hesap kodu yazın, Enter ile atayın · boş bırakıp Enter: kodu kaldır' : 'Hesap kodu yazın, Enter ile atayın'}
               value={S.manualText.value}
               onInput={(e) => (S.manualText.value = (e.currentTarget as HTMLInputElement).value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault();
                   const v = S.manualText.value.trim();
-                  if (v) S.assign(v);
-                  else if (cur) { S.clearAssignment().then(() => S.showToast('Kod kaldırıldı (Ctrl+Z geri alır)', 2500)); S.exitManual(); }
+                  if (v) S.giveCode(v);
+                  else if (cur && !nSel) { S.clearAssignment().then(() => S.showToast('Kod kaldırıldı (Ctrl+Z geri alır)', 2500)); S.exitManual(); }
                   else S.exitManual();
                 } else if (e.key === 'Escape') {
                   e.preventDefault();
@@ -169,9 +170,9 @@ export function ShortcutBar() {
             />
             <div class="sugg">
               {sugg.map((c) => (
-                <button class="ghost tiny" onMouseDown={(e) => { e.preventDefault(); S.assign(c); }}>{c}</button>
+                <button class="ghost tiny" onMouseDown={(e) => { e.preventDefault(); S.giveCode(c); }}>{c}</button>
               ))}
-              <span class="muted">{cur ? 'Boş Enter: kodu kaldır · ' : ''}Esc: vazgeç · Tab: ilk öneri · Ctrl+.: listede ara</span>
+              <span class="muted">{nSel ? <><b>{nSel} seçili faturaya verilir</b> · </> : cur ? 'Boş Enter: kodu kaldır · ' : ''}Esc: vazgeç · Tab: ilk öneri · Ctrl+.: listede ara</span>
             </div>
           </>
         ) : (

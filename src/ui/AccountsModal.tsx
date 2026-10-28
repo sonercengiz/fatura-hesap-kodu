@@ -22,7 +22,7 @@ export function AccountsModal() {
         <div class="form">
           <div class="muted small">Kod + isim listesi. <kbd>Ctrl+.</kbd> ile kod ya da isimle aranıp atanır; listede olmayan kodlar panelde ve önizlemede uyarılır. Liste firmaya bağlıdır ve yedeğe girer.</div>
           <label>
-            <span>Liste adı</span>
+            <span>Liste adı <span class="muted small">· <kbd>Ctrl+.</kbd> ile açılan arama penceresinin başlığında görünür (örn. "Tekdüzen hesap planı 2026")</span></span>
             <input value={S.firm.value.chartName} onInput={(e) => S.updateFirm({ chartName: (e.currentTarget as HTMLInputElement).value })} placeholder="Hesap kodu listem" onKeyDown={(e) => e.stopPropagation()} />
           </label>
           <div class="row-inline" style="justify-content:flex-start; flex-wrap:wrap">

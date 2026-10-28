@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import * as S from './state';
-import { ruleLabel } from '../core/rules';
-import { BulkBar } from './SidePanel';
+import { BulkBar, MoveButton, RemoveButton, RuleActions } from './SidePanel';
 import { fmtAmount } from './InvoiceCard';
 import { SORT_LABELS, type SortMode } from '../core/sort';
 import { DEFAULT_LIST_COLUMNS, normalizeListColumns, type FilterMode, type ListColumnId } from '../core/types';
@@ -120,17 +119,14 @@ export function ListView() {
           )}
         </div>
         <div class="spacer" />
-        {inv && rule && rule.code !== code && (
-          <button class="hint lv-hint" onClick={() => S.assign(rule.code)} title={`${rule.batchId ? 'Dönem kuralı' : 'Kalıcı kural'}: ${ruleLabel(rule)}`}>
-            {rule.batchId ? 'Dönem kuralı' : 'Kural'}: <b>{rule.code}</b> <kbd>Boşluk</kbd>
-          </button>
-        )}
+        {inv && <RuleActions inv={inv} code={code} compact />}
         {hint && (
           <button class="hint lv-hint" onClick={() => S.assign(hint.code)} title="Bu satıcıya daha önce verilen kodu ata (Boşluk)">
             Bu satıcıya önce: <b>{hint.code}</b> <span class="muted">×{hint.count}</span> <kbd>Boşluk</kbd>
           </button>
         )}
-        {S.firms.value.length > 1 && <button class="ghost tiny" title="Bu dönemi ya da seçili faturaları başka firmaya taşı" onClick={() => (S.moveOpen.value = true)}>taşı</button>}
+        <RemoveButton />
+        <MoveButton />
         <span class="muted small">{S.invoices.value.filter(S.passesFilter).length} / {S.invoices.value.length} fatura · çift tık: görseli aç</span>
       </div>
       <div class="lv-bulk"><BulkBar /></div>

@@ -125,8 +125,12 @@ export function SettingsModal() {
                   <input value={b.name} onKeyDown={(e) => e.stopPropagation()} onChange={(e) => S.renameBatch((e.currentTarget as HTMLInputElement).value)} />
                 </label>
                 <div class="muted small">{S.invoices.value.length} fatura · {S.assignedCount.value} atanmış · {S.viewCount.value} görselli · oluşturulma {new Date(b.createdAt).toLocaleDateString('tr-TR')}</div>
+                {S.lastImport.value?.batchId === b.id && (() => {
+                  const li = S.lastImport.value!;
+                  return <div class="muted small last-import">Son yükleme {new Date(li.at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}: {li.report.added} eklendi{li.report.skipped ? ` · ${li.report.skipped} zaten vardı` : ''}{li.report.failed.length ? ` · ${li.report.failed.length} okunamadı` : ''} <button class="ghost tiny" onClick={() => openOther(() => (S.importReport.value = li.report))}>Ayrıntı</button></div>;
+                })()}
                 <div class="settings-links">
-                  {S.firms.value.length > 1 && <button onClick={() => openOther(() => (S.moveOpen.value = true))}>Başka firmaya taşı…</button>}
+                  <button onClick={() => openOther(() => (S.moveOpen.value = true))}>Başka firmaya ya da döneme taşı…</button>
                   <button class="danger" onClick={async () => {
                     if (await askConfirm({ title: 'Dönemi sil', message: `"${b.name}" dönemi, ${S.invoices.value.length} faturası ve atamalarıyla silinecek; "Bu satıcıya önce" ipuçları da bu atamaları unutur. Yalnızca yer açmak istiyorsanız Yedek › Depolama'dan görselleri arşivlemek yeter. Bu işlem geri alınamaz.`, okLabel: 'Sil', danger: true })) { S.deleteBatch(b.id); close(); }
                   }}>Dönemi sil</button>

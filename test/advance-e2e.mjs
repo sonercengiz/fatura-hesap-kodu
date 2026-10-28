@@ -32,6 +32,6 @@ await page.keyboard.press('q'); await page.waitForTimeout(200);
 console.log('kendiliğinden geçiş — q sonrası:', await pos(), '| rozet:', await badge());
 await page.reload(); await page.waitForSelector('.inv-frame', { timeout: 30000 }); await page.waitForTimeout(300);
 await page.locator('.toolbar button[title="Ayarlar"]').click(); await page.locator('.settings-tabs button:has-text("Görünüm")').click();
-console.log('yenileme sonrası ayar işaretli:', await page.locator('label:has-text("kendiliğinden geç") input').isChecked(), '| klavye metni:', (await (await page.locator('.settings-tabs button:has-text("Klavye")').click(), page.locator('.keys').innerText())).includes('sonrakine geç'));
+console.log('yenileme sonrası ayar işaretli:', await page.locator('label:has-text("kendiliğinden geç") input').isChecked(), '| klavye metni:', (await (await page.locator('.settings-tabs button:has-text("Klavye")').click(), page.locator('.modal .keys-table').innerText())).includes('sıradakine geç'));
 console.log('HATALAR:', errors.length ? errors : 'yok');
 await browser.close();

@@ -5,7 +5,7 @@ import { readEdmSheet, edmRowsByNo } from '../../core/excel/readEdm';
 import { db, type BatchRecord, type InvoiceRecord, type AssignmentRecord } from '../../storage/db';
 import { forgetHtml } from '../../render/xslt';
 import { readZip, ZipError } from '../../core/zip';
-import { batchRec, bumpHistory, busy, historyDelta, importReport, invoiceRecs, settingsOpen, settingsTab, showToast } from './core';
+import { batchRec, bumpHistory, busy, historyDelta, importReport, invoiceRecs, lastImport, settingsOpen, settingsTab, showToast } from './core';
 import { createBatch, isQuotaError, notifyOtherTabs, refreshBatchList, reloadBatch } from './firms';
 import { applyRules } from './rules';
 
@@ -53,8 +53,9 @@ export interface ImportReport {
  * e-Fatura XML dosyalarını açık döneme ekler (dönem yoksa oluşturur). Aynı fatura no dönemde varsa atlanır.
  * XSLT'ler özetleriyle tekilleştirilir; daha önce başka dönemde atanmış faturaların kodu taşınır.
  */
-export async function importXml(rawList: File[]): Promise<ImportReport> {
-  const report: ImportReport = { added: 0, skipped: 0, skippedFiles: [], ruled: 0, upgraded: 0, edmMatched: 0, edmAdded: 0, failed: [] };
+export async function importXml(rawList: File[], dropFailed: ImportReport['failed'] = []): Promise<ImportReport> {
+  // dropFailed: sürüklenen klasörde okunamayan dosya/alt klasörler (raporda görünsün)
+  const report: ImportReport = { added: 0, skipped: 0, skippedFiles: [], ruled: 0, upgraded: 0, edmMatched: 0, edmAdded: 0, failed: [...dropFailed] };
   busy.value = rawList.some((f) => /\.zip$/i.test(f.name)) ? 'ZIP açılıyor…' : busy.value;
   const list = await expandZips(rawList);
   const isXml = (f: File) => /\.xml$/i.test(f.name) || f.type === 'text/xml' || f.type === 'application/xml';
@@ -183,8 +184,9 @@ export async function importXml(rawList: File[]): Promise<ImportReport> {
     if (report.ruled) parts.push(`${report.ruled} kuralla atandı`);
     if (report.skipped) parts.push(`${report.skipped} zaten vardı`);
     if (report.failed.length) parts.push(`${report.failed.length} dosya okunamadı`);
-    showToast(parts.join(' · '), 3500);
-    if (report.failed.length) { console.warn('Okunamayan XML dosyaları', report.failed); importReport.value = report; }
+    if (batchRec.value) lastImport.value = { batchId: batchRec.value.id, at: Date.now(), report };
+    if (report.failed.length) { console.warn('Okunamayan XML dosyaları', report.failed); importReport.value = report; showToast(parts.join(' · '), 3500); }
+    else showToast(parts.join(' · '), 6000, { label: 'Ayrıntı', run: () => (importReport.value = report) });
     notifyOtherTabs();
   } catch (e) {
     if (isQuotaError(e)) {

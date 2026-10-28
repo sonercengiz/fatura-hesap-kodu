@@ -229,7 +229,7 @@ export function App() {
       if (i >= 0) {
         e.preventDefault();
         const c = S.slots.value[i];
-        if (c) S.assign(c);
+        if (c) S.giveCode(c);
         else S.showToast(`${k.toUpperCase()} yuvası boş. Alttaki yuvaya tıklayıp bir kod yazın.`);
       }
     };
@@ -243,7 +243,7 @@ export function App() {
     e.preventDefault();
     setDrag(false);
     const dt = e.dataTransfer;
-    filesFromDataTransfer(dt).then((list) => { if (list.length) S.importXml(list); });
+    filesFromDataTransfer(dt).then(({ files, failed }) => { if (files.length || failed.length) S.importXml(files, failed); });
   };
 
   return (
@@ -315,7 +315,7 @@ export function App() {
       {dialog.value && <DialogModal />}
       <PrintRoot />
       {S.busy.value && <div class="busy">{S.busy.value}</div>}
-      {S.toast.value && <div class="toast">{S.toast.value}</div>}
+      {S.toast.value && <div class="toast">{S.toast.value}{S.toastAction.value && <button class="toast-act" onClick={() => { const act = S.toastAction.value; S.toast.value = null; act?.run(); }}>{S.toastAction.value.label}</button>}</div>}
       {drag && <div class="drop-hint">Bırakın: e-Fatura XML, ZIP ya da klasör</div>}
     </div>
   );

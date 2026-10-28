@@ -232,8 +232,8 @@ await page.setViewportSize({ width: W, height: H }); await wait(500);
 // taşıma penceresi için ikinci firma
 await page.locator('.firm-select').selectOption('__new'); await nameDialog('Örnek Kırtasiye Ltd.');
 const first = await page.locator('.firm-select option:has-text("Deneme")').getAttribute('value'); await page.locator('.firm-select').selectOption(first); await wait(400); await page.waitForSelector('.inv-frame');
-await page.locator('.files button:has-text("taşı")').click(); await page.waitForSelector('.modal:has-text("Başka firmaya taşı")');
-await shot('19-tasi.png', { clip: await clipOf('.modal:has-text("Başka firmaya taşı")', 16) }); await esc();
+await page.locator('.files button:has-text("taşı")').click(); await page.waitForSelector('.modal:has-text("ya da döneme taşı")');
+await shot('19-tasi.png', { clip: await clipOf('.modal:has-text("ya da döneme taşı")', 16) }); await esc();
 
 // ---------- 9. Tamamlandı ve koyu tema ----------
 await page.locator('.toolbar button:has-text("Kurallar")').click(); await page.waitForSelector('.modal.rules'); await esc();

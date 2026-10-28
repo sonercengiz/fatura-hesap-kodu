@@ -33,7 +33,7 @@ export async function moveBatchToFirm(targetFirmId: string) {
 }
 
 /**
- * Seçili faturaları başka firmaya taşır: hedef dönem verilmezse orada yeni dönem açılır.
+ * Seçili faturaları başka firmaya ya da aynı firmanın başka dönemine taşır: hedef dönem verilmezse (ya da açık dönemse) yeni dönem açılır.
  * Atamalar faturayla gider; döneme özel kurallar gitmez.
  */
 export async function moveInvoicesToFirm(nos: string[], targetFirmId: string, targetBatchId: string | null) {
@@ -45,8 +45,13 @@ export async function moveInvoicesToFirm(nos: string[], targetFirmId: string, ta
   const asg = (await db.assignments.where('batchId').equals(b.id).toArray()).filter((a) => set.has(a.no));
   const now = Date.now();
   let target = targetBatchId ? await db.batches.get(targetBatchId) : undefined;
-  if (!target || target.firmId !== targetFirmId) {
-    target = { id: newId(), firmId: targetFirmId, name: dominantMonth(recs.map((r) => r.issueDate)) ?? `Yeni dönem ${new Date(now).toLocaleDateString('tr-TR')}`, autoName: true, createdAt: now, updatedAt: now };
+  if (!target || target.firmId !== targetFirmId || target.id === b.id) {
+    // Hedef firmada aynı adlı dönem varsa (örn. aynı firmada "Eylül 2026"dan bölünen) "(2)" eklenir: dönem listesinde karışmasın
+    const base = dominantMonth(recs.map((r) => r.issueDate)) ?? `Yeni dönem ${new Date(now).toLocaleDateString('tr-TR')}`;
+    const taken = new Set((await db.batches.where('firmId').equals(targetFirmId).toArray()).map((x) => x.name));
+    let name = base;
+    for (let k = 2; taken.has(name); k++) name = `${base} (${k})`;
+    target = { id: newId(), firmId: targetFirmId, name, autoName: name === base, createdAt: now, updatedAt: now }; // ekli ad yüklemede ay adına geri dönmesin
     await db.batches.put(target);
   }
   const existing = new Set((await db.invoices.where('batchId').equals(target.id).primaryKeys()).map((k) => k[1]));
@@ -72,5 +77,5 @@ export async function moveInvoicesToFirm(nos: string[], targetFirmId: string, ta
   const name = firms.value.find((f) => f.id === targetFirmId)?.name ?? '';
   await refreshBatchList();
   await reloadBatch();
-  showToast(`${moved.length} fatura ${name} › "${target.name}" dönemine taşındı${skipped ? ` · ${skipped} fatura orada zaten vardı, burada bırakıldı` : ''}.`, 5000);
+  showToast(`${moved.length} fatura ${b.firmId === targetFirmId ? '' : `${name} › `}"${target.name}" dönemine taşındı${skipped ? ` · ${skipped} fatura orada zaten vardı, burada bırakıldı` : ''}.`, 5000);
 }

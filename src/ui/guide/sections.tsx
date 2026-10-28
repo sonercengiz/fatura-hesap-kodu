@@ -88,7 +88,7 @@ export const sections: Section[] = [
           <>Sıra ve süzgeç (tümü / atanmamış / elle / toplu / kural) ve <b>☑ Seç</b> (<T t="toplu atama" />).</>,
           <>Arama: numara, satıcı, tutar (<K k="Ctrl+F" />).</>,
           <>Liste: kod alan satır yuvanın rengini alır. Tıklayınca o fatura açılır.</>,
-          <>Fatura sayısı; yanlış yüklenen faturayı <b>dönemden sil</b>, başka firmaya <b>taşı</b>.</>,
+          <>Fatura sayısı; yanlış yüklenen faturayı <b>dönemden sil</b>, başka firmaya ya da döneme <b>taşı</b>.</>,
           <>Kalemler: ad, miktar × birim fiyat = tutar, KDV oranı. Yanındaki ⚡ "Bu faturadan kural" penceresini o kalem işaretli açar (bkz. Kurallar).</>,
         ]} />
       </>
@@ -136,7 +136,7 @@ export const sections: Section[] = [
       <>
         <Shot src="11-toplu.png" alt="Toplu seçim" notes={[
           <><b>☑ Seç</b> seçim yardımcılarını açar.</>,
-          <><b>Bu satıcıyı seç</b> ya da <b>Görünenleri seç</b>; kodu yazıp <K k="Enter" /> hepsine verir. Kısayol düğmesine tıklamak da olur.</>,
+          <><b>Bu satıcıyı seç</b> ya da <b>Görünenleri seç</b>; kodu yazıp <K k="Enter" /> hepsine verir. Seçim varken <K k="Q" /> <K k="W" /> <K k="E" />… kısayolları, yuvaya tıklamak, elle giriş ve <K k="Ctrl+." /> da seçilenlerin hepsine verir.</>,
           <>Seçili satırlar. <K k="Shift" />+tık aralık, <K k="Ctrl" />+tık tekil seçer; <K k="Esc" /> bırakır.</>,
         ]} />
         <p>Seçim varken <b>Excel'den çıkar</b> seçili faturaları çıktı dosyasının dışında bırakır (istisnai faturalar için; bkz. Önizleme).</p>
@@ -245,7 +245,7 @@ export const sections: Section[] = [
           <><b>İçe aktar</b>: başka bilgisayarda mevcut veriyle birleştirir, silmez.</>,
           <>Depolama: ne kadar yer kullanıldığı; eski dönemlerin görsellerini <T t="arşivle">arşivleyip</T> yer açın.</>,
         ]} />
-        <Shot src="19-tasi.png" alt="Başka firmaya taşı" w="mid" notes={[<><T t="taşı">Taşı</T>: yanlış firmaya yüklenen dönemi ya da seçili faturaları atamalarıyla doğru firmaya götürür. Geri taşımak aynı penceredendir.</>]} />
+        <Shot src="19-tasi.png" alt="Başka firmaya ya da döneme taşı" w="mid" notes={[<><T t="taşı">Taşı</T>: yanlış firmaya yüklenen dönemi ya da seçili faturaları atamalarıyla doğru firmaya götürür. Seçili faturalar aynı firmanın başka dönemine de taşınır: hedef firmada "bu firma"yı seçin. Geri taşımak aynı penceredendir.</>]} />
       </>
     ),
   },
@@ -284,10 +284,10 @@ export const keys: [string, string][] = [
   ['←  →', 'Önceki / sonraki fatura'],
   ['Tab  Shift+Tab', 'Sonraki / önceki kod almamış fatura (Shift+ok da olur)'],
   ['Ctrl+←  Ctrl+→', 'Toplu ve kuralla atananlar dahil gez'],
-  ['Q W E A S D', 'Yuvadaki kodu ver (ayara göre sıradakine geç)'],
-  ['Boşluk', 'Kuralın ya da satıcıya önce verilen kodu ver'],
-  ['/  Enter  0–9', 'Elle kod girişi (Esc vazgeçer)'],
-  ['Ctrl+.', 'Hesap kodu listesinde ara ve ver'],
+  ['Q W E A S D', 'Yuvadaki kodu ver (seçim varken seçilenlerin hepsine; ayara göre sıradakine geç)'],
+  ['Boşluk', 'Kuralın ya da satıcıya önce verilen kodu ver (yalnızca açık faturaya)'],
+  ['/  Enter  0–9', 'Elle kod girişi (Esc vazgeçer; seçim varken seçilenlere)'],
+  ['Ctrl+.', 'Hesap kodu listesinde ara ve ver (seçim varken seçilenlere)'],
   ['Backspace', 'Kodu kaldır (elle girişte boş Enter da kaldırır)'],
   ['Ctrl+Z  Ctrl+Y', 'Geri al / yinele'],
   ['Shift+tık  Ctrl+tık', 'Listede aralık / tekil seçim'],

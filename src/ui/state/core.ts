@@ -85,8 +85,10 @@ export const printOpen = signal(false);
 /** Çıktı Excel şablonu penceresi */
 export const templateOpen = signal(false);
 
-/** Yükleme sonucu penceresi (okunamayan dosya varsa kendiliğinden açılır) ve son yükleme özeti */
+/** Yükleme sonucu penceresi (okunamayan dosya varsa kendiliğinden açılır) */
 export const importReport = signal<ImportReport | null>(null);
+/** Son yükleme (bu oturumda): bildirimdeki "Ayrıntı" ve Ayarlar › Dönem buradan yeniden açar */
+export const lastImport = signal<{ batchId: string; at: number; report: ImportReport } | null>(null);
 
 export interface PrintOpts { pageBreak: boolean; strip: boolean; summary: boolean; /** parça başına fatura; 0 = tek parça */ chunk: number }
 
@@ -308,8 +310,12 @@ export function attentionIssues(inv: Invoice): IssueKind[] {
 
 export let toastTimer: number | undefined;
 
-export function showToast(msg: string, ms = 2200) {
+/** Bildirimdeki isteğe bağlı düğme (örn. yükleme sonrası "Ayrıntı") */
+export const toastAction = signal<{ label: string; run: () => void } | null>(null);
+
+export function showToast(msg: string, ms = 2200, action?: { label: string; run: () => void }) {
   toast.value = msg;
+  toastAction.value = action ?? null;
   window.clearTimeout(toastTimer);
   toastTimer = window.setTimeout(() => (toast.value = null), ms);
 }
@@ -772,7 +778,11 @@ export async function assignBulk(codeRaw: string) {
   const changes: Change[] = nos.map((no) => ({ no, code, source: 'bulk' }));
   const inverse = await applyChanges(changes);
   pushUndo(`${nos.length} faturaya toplu ${code}`, inverse, changes);
-  selected.value = new Set();
+  sbatch(() => {
+    selected.value = new Set();
+    mode.value = 'nav';
+    manualText.value = '';
+  });
   showToast(`${nos.length} faturaya toplu olarak ${code} atandı`);
   if (current.value && bulkNos.value.has(current.value.no)) next();
 }
@@ -809,11 +819,19 @@ export function closeChart() {
   chartQuery.value = '';
 }
 
+/**
+ * Kod veren her yol (yuva tuşu/tıklaması, elle giriş, Ctrl+. listesi) buradan geçer: seçim varsa seçilenlere toplu,
+ * yoksa açık faturaya. Boşluk (kural/satıcı önerisi) faturaya özgü olduğu için yalnızca açık faturaya verir.
+ */
+export async function giveCode(code: string) {
+  if (selected.value.size > 0) await assignBulk(code);
+  else await assign(code);
+}
+
 /** Pencereden seçilen kodu seçili faturaya (seçim varsa toplu) ata */
 export async function pickFromChart(code: string) {
   closeChart();
-  if (selected.value.size > 0) await assignBulk(code);
-  else await assign(code);
+  await giveCode(code);
 }
 
 export const moveOpen = signal(false);

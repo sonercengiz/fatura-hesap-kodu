@@ -6,7 +6,7 @@ import { fmtAmount } from './InvoiceCard';
 import { SORT_LABELS, type SortMode } from '../core/sort';
 import { ROW_ORDER_LABELS } from '../core/excel/template';
 import { fmtMoney, fmtTrNumber } from '../core/num';
-import type { FilterMode } from '../core/types';
+import type { FilterMode, Invoice } from '../core/types';
 import { useState } from 'preact/hooks';
 
 const LINES_KEY = 'linesOpen';
@@ -76,22 +76,7 @@ export function SidePanel() {
             <span>Atanan{S.ruleNos.value.has(inv.no) && <span class="bulk-tag" title="Kuralla atandı">kural</span>}</span>
             <b>{code ?? '—'}</b>
           </div>
-          {(() => {
-            const r = S.ruleFor.value.get(inv.no);
-            const perm = r?.batchId ? S.overriddenBy(r) : null;
-            if (r && r.code !== code) return (
-              <button class="hint" onClick={() => S.assign(r.code)} title={`${r.batchId ? 'Dönem kuralı' : 'Kalıcı kural'}: ${ruleLabel(r)}`}>
-                {r.batchId ? 'Dönem kuralı' : 'Kural'}: <b>{r.code}</b> <span class="muted">({ruleLabel(r)})</span> <kbd>Boşluk</kbd>
-              </button>
-            );
-            if (r && r.batchId && perm && perm.count > 0 && S.ruleNos.value.has(inv.no)) return (
-              <div class="muted small rule-note" title="Bu döneme özel kural, kalıcı kuralın önüne geçti">Dönem kuralı · kalıcı {perm.codes.join(', ')} yerine</div>
-            );
-            if (code && !r) return (
-              <button class="ghost tiny rule-make" onClick={() => (S.quickRule.value = { lineIndex: -1 })} title="Bu faturanın bilgilerinden kural yap (satıcı, tarih, KDV, kalemler…)">⚡ Kural yap: bu faturadan → {code}</button>
-            );
-            return null;
-          })()}
+          <RuleActions inv={inv} code={code} />
           {S.hint.value && S.hint.value.code !== code && !S.ruleFor.value.has(inv.no) && (
             <button class="hint" onClick={() => S.assign(S.hint.value!.code)} title="Bu satıcıya daha önce verilen kodu ata (Boşluk)">
               Bu satıcıya önce: <b>{S.hint.value.code}</b> <span class="muted">×{S.hint.value.count}</span> <kbd>Boşluk</kbd>
@@ -167,10 +152,8 @@ export function SidePanel() {
       </div>
       <div class="files">
         <span title={`${S.viewCount.value} faturanın görseli (XML'i) var`}>{S.invoices.value.length} fatura{S.viewCount.value < S.invoices.value.length ? ` · ${S.invoices.value.length - S.viewCount.value} görselsiz` : ''}</span>
-        {/* Seçim varken tekli "dönemden sil" gizlenir: hangisinin silineceği karışmasın */}
-        {inv && S.selected.value.size <= 1 && <button class="ghost tiny" title="Bu faturayı dönemden sil (yanlış yüklendiyse). Excel'e girmesin ama dönemde kalsın istiyorsanız listede seçip “Excel'den çıkar”ı kullanın." onClick={async () => { if (await askConfirm({ title: 'Faturayı dönemden sil', message: `${inv.no} (${inv.supplierName}) bu dönemden silinecek; ataması da silinir. Geri almak için XML'ini yeniden yüklemeniz gerekir.`, okLabel: 'Sil', danger: true })) S.removeInvoices([inv.no]); }}>dönemden sil</button>}
-        {S.firms.value.length > 1 && <button class="ghost tiny" title="Bu dönemi ya da seçili faturaları başka firmaya taşı" onClick={() => (S.moveOpen.value = true)}>taşı</button>}
-        {S.selected.value.size > 1 && <button class="ghost tiny" title="Seçili faturaları dönemden sil" onClick={async () => { const n = S.selected.value.size; if (await askConfirm({ title: 'Seçilileri dönemden sil', message: `${n} fatura bu dönemden silinecek; atamaları da silinir. Geri almak için XML'lerini yeniden yüklemeniz gerekir.`, okLabel: 'Sil', danger: true })) S.removeInvoices(Array.from(S.selected.value)); }}>{S.selected.value.size} seçiliyi dönemden sil</button>}
+        <RemoveButton />
+        <MoveButton />
       </div>
     </aside>
   );
@@ -212,7 +195,7 @@ export function BulkBar() {
         <div class="bulk-row">
           <input
             class="bulk-input"
-            placeholder={`${n} faturaya kod: yazıp Enter`}
+            placeholder={`${n} faturaya kod: yazıp Enter (Q W E… yuvaları da seçilenlere verir)`}
             value={code}
             onInput={(e) => setCode((e.currentTarget as HTMLInputElement).value)}
             onKeyDown={(e) => {
@@ -242,4 +225,37 @@ export function BulkBar() {
       )}
     </div>
   );
+}
+
+/** Kural ipucu, dönem kuralı notu ya da "⚡ Kural yap": panelde ve liste görünümünde aynı (listede kural etiketi kısalır) */
+export function RuleActions({ inv, code, compact }: { inv: Invoice; code: string | undefined; compact?: boolean }) {
+  const r = S.ruleFor.value.get(inv.no);
+  const perm = r?.batchId ? S.overriddenBy(r) : null;
+  if (r && r.code !== code) return (
+    <button class={compact ? 'hint lv-hint' : 'hint'} onClick={() => S.assign(r.code)} title={`${r.batchId ? 'Dönem kuralı' : 'Kalıcı kural'}: ${ruleLabel(r)}`}>
+      {r.batchId ? 'Dönem kuralı' : 'Kural'}: <b>{r.code}</b> {!compact && <span class="muted">({ruleLabel(r)})</span>} <kbd>Boşluk</kbd>
+    </button>
+  );
+  if (r && r.batchId && perm && perm.count > 0 && S.ruleNos.value.has(inv.no)) return (
+    <div class="muted small rule-note" title="Bu döneme özel kural, kalıcı kuralın önüne geçti">Dönem kuralı · kalıcı {perm.codes.join(', ')} yerine</div>
+  );
+  if (code && !r) return (
+    <button class="ghost tiny rule-make" onClick={() => (S.quickRule.value = { lineIndex: -1 })} title="Bu faturanın bilgilerinden kural yap (satıcı, tarih, KDV, kalemler…)">⚡ Kural yap{compact ? '' : ': bu faturadan'} → {code}</button>
+  );
+  return null;
+}
+
+/** "dönemden sil": seçim varken seçilenler, yoksa açık fatura (hangisinin silineceği karışmasın diye ikisi birlikte görünmez) */
+export function RemoveButton() {
+  const inv = S.current.value;
+  const n = S.selected.value.size;
+  if (n > 1) return <button class="ghost tiny" title="Seçili faturaları dönemden sil" onClick={async () => { if (await askConfirm({ title: 'Seçilileri dönemden sil', message: `${n} fatura bu dönemden silinecek; atamaları da silinir. Geri almak için XML'lerini yeniden yüklemeniz gerekir.`, okLabel: 'Sil', danger: true })) S.removeInvoices(Array.from(S.selected.value)); }}>{n} seçiliyi dönemden sil</button>;
+  if (!inv) return null;
+  return <button class="ghost tiny" title="Bu faturayı dönemden sil (yanlış yüklendiyse). Excel'e girmesin ama dönemde kalsın istiyorsanız listede seçip “Excel'den çıkar”ı kullanın." onClick={async () => { if (await askConfirm({ title: 'Faturayı dönemden sil', message: `${inv.no} (${inv.supplierName}) bu dönemden silinecek; ataması da silinir. Geri almak için XML'ini yeniden yüklemeniz gerekir.`, okLabel: 'Sil', danger: true })) S.removeInvoices([inv.no]); }}>dönemden sil</button>;
+}
+
+/** "taşı": tek firmada da (aynı firmanın başka dönemine) */
+export function MoveButton() {
+  if (!S.batchRec.value) return null;
+  return <button class="ghost tiny" title="Bu dönemi ya da seçili faturaları başka firmaya ya da başka döneme taşı" onClick={() => (S.moveOpen.value = true)}>taşı</button>;
 }
