@@ -8,7 +8,7 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true });
 const errors = []; const log = (...a) => console.log(...a);
 const p = await (await browser.newContext({ viewport: { width: 1440, height: 900 } })).newPage();
 p.on('pageerror', (e) => errors.push('pageerror: ' + e.message)); p.on('console', (m) => { if (m.type() === 'error' && !/srcdoc|sandboxed|ERR_/.test(m.text())) errors.push('console: ' + m.text()); });
-await p.addInitScript(() => { try { localStorage.setItem('guideSeen', '1'); } catch {} });
+await p.addInitScript(() => { try { localStorage.setItem('guideSeen', '1'); localStorage.setItem('tplMode', 'advanced'); } catch {} });
 await p.goto('http://localhost:5179/'); await p.waitForSelector('.welcome');
 // ---- A11: dönem yokken dolu yuva düzenlenebilir
 await p.locator('.slot.slot-0').click(); await p.keyboard.type('153.01'); await p.keyboard.press('Enter'); await p.waitForTimeout(200);

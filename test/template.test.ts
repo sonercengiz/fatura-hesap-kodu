@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as XLSX from 'xlsx';
-import { edmTemplate, DEFAULT_OUTPUT_TEMPLATE, normalizeTemplate, buildTemplateRows, isEdmDefault, codeColumnIndexOf, moneyColumns, FIELD_DEFS, KDV_FIELD_IDS, vatUncovered, vatFieldsFor, excelDateSerial, dateColumns, type OutputTemplate } from '../src/core/excel/template';
+import { edmTemplate, DEFAULT_OUTPUT_TEMPLATE, normalizeTemplate, buildTemplateRows, isEdmDefault, codeColumnIndexOf, moneyColumns, FIELD_DEFS, KDV_FIELD_IDS, vatUncovered, vatFieldsFor, excelDateSerial, dateColumns, addColumn, removeColumn, renameColumn, moveColumn, toggleField, FIELD_GROUPS, type OutputTemplate, type OutputFieldId } from '../src/core/excel/template';
 import { buildTemplateWorkbook, EDM_HEADERS } from '../src/core/excel/writeOutput';
 import { unzipSync, strFromU8 } from 'fflate';
 import type { Invoice } from '../src/core/types';
@@ -133,5 +133,21 @@ describe('çıktı şablonu', () => {
     expect(ws.C2?.v ?? '').toBe(''); // geliş zamanı yok: boş kalır
     expect([ws.C3.t, ws.C3.z]).toEqual(['n', 'dd.mm.yyyy hh:mm']);
     expect(ws.A2.t).toBe('s');
+  });
+  it('düzenleme işlemleri: ekle, kaldır, adlandır, taşı, alanı aç/kapat; gruplar bütün alanları bir kez kapsar', () => {
+    const t0: OutputTemplate = { columns: [{ id: 'no', header: 'No' }, { id: 'date', header: 'Tarih' }], rowOrder: 'date-no', sheetName: 'S' };
+    const t1 = addColumn(t0, 'amount');
+    expect(t1.columns.map((c) => c.header)).toEqual(['No', 'Tarih', 'Tutar']);
+    expect(moveColumn(t1, 2, 0).columns.map((c) => c.id)).toEqual(['amount', 'no', 'date']);
+    expect(moveColumn(t1, 0, 9)).toBe(t1);
+    expect(renameColumn(t1, 1, 'Belge Tarihi').columns[1]).toEqual({ id: 'date', header: 'Belge Tarihi' });
+    expect(removeColumn(t1, 0).columns.map((c) => c.id)).toEqual(['date', 'amount']);
+    const dup = addColumn(t1, 'date', 'Belge Tarihi');
+    expect(toggleField(dup, 'date', false).columns.map((c) => c.id)).toEqual(['no', 'amount']);
+    expect(toggleField(t1, 'no', true)).toBe(t1);
+    expect(t0.columns.length).toBe(2); // saf: girdi değişmez
+    const grouped = FIELD_GROUPS.flatMap((g) => g.ids);
+    const all = (Object.keys(FIELD_DEFS) as OutputFieldId[]).filter((id) => id !== 'blank');
+    expect([...grouped].sort()).toEqual([...all].sort());
   });
 });

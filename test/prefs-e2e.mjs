@@ -11,7 +11,7 @@ const errors = [];
 let fails = 0;
 const check = (name, ok, got) => { if (!ok) fails++; console.log(ok ? '✓' : '✗', name, ok ? '' : `→ ${got}`); };
 const ctx = await browser.newContext({ viewport: { width: 1366, height: 768 }, acceptDownloads: true });
-await ctx.addInitScript(() => { try { localStorage.setItem('guideSeen', '1'); } catch {} });
+await ctx.addInitScript(() => { try { localStorage.setItem('guideSeen', '1'); localStorage.setItem('tplMode', 'advanced');  } catch {} });
 const a = await ctx.newPage();
 a.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
 const up = 'input[accept*=".zip"]';
@@ -21,33 +21,21 @@ const banner = () => a.locator('.backup-hint').count().then((n) => n > 0);
 await a.goto('http://localhost:5179/'); await a.waitForSelector('.welcome');
 await a.locator(up).setInputFiles(files); await a.waitForSelector('.inv-frame'); await a.waitForFunction(() => !document.querySelector('.busy')); await a.waitForTimeout(300);
 
-// 1) Şablon: değişiklik yokken Esc doğrudan kapatır; "Kaydet ile geçerli olur" yazar
+// 1) Şablon: anında kaydeder (Kaydet yok); Geri al pencere içinde; Esc sormadan kapatır
 await a.locator('.toolbar button:has-text("Şablon")').click(); await a.waitForSelector('.tpl-modal');
 const n0 = await tplCols();
-check('şablon başlığı Kaydet istisnasını söyler', (await a.locator('.tpl-modal .modal-head').innerText()).includes('Kaydet ile geçerli olur'), await a.locator('.tpl-modal .modal-head').innerText());
-await a.keyboard.press('Escape'); await a.waitForTimeout(200);
-check('değişiklik yokken Esc sormadan kapatır', !(await tplOpen()) && (await a.locator('.modal.dialog').count()) === 0, 'açık');
-// değişiklik → "kaydedilmedi" → Esc sorar → Vazgeç: pencere ve değişiklik kalır
-await a.locator('.toolbar button:has-text("Şablon")').click(); await a.waitForSelector('.tpl-modal');
+check('şablonda Kaydet yok, "anında kaydedilir" yazar', (await a.locator('.tpl-modal button:has-text("Kaydet")').count()) === 0 && (await a.locator('.tpl-modal .modal-head').innerText()).includes('anında kaydedilir'), await a.locator('.tpl-modal .modal-head').innerText());
 await a.locator('.tpl-modal .tpl-row').nth(5).locator('button[title="Sütunu kaldır"]').click(); await a.waitForTimeout(150);
-check('değişince "● kaydedilmedi"', (await a.locator('.tpl-modal .tpl-dirty').count()) === 1, await a.locator('.tpl-modal .modal-head').innerText());
-await a.keyboard.press('Escape'); await a.waitForSelector('.modal.dialog');
-check('Esc: "Şablon kaydedilmedi" sorusu', (await a.locator('.modal.dialog').innerText()).includes('kaydedilmedi'), await a.locator('.modal.dialog').innerText());
+await a.locator('.tpl-modal .tpl-row').nth(5).locator('button[title="Sütunu kaldır"]').click(); await a.waitForTimeout(150);
+check('Geri al sayısı söyler', (await a.locator('.tpl-modal button:has-text("Geri al")').innerText()).includes('(2)'), await a.locator('.tpl-modal button:has-text("Geri al")').innerText());
+await a.keyboard.press('Control+z'); await a.waitForTimeout(150);
+check('Ctrl+Z bir adım geri alır', (await tplCols()) === n0 - 1, await tplCols());
 await a.keyboard.press('Escape'); await a.waitForTimeout(200);
-check('soruda Vazgeç: şablon açık, değişiklik duruyor', (await tplOpen()) && (await tplCols()) === n0 - 1, `${await tplOpen()} ${await tplCols()}`);
-// dışına tıklama da sorar → Kaydetmeden kapat: değişiklik atılır
-await a.mouse.click(5, 400); await a.waitForSelector('.modal.dialog');
-await a.locator('.modal.dialog button.danger').click(); await a.waitForTimeout(200);
-check('Kaydetmeden kapat: kapanır', !(await tplOpen()), 'açık');
+check('Esc sormadan kapatır', !(await tplOpen()) && (await a.locator('.modal.dialog').count()) === 0, 'açık');
 await a.locator('.toolbar button:has-text("Şablon")').click(); await a.waitForSelector('.tpl-modal');
-check('atılan değişiklik kaydedilmemiş', (await tplCols()) === n0, await tplCols());
-// Kaydet: sormadan kapanır, kaydeder
-await a.locator('.tpl-modal .tpl-row').nth(5).locator('button[title="Sütunu kaldır"]').click(); await a.waitForTimeout(100);
-await a.locator('.tpl-modal button.primary:has-text("Kaydet")').click(); await a.waitForTimeout(300);
-check('Kaydet: sormadan kapanır', !(await tplOpen()) && (await a.locator('.modal.dialog').count()) === 0, 'açık');
-await a.locator('.toolbar button:has-text("Şablon")').click(); await a.waitForSelector('.tpl-modal');
-check('kaydedilen şablon: bir sütun eksik', (await tplCols()) === n0 - 1, await tplCols());
-await a.locator('.tpl-modal button:has-text("EDM varsayılanına dön")').click(); await a.locator('.tpl-modal button.primary:has-text("Kaydet")').click(); await a.waitForTimeout(300);
+check('değişiklik kaydedilmiş (bir sütun eksik)', (await tplCols()) === n0 - 1, await tplCols());
+await a.locator('.tpl-modal button:has-text("EDM varsayılanına dön")').click(); await a.waitForTimeout(150);
+await a.keyboard.press('Escape'); await a.waitForTimeout(200);
 
 // 2) Yedek şeridi: hiç yedek yoksa çıkar; "1 hafta sonra hatırlat" gizler
 check('hiç yedek yokken şerit', await banner(), 'yok');

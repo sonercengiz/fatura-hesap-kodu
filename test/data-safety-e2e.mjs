@@ -10,7 +10,7 @@ const log = (...a) => console.log(...a);
 const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, acceptDownloads: true });
 const a = await ctx.newPage();
 a.on('pageerror', (e) => errors.push('pageerror: ' + e.message)); a.on('console', (m) => { if (m.type() === 'error' && !/srcdoc|sandboxed|ERR_/.test(m.text())) errors.push('console: ' + m.text()); });
-await a.addInitScript(() => { try { localStorage.setItem('guideSeen', '1'); } catch {} });
+await a.addInitScript(() => { try { localStorage.setItem('guideSeen', '1'); localStorage.setItem('tplMode', 'advanced'); } catch {} });
 const up = 'input[accept*=".zip"]';
 const toast = () => a.locator('.toast').innerText().catch(() => '(yok)');
 const newFirm = async (name) => { await a.locator('.firm-select').selectOption('__new'); await a.waitForSelector('.modal.dialog input'); await a.locator('.modal.dialog input').fill(name); await a.keyboard.press('Enter'); await a.waitForTimeout(500); return a.locator('.firm-select option:checked').getAttribute('value'); };
@@ -52,13 +52,13 @@ await a.locator('.firm-select').selectOption(firm1); await a.waitForSelector('.i
 
 // ---- A3: şablonu özelleştir → dışa aktar → temiz tarayıcıda içe aktar → şablon gelmeli
 await a.locator('button[title="Ayarlar"]').click(); await a.locator('.settings-tabs button:has-text("Çıktı")').click(); await a.locator('button:has-text("Şablonu düzenle")').click(); await a.waitForSelector('.tpl-header');
-await a.locator('.tpl-header').first().fill('Belge No'); await a.locator('.modal button.primary:has-text("Kaydet")').click(); await a.waitForTimeout(300);
+await a.locator('.tpl-header').first().fill('Belge No'); await a.locator('.tpl-modal button:has-text("Kapat")').click(); await a.waitForTimeout(300);
 await a.locator('button[title="Ayarlar"]').click(); await a.locator('.settings-tabs button:has-text("Yedek")').click();
 const [dl] = await Promise.all([a.waitForEvent('download'), a.locator('button:has-text("Dışa aktar (.json)")').click()]);
 const json = `${S}/yedek-sablon.json`; await dl.saveAs(json); await a.keyboard.press('Escape');
 const ctxB = await browser.newContext({ viewport: { width: 1440, height: 900 } }); const b = await ctxB.newPage();
 b.on('pageerror', (e) => errors.push('B pageerror: ' + e.message));
-await b.addInitScript(() => { try { localStorage.setItem('guideSeen', '1'); } catch {} });
+await b.addInitScript(() => { try { localStorage.setItem('guideSeen', '1'); localStorage.setItem('tplMode', 'advanced'); } catch {} });
 await b.goto('http://localhost:5179/'); await b.waitForSelector('.welcome');
 await b.locator('button[title="Ayarlar"]').click(); await b.locator('.settings-tabs button:has-text("Çıktı")').click(); log('B şablon (önce):', (await b.locator('.settings-pane .muted').first().innerText()).replace(/\n/g, ' ').slice(0, 90));
 await b.locator('.settings-tabs button:has-text("Yedek")').click(); await b.locator('input[accept*=".json"]').setInputFiles(json); await b.waitForTimeout(1200);
@@ -69,7 +69,7 @@ await b.locator('button:has-text("Şablonu düzenle")').click(); await b.waitFor
 await b.keyboard.press('Escape');
 // Yerel şablon özelleştirilmişse ezilmez: B'de başlığı değiştir, yedeği yeniden al
 await b.locator('button[title="Ayarlar"]').click(); await b.locator('.settings-tabs button:has-text("Çıktı")').click(); await b.locator('button:has-text("Şablonu düzenle")').click(); await b.waitForSelector('.tpl-header');
-await b.locator('.tpl-header').first().fill('Evrak No'); await b.locator('.modal button.primary:has-text("Kaydet")').click(); await b.waitForTimeout(200);
+await b.locator('.tpl-header').first().fill('Evrak No'); await b.locator('.tpl-modal button:has-text("Kapat")').click(); await b.waitForTimeout(200);
 await b.locator('button[title="Ayarlar"]').click(); await b.locator('.settings-tabs button:has-text("Yedek")').click(); await b.locator('input[accept*=".json"]').setInputFiles(json); await b.waitForTimeout(1200);
 log('B ikinci içe aktarma toast:', await b.locator('.toast').innerText().catch(() => '(yok)'));
 await b.keyboard.press('Escape'); await b.locator('button[title="Ayarlar"]').click(); await b.locator('.settings-tabs button:has-text("Çıktı")').click(); await b.locator('button:has-text("Şablonu düzenle")').click(); await b.waitForSelector('.tpl-header');

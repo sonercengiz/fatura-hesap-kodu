@@ -13,7 +13,7 @@ const errors = [];
 let fails = 0;
 const check = (name, ok, got) => { if (!ok) fails++; console.log(ok ? '✓' : '✗', name, ok ? '' : `→ ${got}`); };
 const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, acceptDownloads: true });
-await ctx.addInitScript(() => { try { localStorage.setItem('guideSeen', '1'); } catch {} });
+await ctx.addInitScript(() => { try { localStorage.setItem('guideSeen', '1'); localStorage.setItem('tplMode', 'advanced');  } catch {} });
 const a = await ctx.newPage();
 a.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
 
@@ -28,7 +28,7 @@ check('düğme sütun sayısını söyler', (await btn.innerText()).includes('8 
 await btn.click();
 check('8 sütun eklendi', (await a.locator('.tpl-header').count()) === n0 + 8, await a.locator('.tpl-header').count());
 check('düğme artık "ekli"', (await btn.innerText()).includes('ekli') && (await btn.isDisabled()), await btn.innerText());
-await a.locator('.tpl-modal button.primary:has-text("Kaydet")').click(); await a.waitForTimeout(300);
+await a.locator('.tpl-modal button:has-text("Kapat")').click(); await a.waitForTimeout(300);
 await a.keyboard.press('Escape').catch(() => {}); await a.waitForTimeout(200);
 
 const [dl] = await Promise.all([a.waitForEvent('download'), a.keyboard.press('F1')]);
@@ -74,7 +74,7 @@ if (STRICT) {
   await a.locator('.tpl-gap button').click();
   check('+ Ekle sütunu geri getirir, uyarı kalkar', (await a.locator('.tpl-gap').count()) === 0 && (await oddRow.count()) === 1, await a.locator('.tpl-gap').count());
   await oddRow.locator('button[title="Sütunu kaldır"]').click();
-  await a.locator('.tpl-modal button.primary:has-text("Kaydet")').click(); await a.waitForSelector('.tpl-modal', { state: 'detached' });
+  await a.locator('.tpl-modal button:has-text("Kapat")').click(); await a.waitForSelector('.tpl-modal', { state: 'detached' });
   await a.keyboard.press('F5'); await a.waitForSelector('.modal.wide .legend');
   const legend = await a.locator('.modal.wide .legend').innerText();
   check('önizleme: sütunu olmayan KDV uyarısı', legend.includes('KDV oranının Excel şablonunda sütunu yok: 1'), legend);

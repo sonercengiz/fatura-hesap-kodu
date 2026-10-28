@@ -4,7 +4,7 @@ import { DEFAULT_SHORTCUT_KEYS } from '../core/types';
 import type { HistoryEntry } from '../core/suggest/engine';
 import { sheetToInvoices, type EdmSheet } from '../core/legacy';
 import type { Rule } from '../core/rules';
-import type { OutputTemplate } from '../core/excel/template';
+import { edmTemplate, normalizeTemplate, type OutputTemplate } from '../core/excel/template';
 import { itemTextOf, linesOf, taxInclusiveOf, vatBreakdownOf, vatRatesOf, type LineInfo, type VatPart } from '../core/xml/parseUbl';
 import { upgradeRule } from '../core/rules';
 
@@ -19,7 +19,7 @@ export interface FirmRecord {
   createdAt: number;
   shortcuts: ShortcutSlot[];
   chartName: string;
-  /** Firmanın çıktı Excel şablonu (her firma kendi GMS düzenine göre); eski kayıtlarda yok → açılışta genel şablon kopyalanır */
+  /** Firmaya özel çıktı şablonu; yoksa genel şablon (ayarlar) kullanılır */
   outputTemplate?: OutputTemplate;
 }
 
@@ -32,6 +32,8 @@ export interface BatchRecord {
   autoName: boolean;
   createdAt: number;
   updatedAt: number;
+  /** Döneme özel çıktı şablonu; yoksa firmanınki ya da genel */
+  outputTemplate?: OutputTemplate;
 }
 
 /** Bir fatura; XML'i (XSLT'si ayrılmış) ve başlık alanları. EDM listesinden gelen ya da XML'i kaldırılan faturada xml null. */
@@ -282,6 +284,22 @@ class AppDb extends Dexie {
           r.taxInclusive = taxInclusiveOf(root);
         } catch { /* olduğu gibi kalır */ }
       });
+    });
+    // v14: şablon kapsamı genel › firma › dönem. Eskiden her firmaya şablonun bir kopyası yazılıyordu; firmalarda en çok kullanılan
+    // şablon genel olur, onunla aynı olan firma kopyaları silinir (genele bağlanır). Her firmanın Excel'i birebir aynı kalır.
+    this.version(14).stores({}).upgrade(async (tx) => {
+      const sRec = await tx.table('settings').get('settings');
+      const sv = (sRec?.value ?? {}) as { outputTemplate?: OutputTemplate; codeColumnIndex?: number; codeHeader?: string };
+      const general = sv.outputTemplate ? normalizeTemplate(sv.outputTemplate) : edmTemplate(sv.codeColumnIndex ?? 3, sv.codeHeader ?? 'Hesap Kodu');
+      const key = (t: OutputTemplate) => JSON.stringify(normalizeTemplate(t));
+      const count = new Map<string, number>();
+      for (const f of (await tx.table('firms').toArray()) as FirmRecord[]) if (f.outputTemplate) count.set(key(f.outputTemplate), (count.get(key(f.outputTemplate)) ?? 0) + 1);
+      if (count.size === 0) return;
+      const max = Math.max(...count.values());
+      const top = [...count].filter(([, n]) => n === max).map(([k]) => k);
+      const best = top.includes(key(general)) ? key(general) : top[0];
+      if (best !== key(general)) await tx.table('settings').put({ key: 'settings', value: { ...sv, outputTemplate: JSON.parse(best) } });
+      await tx.table('firms').toCollection().modify((f: FirmRecord) => { if (f.outputTemplate && key(f.outputTemplate) === best) delete f.outputTemplate; });
     });
   }
 }

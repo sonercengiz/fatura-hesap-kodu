@@ -1,5 +1,5 @@
 import { signal, computed, batch as sbatch } from '@preact/signals';
-import { DEFAULT_SETTINGS, DEFAULT_SHORTCUT_KEYS, typeLabel, profileLabel, toDisplayDate, type Settings, type Invoice, type FilterMode, type ListColumnId } from '../../core/types';
+import { DEFAULT_SETTINGS, DEFAULT_SHORTCUT_KEYS, typeLabel, profileLabel, toDisplayDate, type Settings, type Invoice, type FilterMode } from '../../core/types';
 import { buildTemplateWorkbook, buildFileName } from '../../core/excel/writeOutput';
 import { buildTemplateRows, normalizeTemplate, codeColumnIndexOf, vatUncovered, usesVat, type OutputTemplate, type RowContext } from '../../core/excel/template';
 import { supplierHint, type HistoryEntry } from '../../core/suggest/engine';
@@ -24,10 +24,23 @@ export const EMPTY_FIRM: FirmRecord = { id: DEFAULT_FIRM_ID, name: '', createdAt
 /** Seçili firma; kısayollar, hesap listesi ve öneri geçmişi buna bağlıdır */
 export const firm = computed<FirmRecord>(() => firms.value.find((f) => f.id === currentFirmId.value) ?? firms.value[0] ?? EMPTY_FIRM);
 
-/** Açık firmanın çıktı şablonu (eski kayıtlarda genel ayardaki şablon) */
-export const outputTemplate = computed<OutputTemplate>(() => normalizeTemplate(firm.value.outputTemplate ?? settings.value.outputTemplate));
-
 export const batchRec = signal<BatchRecord | null>(null);
+
+/** Şablonun kapsamı: genel (bütün firmalar), firmaya özel, döneme özel */
+export type TemplateScope = 'general' | 'firm' | 'batch';
+export const SCOPE_LABEL: Record<TemplateScope, string> = { general: 'Genel', firm: 'Bu firma', batch: 'Bu dönem' };
+
+/** Geçerli şablonun geldiği kapsam: en özel tanımlı olan (dönem › firma › genel) */
+export const templateScope = computed<TemplateScope>(() => (batchRec.value?.outputTemplate ? 'batch' : firm.value.outputTemplate ? 'firm' : 'general'));
+
+/** Kapsamın kendi şablonu; o kapsamda tanımlı değilse null (genel her zaman tanımlı) */
+export function templateAt(scope: TemplateScope): OutputTemplate | null {
+  const t = scope === 'batch' ? batchRec.value?.outputTemplate : scope === 'firm' ? firm.value.outputTemplate : settings.value.outputTemplate;
+  return t ? normalizeTemplate(t) : null;
+}
+
+/** Açık dönemde Excel'e yazılan şablon: döneme özel › firmaya özel › genel */
+export const outputTemplate = computed<OutputTemplate>(() => normalizeTemplate(batchRec.value?.outputTemplate ?? firm.value.outputTemplate ?? settings.value.outputTemplate));
 
 export const batchList = signal<BatchRecord[]>([]);
 
@@ -700,8 +713,27 @@ export function outputRowsAll() {
   return buildTemplateRows(outputOrder.value, outputTemplate.value, outputContext());
 }
 
-export async function setOutputTemplate(t: OutputTemplate) {
-  await updateFirm({ outputTemplate: normalizeTemplate(t) });
+/** Şablonu bir kapsama yazar (anında kayıt); kapsam verilmezse geçerli şablonun geldiği kapsam */
+export async function setOutputTemplate(t: OutputTemplate, scope: TemplateScope = templateScope.value) {
+  const n = normalizeTemplate(t);
+  if (scope === 'general') await updateSettings({ outputTemplate: n });
+  else if (scope === 'firm') await updateFirm({ outputTemplate: n });
+  else await updateBatchTemplate(n);
+}
+
+/** Firmaya/döneme özel şablonu siler: o kapsam bir üsttekini (firma → genel, dönem → firma ya da genel) kullanır */
+export async function clearTemplateAt(scope: 'firm' | 'batch') {
+  if (scope === 'firm') await updateFirm({ outputTemplate: undefined });
+  else await updateBatchTemplate(undefined);
+}
+
+async function updateBatchTemplate(t: OutputTemplate | undefined) {
+  const b = batchRec.value;
+  if (!b) return;
+  await db.batches.update(b.id, { outputTemplate: t });
+  batchRec.value = { ...b, outputTemplate: t };
+  batchList.value = batchList.value.map((x) => (x.id === b.id ? { ...x, outputTemplate: t } : x));
+  notifyOtherTabs();
 }
 
 export async function exportExcel() {
@@ -729,15 +761,6 @@ export async function setLayout(layout: Settings['layout'], no?: string) {
     const idx = invoices.value.findIndex((i) => i.no === no);
     if (idx >= 0) currentIndex.value = idx;
   }
-}
-
-/** Liste görünümü sütunları (kendi seçimim): sıra korunur */
-export async function setListColumns(ids: ListColumnId[]) {
-  await updateSettings({ listColumns: ids });
-}
-
-export async function setListFollowsTemplate(on: boolean) {
-  await updateSettings({ listFollowsTemplate: on });
 }
 
 export async function updateSettings(patch: Partial<Settings>) {

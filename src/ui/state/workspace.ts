@@ -3,7 +3,7 @@ import { isEdmDefault, normalizeTemplate, type OutputTemplate } from '../../core
 import { sheetToInvoices, type EdmSheet } from '../../core/legacy';
 import { db, newId, type BatchRecord, type InvoiceRecord, type AssignmentRecord, type AccountRecord, type FirmRecord, type FirmHistoryEntry } from '../../storage/db';
 import { upgradeRule, type Rule } from '../../core/rules';
-import { batchList, batchRec, busy, currentFirmId, firm, firms, lastExportAt, outputTemplate, settings, showToast } from './core';
+import { batchList, batchRec, busy, currentFirmId, firm, firms, lastExportAt, settings, showToast, updateSettings } from './core';
 import { loadFirmData, openBatch, refreshBatchList, reloadBatch } from './firms';
 import { mergeRule } from './rules';
 
@@ -73,12 +73,19 @@ export async function importWorkspace(file: File) {
     const srcFirms: FirmRecord[] = (raw.version ?? 1) >= 2 && raw.firms?.length ? raw.firms : [{ ...firm.value, id: legacyFirm }];
     const firmMap = new Map<string, string>(); // kaynak id → yerel id
     const local = await db.firms.toArray();
-    // Çıktı şablonu firmaya özel; eski yedeklerde (firma şablonsuz) genel ayardaki şablon geçerli
-    const srcTpl = raw.settings?.outputTemplate ? normalizeTemplate(raw.settings.outputTemplate) : null;
+    // Şablonlar: genel (ayarlar) › firmaya özel › döneme özel (dönem kaydıyla gelir). Yerelde özelleştirilmiş şablon ezilmez.
+    const key = (t: OutputTemplate) => JSON.stringify(normalizeTemplate(t));
+    const srcGeneral = raw.settings?.outputTemplate ? normalizeTemplate(raw.settings.outputTemplate) : null;
+    const localGeneral = normalizeTemplate(settings.value.outputTemplate);
     let tplTaken = 0;
     let tplKept = 0;
+    if (srcGeneral && !isEdmDefault(srcGeneral) && key(srcGeneral) !== key(localGeneral)) {
+      if (isEdmDefault(localGeneral)) { await updateSettings({ outputTemplate: srcGeneral }); tplTaken++; } else tplKept++;
+    }
+    const general = normalizeTemplate(settings.value.outputTemplate);
     for (const f of srcFirms) {
-      const inTpl = f.outputTemplate ? normalizeTemplate(f.outputTemplate) : srcTpl;
+      // Eski yedeklerde her firmada genel şablonun kopyası var: genelle aynıysa firmaya özel sayılmaz
+      const inTpl = f.outputTemplate && key(f.outputTemplate) !== key(srcGeneral ?? general) && key(f.outputTemplate) !== key(general) ? normalizeTemplate(f.outputTemplate) : null;
       const byId = local.find((x) => x.id === f.id);
       const byName = local.find((x) => x.name.trim().toLocaleLowerCase('tr') === f.name.trim().toLocaleLowerCase('tr'));
       const target = byId ?? byName;
@@ -87,16 +94,15 @@ export async function importWorkspace(file: File) {
         // Yerelde boş olan kısayol yuvalarını kaynaktan doldur
         const merged = target.shortcuts.map((sc, i) => (sc.code ? sc : { ...sc, code: f.shortcuts?.[i]?.code ?? null }));
         const untouched = !byName && (await db.batches.where('firmId').equals(target.id).count()) === 0;
-        // Şablon: yerel şablon hâlâ EDM varsayılanıysa yedektekini al; özelleştirilmiş yerel şablon ezilmez
-        const localTpl = target.outputTemplate ?? settings.value.outputTemplate;
+        // Firmaya özel şablon: yerelde yoksa yedektekini al; yereldeki farklı özel şablon korunur
         let tpl: { outputTemplate?: OutputTemplate } = {};
-        if (inTpl && !isEdmDefault(inTpl) && JSON.stringify(inTpl) !== JSON.stringify(localTpl)) {
-          if (isEdmDefault(localTpl)) { tpl = { outputTemplate: inTpl }; tplTaken++; } else tplKept++;
+        if (inTpl && (!target.outputTemplate || key(target.outputTemplate) !== key(inTpl))) {
+          if (!target.outputTemplate) { tpl = { outputTemplate: inTpl }; tplTaken++; } else tplKept++;
         }
         await db.firms.update(target.id, untouched ? { shortcuts: merged, name: f.name, chartName: f.chartName || target.chartName, ...tpl } : { shortcuts: merged, ...tpl });
       } else {
         const id = f.id && !local.some((x) => x.id === f.id) ? f.id : newId();
-        await db.firms.put({ ...f, id, createdAt: f.createdAt ?? Date.now(), shortcuts: f.shortcuts ?? DEFAULT_SHORTCUT_KEYS.map((key) => ({ key, code: null })), chartName: f.chartName || 'Hesap kodu listem', outputTemplate: inTpl ?? outputTemplate.value });
+        await db.firms.put({ ...f, id, createdAt: f.createdAt ?? Date.now(), shortcuts: f.shortcuts ?? DEFAULT_SHORTCUT_KEYS.map((key) => ({ key, code: null })), chartName: f.chartName || 'Hesap kodu listem', outputTemplate: inTpl ?? undefined });
         firmMap.set(f.id, id);
       }
     }
@@ -149,7 +155,7 @@ export async function importWorkspace(file: File) {
       if (!up) continue;
       nr += await mergeRule({ ...(r as Rule), ...up, batchId: r.batchId ?? null, firmId: fid(r.firmId) }) ? 1 : 0;
     }
-    const tplNote = tplTaken ? `, ${tplTaken > 1 ? `${tplTaken} firmanın ` : ''}çıktı şablonu` : tplKept ? '; buradaki özelleştirilmiş çıktı şablonu korundu' : '';
+    const tplNote = tplTaken ? `, ${tplTaken > 1 ? `${tplTaken} ` : ''}Excel şablonu` : tplKept ? '; buradaki özelleştirilmiş Excel şablonu korundu' : '';
     firms.value = await db.firms.orderBy('name').toArray();
     await loadFirmData();
     await refreshBatchList();

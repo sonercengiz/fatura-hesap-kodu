@@ -24,8 +24,8 @@ log('atama sonrası:', await page.locator('.progress').innerText(), '| geçerli 
 await page.locator('.lv-table tbody tr').nth(5).locator('td.lv-code').click(); await page.waitForSelector('.manual-input'); await page.keyboard.type('760.02'); await page.keyboard.press('Enter'); await page.waitForTimeout(150);
 log('hücre tıkla → kod:', (await page.locator('.lv-table td.lv-code').allInnerTexts())[5]);
 // sütun seçici: Matrah ekle, Tip kaldır
-await page.locator('.cols-btn').click(); await page.waitForSelector('.cols-pop');
-await page.locator('.cols-add').selectOption('taxExclusive'); await page.locator('.cols-row').filter({ has: page.locator('.cols-name', { hasText: /^Tip$/ }) }).locator('button[title="Sütunu kaldır"]').click(); await page.waitForTimeout(100);
+await page.locator('.lv-cols .add-col').selectOption('taxExclusive'); await page.waitForTimeout(150);
+await page.locator('.lv-table thead th.hdr-edit', { hasText: 'Fatura Tipi' }).hover(); await page.locator('.lv-table thead th.hdr-edit', { hasText: 'Fatura Tipi' }).locator('.hdr-x').click(); await page.waitForTimeout(150);
 log('sütunlar:', (await page.locator('.lv-table thead th').allInnerTexts()).join(' | '));
 await page.mouse.click(900, 600); await page.waitForTimeout(100);
 await page.screenshot({path:`${S}/shots/list-1.png`});

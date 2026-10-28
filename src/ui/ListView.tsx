@@ -3,16 +3,12 @@ import * as S from './state';
 import { BulkBar, MoveButton, RemoveButton, RuleActions } from './SidePanel';
 import { fmtAmount } from './InvoiceCard';
 import { SORT_LABELS, type SortMode } from '../core/sort';
-import { DEFAULT_LIST_COLUMNS, normalizeListColumns, type FilterMode, type ListColumnId } from '../core/types';
-import { FIELD_DEFS, KDV_FIELD_IDS, ROW_ORDER_LABELS, type OutputFieldId } from '../core/excel/template';
+import type { FilterMode, ListColumnId } from '../core/types';
+import { FIELD_DEFS, ROW_ORDER_LABELS, type OutputFieldId } from '../core/excel/template';
 import type { CellValue } from '../core/types';
+import { HeaderCell, AddColumnSelect, scopeNote } from './TemplateParts';
 
-/** Listede kısa başlıklar; diğer alanlarda Excel'deki başlık */
-const SHORT: Partial<Record<ListColumnId, string>> = { date: 'Tarih', name: 'Satıcı', vkn: 'VKN / TCKN', type: 'Tip', profile: 'Tür', amount: 'Tutar', taxExclusive: 'Matrah', tax: 'Vergi', currency: 'Döviz', lineCount: 'Kalem', source: 'Kaynak', accountName: 'Hesap adı', issues: 'Dikkat' };
-const colLabel = (id: ListColumnId) => SHORT[id] ?? (id === 'issues' ? 'Dikkat' : FIELD_DEFS[id].header || FIELD_DEFS[id].label);
-const isField = (id: string) => id in FIELD_DEFS;
-/** Eklenebilecek alanlar: boş sütun hariç bütün çıktı alanları + Dikkat */
-const ALL_LIST_IDS: ListColumnId[] = [...(Object.keys(FIELD_DEFS) as OutputFieldId[]).filter((id) => id !== 'blank'), 'issues'];
+const readShowEmpty = () => { try { return localStorage.getItem('listShowEmpty') === '1'; } catch { return false; } };
 const MONO = new Set<ListColumnId>(['no', 'date', 'vkn', 'uuid']);
 
 /** Bir alan hücresi: para sağa yaslı Türkçe biçimli, numara/VKN/ETTN eşit aralıklı, satıcı ve hesap adı kırpılır */
@@ -30,31 +26,22 @@ function cell(id: OutputFieldId, v: CellValue) {
 export function ListView() {
   const idx = S.currentIndex.value;
   const box = useRef<HTMLDivElement>(null);
-  const [colsOpen, setColsOpen] = useState(false);
-  const follow = S.settings.value.listFollowsTemplate;
-  const own = normalizeListColumns(S.settings.value.listColumns, isField);
-  // Excel şablonuyla aynı: şablonun sütunları, sırası ve başlıkları (boş sütun hariç) + listede Dikkat
-  const cols: { id: ListColumnId; head: string }[] = follow
-    ? [...S.outputTemplate.value.columns.filter((c) => c.id !== 'blank').map((c) => ({ id: c.id as ListColumnId, head: c.header || colLabel(c.id) })), { id: 'issues', head: 'Dikkat' }]
-    : own.map((id) => ({ id, head: colLabel(id) }));
+  const [showEmpty, setShowEmptyState] = useState(readShowEmpty);
+  const setShowEmpty = (v: boolean) => { setShowEmptyState(v); try { localStorage.setItem('listShowEmpty', v ? '1' : '0'); } catch { /* yok say */ } };
+  const t = S.outputTemplate.value;
   const ctx = S.outputContext();
   const inv = S.current.value;
-  const stop = (e: KeyboardEvent) => e.stopPropagation();
-  const moveCol = (k: number, d: -1 | 1) => { const a = own.slice(); const j = k + d; if (j < 0 || j >= a.length) return; [a[k], a[j]] = [a[j], a[k]]; S.setListColumns(a); };
-  const addable = ALL_LIST_IDS.filter((id) => !own.includes(id));
-  const missingKdv = KDV_FIELD_IDS.filter((id) => !own.includes(id));
-  const openTemplate = () => { setColsOpen(false); S.templateOpen.value = true; };
+  // Liste = Excel şablonu (aynı sütunlar, sıra, başlıklar); burada yapılan değişiklik Excel'i de değiştirir. Boş sütun (başlıksız) ve
+  // dönemde bütün satırlarda boş olan sütunlar yalnızca ekranda gizlenir (Excel'e yine yazılır); no ve hesap kodu hep görünür.
+  const all = S.invoices.value;
+  const isEmpty = (id: OutputFieldId) => id !== 'no' && id !== 'code' && all.length > 0 && all.every((i) => { const v = FIELD_DEFS[id].value(i, ctx); return v === null || v === undefined || v === ''; });
+  const hidden = t.columns.map((c, k) => (c.id === 'blank' || (!showEmpty && isEmpty(c.id)) ? k : -1)).filter((k) => k >= 0);
+  const emptyCount = t.columns.filter((c) => c.id !== 'blank' && isEmpty(c.id)).length;
+  const cols: { id: ListColumnId; k: number }[] = [...t.columns.map((c, k) => ({ id: c.id as ListColumnId, k })).filter((c) => !hidden.includes(c.k)), { id: 'issues', k: -1 }];
 
   useEffect(() => {
     box.current?.querySelector<HTMLElement>('tr.current')?.scrollIntoView({ block: 'nearest' });
   }, [idx]);
-
-  useEffect(() => {
-    if (!colsOpen) return;
-    const close = (e: MouseEvent) => { if (!(e.target as HTMLElement).closest('.cols-pop, .cols-btn')) setColsOpen(false); };
-    window.addEventListener('mousedown', close);
-    return () => window.removeEventListener('mousedown', close);
-  }, [colsOpen]);
 
   const rule = inv ? S.ruleFor.value.get(inv.no) : undefined;
   const code = inv ? S.assignments.value.get(inv.no) : undefined;
@@ -81,42 +68,14 @@ export function ListView() {
           {(Object.keys(S.FILTER_LABELS) as FilterMode[]).map((m) => <option value={m}>Göster: {S.FILTER_LABELS[m]}</option>)}
         </select>
         <button class={`tiny bulk-toggle ${S.bulkMode.value || S.selected.value.size ? 'on' : ''}`} title="Toplu seçim yardımcılarını aç/kapat" onClick={() => (S.bulkMode.value = !S.bulkMode.value)}>☑ Seç</button>
-        <div class="cols-wrap">
-          <button class="tiny cols-btn" title="Gösterilecek sütunlar" onClick={() => setColsOpen(!colsOpen)}>Sütunlar ▾</button>
-          {colsOpen && (
-            <div class="cols-pop">
-              <div class="cols-mode">
-                <label><input type="radio" name="lv-cols" checked={!follow} onChange={() => S.setListFollowsTemplate(false)} /> Kendi seçimim</label>
-                <label title="Liste, açık firmanın Excel şablonundaki sütunları aynı sırayla ve aynı başlıklarla gösterir"><input type="radio" name="lv-cols" checked={follow} onChange={() => S.setListFollowsTemplate(true)} /> Excel şablonuyla aynı</label>
-              </div>
-              {follow ? (
-                <div class="muted small cols-note">Liste, <b>{S.firm.value.name}</b> firmasının Excel şablonunu ({S.outputTemplate.value.columns.length} sütun) aynı sırayla ve başlıklarla gösterir; ekranda ne görüyorsanız Excel'e o çıkar. Sona yalnızca listede olan "Dikkat" eklenir.</div>
-              ) : (
-                <>
-                  <div class="cols-list">
-                    {own.map((id, k) => (
-                      <div class={`cols-row ${id === 'code' ? 'is-code' : ''}`}>
-                        <span class="cols-name" title={id === 'issues' ? 'Uyarılar (yalnızca listede)' : FIELD_DEFS[id].label}>{colLabel(id)}</span>
-                        <button class="ghost tiny" title="Sola (yukarı)" disabled={k === 0} onClick={() => moveCol(k, -1)}>↑</button>
-                        <button class="ghost tiny" title="Sağa (aşağı)" disabled={k === own.length - 1} onClick={() => moveCol(k, 1)}>↓</button>
-                        <button class="ghost tiny" title="Sütunu kaldır" disabled={own.length === 1} onClick={() => S.setListColumns(own.filter((x) => x !== id))}>✕</button>
-                      </div>
-                    ))}
-                  </div>
-                  <select class="cols-add" value="" onKeyDown={stop} onChange={(e) => { const v = (e.currentTarget as HTMLSelectElement).value as ListColumnId; if (v) S.setListColumns([...own, v]); }}>
-                    <option value="">+ Sütun ekle…</option>
-                    {addable.map((id) => <option value={id}>{id === 'issues' ? 'Dikkat (uyarılar)' : FIELD_DEFS[id].label}</option>)}
-                  </select>
-                  <div class="cols-foot">
-                    {missingKdv.length > 0 && <button class="tiny" onClick={() => S.setListColumns([...own, ...missingKdv])} title="KDV oranına göre matrah ve KDV sütunları">+ KDV dökümü</button>}
-                    <button class="tiny ghost" onClick={() => S.setListColumns(DEFAULT_LIST_COLUMNS)}>Varsayılana dön</button>
-                  </div>
-                  <div class="muted small cols-note">Seçim bu tarayıcıda hatırlanır; Excel dosyasını etkilemez.</div>
-                </>
-              )}
-              <button class="tiny cols-tpl" onClick={openTemplate}>Excel şablonunu düzenle ({S.firm.value.name})…</button>
-            </div>
+        <div class="lv-cols" title={`Liste, Excel şablonunun aynısıdır: başlığa tıklayıp adını değiştirin, sürükleyip sırasını değiştirin, ✕ ile kaldırın. Değişiklik Excel'e de yansır (${scopeNote(S.templateScope.value)}).`}>
+          <AddColumnSelect t={t} />
+          {emptyCount > 0 && (
+            <button class="tiny ghost lv-empty" onClick={() => setShowEmpty(!showEmpty)} title="Bu dönemde bütün satırlarda boş olan sütunlar (çoğunlukla EDM listesi yüklenmediği için). Yalnızca ekranda gizlenir; Excel'e yine yazılır.">
+              {showEmpty ? `Boş sütunları gizle (${emptyCount})` : `+${emptyCount} boş sütun gizli · göster`}
+            </button>
           )}
+          <button class="tiny ghost" onClick={() => (S.templateOpen.value = true)}>Şablon…</button>
         </div>
         <div class="spacer" />
         {inv && <RuleActions inv={inv} code={code} compact />}
@@ -136,7 +95,7 @@ export function ListView() {
             <tr>
               <th class="lv-check"><input type="checkbox" title="Görünenleri seç / bırak" checked={S.selected.value.size > 0 && S.invoices.value.filter(S.passesFilter).every((i) => S.selected.value.has(i.no))} onChange={(e) => ((e.currentTarget as HTMLInputElement).checked ? S.selectVisible() : S.clearSelection())} /></th>
               <th class="num">#</th>
-              {cols.map((c) => <th class={`lv-${c.id}`}>{c.head}</th>)}
+              {cols.map((c) => (c.id === 'issues' ? <th class="lv-issues" title="Yalnızca listede: uyarılar (Excel'e girmez)">Dikkat</th> : <HeaderCell t={t} k={c.k} cls={`lv-${c.id}`} />))}
             </tr>
           </thead>
           <tbody>

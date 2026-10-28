@@ -135,9 +135,8 @@ await shot('09-ilerleme.png', { clip: await clipOf('.bar', 4) }); await clear();
 
 // ---------- 3. Liste görünümü ----------
 await page.locator('.layout-btn').click(); await page.waitForSelector('.listview'); await wait(200);
-await page.locator('.cols-btn').click(); await page.waitForSelector('.cols-pop');
-await annotate([{ sel: '.lv-head', n: 1, pad: 2 }, { sel: '.cols-pop', n: 2 }, { sel: 'tr.current', n: 3, pad: 0 }, { sel: 'tr.current td.lv-code', n: 4, pos: 'tr' }]);
-await shot('10-liste.png'); await clear(); await page.locator('.cols-btn').click(); await page.waitForSelector('.cols-pop', { state: 'detached' });
+await annotate([{ sel: '.lv-head', n: 1, pad: 2 }, { sel: '.lv-table thead tr', n: 2, pad: 0 }, { sel: 'tr.current', n: 3, pad: 0 }, { sel: 'tr.current td.lv-code', n: 4, pos: 'tr' }]);
+await shot('10-liste.png'); await clear();
 // toplu seçim
 await page.locator('.bulk-toggle').click(); await page.locator('button:has-text("Bu satıcıyı seç")').click(); await wait(150);
 await page.locator('.bulk-input').fill('770.03');
@@ -187,10 +186,10 @@ await page.locator('.rule-code').press('Enter'); await wait(300); await esc(); a
 
 // ---------- 6. Önizleme, şablon ----------
 await page.keyboard.press('F5'); await page.waitForSelector('.modal.wide'); await wait(200);
-await annotate([{ sel: '.legend', n: 1 }, { sel: 'th.code-col', n: 2 }, { sel: 'tr.iss-code', n: 3, pad: 0, pos: 'bl' }, { sel: 'button:has-text("Şablonu düzenle")', n: 4 }]);
+await annotate([{ sel: '.legend', n: 1 }, { sel: 'th.code-col', n: 2 }, { sel: 'tr.iss-code', n: 3, pad: 0, pos: 'bl' }, { sel: '.modal.wide thead tr', n: 4, pad: 0, pos: 'tr' }]);
 await shot('14-onizleme.png'); await clear();
-await page.locator('button:has-text("Şablonu düzenle")').click(); await page.waitForSelector('.tpl-modal'); await wait(200);
-await annotate([{ sel: '.tpl-row.is-code', n: 1 }, { sel: '.tpl-add', n: 2 }, { sel: '.tpl-side select', n: 3 }, { sel: '.tpl-preview', n: 4 }, { sel: 'button:has-text("EDM varsayılanına dön")', n: 5 }]);
+await page.locator('button:has-text("Şablon penceresi")').click(); await page.waitForSelector('.tpl-modal'); await wait(200);
+await annotate([{ sel: '.tpl-scopes', n: 1 }, { sel: '.tpl-mode', n: 2 }, { sel: '.tpl-preview thead tr', n: 3, pad: 0 }, { sel: '.tpl-modal button:has-text("Geri al")', n: 4 }, { sel: '.tpl-preview th.code-col', n: 5, pos: 'tr' }]);
 await shot('15-sablon.png'); await clear(); await esc();
 
 // ---------- 7. Yazdırma ----------

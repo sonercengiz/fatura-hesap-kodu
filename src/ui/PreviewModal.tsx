@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'preact/hooks';
 import * as S from './state';
 import { FIELD_DEFS, colName } from '../core/excel/template';
+import { HeaderCell, AddColumnSelect } from './TemplateParts';
 import { fmtCell } from '../core/num';
 
 export function PreviewModal() {
@@ -34,7 +35,8 @@ export function PreviewModal() {
         <div class="modal-head">
           <b>Çıktı önizlemesi</b>
           <span class="muted">{rows.length - 1 - excl} satır{excl > 0 ? ` (+${excl} çıkarıldı)` : ''} · {rows[0]?.length ?? 0} sütun · {at >= 0 ? `Hesap Kodu ${colName(at)} sütununda` : 'Hesap Kodu sütunu yok'}</span>
-          <button class="ghost tiny" onClick={() => { S.previewOpen.value = false; S.templateOpen.value = true; }} title="Çıktı sütunlarını ve sırasını düzenle">Şablonu düzenle</button>
+          <AddColumnSelect t={S.outputTemplate.value} />
+          <button class="ghost tiny" onClick={() => { S.previewOpen.value = false; S.templateOpen.value = true; }} title="Şablon penceresi: genel / firma / dönem şablonu, satır sırası, sayfa adı, tarih biçimi">Şablon penceresi…</button>
           <div class="spacer" />
           <span class="legend">
             {(Object.keys(counts) as S.IssueKind[]).filter((k) => counts[k] > 0).map((k) => (
@@ -51,8 +53,8 @@ export function PreviewModal() {
               <tr>
                 <th class="num">#</th>
                 <th class="pv-incl" title="İşareti kaldırılan fatura Excel'e yazılmaz (istisnai faturalar). Ctrl+Z geri alır.">Excel</th>
-                {/* Sütun harfi GMS şablon tanımıyla (Fatura Tarih Kolonu C gibi) karşılaştırmak için */}
-                {rows[0]?.map((h, c) => <th class={c === at ? 'code-col' : money[c] ? 'r' : ''}><span class="col-letter">{colName(c)}</span>{String(h ?? '') || <span class="muted">(boş)</span>}</th>)}
+                {/* Başlıklar burada da düzenlenir (ad, sıra, kaldır); değişiklik Excel şablonuna anında yazılır */}
+                {S.outputTemplate.value.columns.map((_, c) => <HeaderCell t={S.outputTemplate.value} k={c} cls={c === at ? 'code-col' : money[c] ? 'r' : ''} />)}
               </tr>
             </thead>
             <tbody>

@@ -1,10 +1,10 @@
 import { batch as sbatch } from '@preact/signals';
-import { DEFAULT_SETTINGS, DEFAULT_SHORTCUT_KEYS, normalizeListColumns } from '../../core/types';
-import { normalizeTemplate, edmTemplate, FIELD_DEFS, type OutputTemplate } from '../../core/excel/template';
+import { DEFAULT_SETTINGS, DEFAULT_SHORTCUT_KEYS } from '../../core/types';
+import { normalizeTemplate, edmTemplate, type OutputTemplate } from '../../core/excel/template';
 import { SORT_LABELS } from '../../core/sort';
 import { db, DEFAULT_FIRM_ID, loadSettings, newId, type BatchRecord, type FirmRecord } from '../../storage/db';
 import { ensureXslt, forgetHtml } from '../../render/xslt';
-import { ready, needsCode, markChanged, lastChangeAt, backupRemind, outputTemplate, accounts, assignments, backupDismissedAt, batchList, batchRec, bulkNos, bumpHistory, historyDelta, current, currentFirmId, currentIndex, filterMode, firm, firms, firstNavigable, goTo, history, invoiceRecs, invoices, lastClicked, lastExportAt, mode, redoStack, ruleNos, rules, searchText, selected, settings, showToast, undoStack } from './core';
+import { ready, needsCode, markChanged, lastChangeAt, backupRemind, accounts, assignments, backupDismissedAt, batchList, batchRec, bulkNos, bumpHistory, historyDelta, current, currentFirmId, currentIndex, filterMode, firm, firms, firstNavigable, goTo, history, invoiceRecs, invoices, lastClicked, lastExportAt, mode, redoStack, ruleNos, rules, searchText, selected, settings, showToast, undoStack } from './core';
 
 /** Diğer sekmelere "veri değişti" sinyali; alan sekme görünürse yeniler, değilse görünür olunca yeniler */
 export const channel: BroadcastChannel | null = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('fatura-hesap-kodu') : null;
@@ -23,7 +23,10 @@ export function notifyOtherTabs() {
 export async function refreshFromDb() {
   suppressBroadcast = true;
   try {
-    settings.value = { ...(await loadSettings(DEFAULT_SETTINGS)), outputTemplate: settings.value.outputTemplate };
+    // Genel şablon da başka sekmeden değişmiş olabilir; kayıtta yoksa (eski ayar) bellekteki kalır
+    const s = await loadSettings(DEFAULT_SETTINGS);
+    const saved = ((await db.settings.get('settings'))?.value as { outputTemplate?: OutputTemplate } | undefined)?.outputTemplate;
+    settings.value = { ...s, outputTemplate: saved ? normalizeTemplate(saved) : settings.value.outputTemplate };
     try { lastChangeAt.value = Math.max(lastChangeAt.value, Number(localStorage.getItem('lastChangeAt') ?? 0) || 0); } catch { /* yok say */ }
     firms.value = await db.firms.orderBy('name').toArray();
     if (!firms.value.some((f) => f.id === currentFirmId.value)) { await switchFirm(firms.value[0]?.id ?? DEFAULT_FIRM_ID); return; }
@@ -56,7 +59,6 @@ export async function init() {
   const legacy = ((await db.settings.get('settings'))?.value ?? {}) as { codeColumnIndex?: number; codeHeader?: string; outputTemplate?: unknown };
   settings.value = { ...settings.value, outputTemplate: legacy.outputTemplate ? normalizeTemplate(legacy.outputTemplate as OutputTemplate) : edmTemplate(legacy.codeColumnIndex ?? 3, legacy.codeHeader ?? 'Hesap Kodu') };
   if (!(settings.value.sortMode in SORT_LABELS)) settings.value = { ...settings.value, sortMode: 'date-supplier' };
-  settings.value = { ...settings.value, listColumns: normalizeListColumns(settings.value.listColumns, (id) => id in FIELD_DEFS) };
   lastExportAt.value = ((await db.settings.get('lastExportAt'))?.value as number | undefined) ?? null;
   try {
     backupDismissedAt.value = Number(localStorage.getItem('backupDismissedAt') ?? 0) || 0;
@@ -68,12 +70,6 @@ export async function init() {
   const lastBatch = (await db.batches.toArray()).reduce((m, b) => Math.max(m, b.updatedAt ?? 0), 0);
   if (lastBatch > lastChangeAt.value) lastChangeAt.value = lastBatch;
   await ensureFirms();
-  // Şablon artık firmaya özel: şablonu olmayan firmalar (eski kayıtlar) o ana kadarki genel şablonu alır
-  const noTpl = firms.value.filter((f) => !f.outputTemplate);
-  if (noTpl.length) {
-    for (const f of noTpl) await db.firms.update(f.id, { outputTemplate: settings.value.outputTemplate });
-    firms.value = await db.firms.orderBy('name').toArray();
-  }
   const cur = (await db.settings.get('currentFirmId'))?.value as string | undefined;
   currentFirmId.value = cur && firms.value.some((f) => f.id === cur) ? cur : firms.value[0].id;
   await loadFirmData();
@@ -130,8 +126,8 @@ export async function createFirm(name: string) {
     await switchFirm(dup.id);
     return;
   }
-  // Yeni firma açık firmanın çıktı şablonuyla başlar (çoğunlukla aynı GMS düzeni); şablon penceresinden değiştirilir
-  const rec: FirmRecord = { id: newId(), name: n, createdAt: Date.now(), shortcuts: DEFAULT_SHORTCUT_KEYS.map((key) => ({ key, code: null })), chartName: 'Hesap kodu listem', outputTemplate: outputTemplate.value };
+  // Yeni firma genel şablonu kullanır; isterse şablon penceresinden kendine özel yapar
+  const rec: FirmRecord = { id: newId(), name: n, createdAt: Date.now(), shortcuts: DEFAULT_SHORTCUT_KEYS.map((key) => ({ key, code: null })), chartName: 'Hesap kodu listem' };
   await db.firms.put(rec);
   firms.value = await db.firms.orderBy('name').toArray();
   await switchFirm(rec.id);

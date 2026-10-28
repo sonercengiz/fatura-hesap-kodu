@@ -7,7 +7,7 @@ const browser=await chromium.launch({channel:'chrome',headless:true});
 const ctx=await browser.newContext({viewport:{width:1500,height:900},acceptDownloads:true}); const page=await ctx.newPage();
 const errors=[]; page.on('pageerror',e=>errors.push(e.message));
 // Eski ayar: codeColumnIndex=1, codeHeader=HK → şablona taşınmalı
-await page.addInitScript(()=>{try{localStorage.setItem('guideSeen','1')}catch{}});
+await page.addInitScript(()=>{try{localStorage.setItem('guideSeen','1');localStorage.setItem('tplMode','advanced')}catch{}});
 await page.goto('http://localhost:5179/'); await page.waitForSelector('.welcome');
 await page.evaluate(async()=>{ const req=indexedDB.open('fatura-hesap-kodu'); await new Promise(r=>req.onsuccess=r); const db=req.result; const tx=db.transaction('settings','readwrite'); tx.objectStore('settings').put({key:'settings', value:{codeColumnIndex:1, codeHeader:'HK', theme:'light'}}); await new Promise(r=>tx.oncomplete=r); db.close(); });
 await page.reload(); await page.waitForSelector('.welcome');
@@ -15,20 +15,20 @@ await page.locator('input[accept*=".zip"]').setInputFiles(files); await page.wai
 await page.keyboard.press('/'); await page.keyboard.type('770.01'); await page.keyboard.press('Enter'); await page.waitForTimeout(150);
 await page.keyboard.press('F5'); await page.waitForSelector('.modal.wide');
 console.log('eski ayar taşındı:', await page.locator('.modal-head .muted').innerText(), '| ilk başlıklar:', (await page.locator('.modal.wide thead th').allInnerTexts()).slice(1,4).join(' | '));
-await page.locator('button:has-text("Şablonu düzenle")').click(); await page.waitForSelector('.tpl-modal');
-console.log('şablon:', await page.locator('.tpl-modal .modal-head .muted').first().innerText());
+await page.locator('button:has-text("Şablon penceresi")').click(); await page.waitForSelector('.tpl-modal');
+console.log('şablon:', await page.locator('.tpl-modal .tpl-foot').innerText());
 // EDM varsayılanına dön, Geliş Zamanı'nı kaldır, ETTN ve Hesap adı ekle, başlık değiştir, satır sırası yükleme, sayfa adı GMS
 await page.locator('button:has-text("EDM varsayılanına dön")').click();
 await page.locator('.tpl-row:has-text("Geliş Zamanı") button[title="Sütunu kaldır"]').click();
 await page.locator('.tpl-add select').selectOption('uuid'); await page.locator('button:has-text("+ Sütun ekle")').click();
 await page.locator('.tpl-add select').selectOption('accountName'); await page.locator('button:has-text("+ Sütun ekle")').click();
 await page.locator('.tpl-row.is-code .tpl-header').fill('Muhasebe Kodu');
-await page.locator('.tpl-side select').selectOption('added'); await page.locator('.tpl-side input[placeholder="Sheet0"]').fill('GMS');
+await page.locator('.tpl-side select').first().selectOption('added'); await page.locator('.tpl-side input[placeholder="Sheet0"]').fill('GMS');
 // kod sütununu en başa taşı (↑ ×2)
 await page.locator('.tpl-row.is-code button[title="Yukarı"]').click(); await page.locator('.tpl-row.is-code button[title="Yukarı"]').click();
 console.log('önizleme başlıkları:', (await page.locator('.tpl-preview th').allInnerTexts()).slice(0,5).join(' | '), '… toplam', await page.locator('.tpl-preview th').count());
 await page.screenshot({path:`${S}/shots/template.png`});
-await page.locator('.tpl-modal button.primary:has-text("Kaydet")').click(); await page.waitForTimeout(200);
+await page.locator('.tpl-modal button:has-text("Kapat")').click(); await page.waitForTimeout(200);
 const [dl]=await Promise.all([page.waitForEvent('download'), page.keyboard.press('F1')]);
 const out=`${S}/${dl.suggestedFilename()}`; await dl.saveAs(out);
 const wb=XLSX.read(readFileSync(out),{type:'buffer'}); const ws=wb.Sheets[wb.SheetNames[0]]; const aoa=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null});

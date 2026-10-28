@@ -59,30 +59,11 @@ export type FilterMode = 'all' | 'unassigned' | 'manual' | 'bulk' | 'rule' | 'ex
 export type Layout = 'hybrid' | 'list';
 /** Liste görünümü sütunu: Excel çıktısının alanlarından biri ya da yalnızca listede olan "Dikkat" (uyarılar). */
 export type ListColumnId = OutputFieldId | 'issues';
-export const DEFAULT_LIST_COLUMNS: ListColumnId[] = ['no', 'date', 'name', 'vkn', 'type', 'amount', 'code', 'accountName', 'issues'];
-/** Eski (15 sabit sütunlu) liste seçimindeki kimliklerin karşılıkları */
-const LEGACY_LIST_IDS: Record<string, ListColumnId> = { supplier: 'name', lines: 'lineCount', account: 'accountName', vatOtherTax: 'vatOddTax' };
-
-/** Kayıtlı liste seçimini toparlar: eski kimlikler çevrilir, bilinmeyen/yinelenen atılır; boşsa varsayılan */
-export function normalizeListColumns(ids: unknown, valid: (id: string) => boolean): ListColumnId[] {
-  if (!Array.isArray(ids)) return DEFAULT_LIST_COLUMNS;
-  const out: ListColumnId[] = [];
-  for (const raw of ids) {
-    const id = (LEGACY_LIST_IDS[String(raw)] ?? raw) as ListColumnId;
-    if ((id === 'issues' || (valid(id) && id !== 'blank')) && !out.includes(id)) out.push(id);
-  }
-  return out.length ? out : DEFAULT_LIST_COLUMNS;
-}
-
 export interface Settings {
   /** Çıktı Excel şablonu: sütunlar, başlıklar, satır sırası, sayfa adı */
   outputTemplate: OutputTemplate;
   /** Ana ekran: görsel (görsel + panel) ya da yalın liste */
   layout: Layout;
-  /** Liste görünümünde gösterilen sütunlar, sırasıyla (kendi seçimim) */
-  listColumns: ListColumnId[];
-  /** Liste görünümü açık firmanın Excel şablonundaki sütunları gösterir (ekranda ne varsa Excel'e o çıkar) */
-  listFollowsTemplate: boolean;
   viewMode: ViewMode;
   marginPx: number;
   theme: 'light' | 'dark';
@@ -98,8 +79,6 @@ export const DEFAULT_SHORTCUT_KEYS = ['q', 'w', 'e', 'a', 's', 'd'] as const;
 export const DEFAULT_SETTINGS: Settings = {
   outputTemplate: DEFAULT_OUTPUT_TEMPLATE,
   layout: 'hybrid',
-  listColumns: DEFAULT_LIST_COLUMNS,
-  listFollowsTemplate: false,
   viewMode: 'top',
   marginPx: 0,
   theme: 'light',

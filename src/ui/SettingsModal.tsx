@@ -140,9 +140,9 @@ export function SettingsModal() {
             {tab === 'output' && (
               <>
                 <div class="muted">
-                  <b>{S.firm.value.name}</b> çıktısı: <b>{S.outputTemplate.value.columns.length} sütun</b> · {S.outputCodeAt.value >= 0 ? <>Hesap Kodu <b>{String.fromCharCode(65 + Math.min(S.outputCodeAt.value, 25))}</b> sütununda</> : 'Hesap Kodu sütunu yok'} · {isEdmDefault(S.outputTemplate.value) ? 'EDM düzeni (varsayılan)' : 'özelleştirilmiş'} · sayfa "{S.outputTemplate.value.sheetName}".
+                  Açık dönemin Excel'i <b>{S.templateScope.value === 'batch' ? 'döneme özel' : S.templateScope.value === 'firm' ? `${S.firm.value.name} firmasına özel` : 'genel'}</b> şablonla: <b>{S.outputTemplate.value.columns.length} sütun</b> · {S.outputCodeAt.value >= 0 ? <>Hesap Kodu <b>{String.fromCharCode(65 + Math.min(S.outputCodeAt.value, 25))}</b> sütununda</> : 'Hesap Kodu sütunu yok'} · {isEdmDefault(S.outputTemplate.value) ? 'EDM düzeni (varsayılan)' : 'özelleştirilmiş'} · sayfa "{S.outputTemplate.value.sheetName}".
                 </div>
-                <div class="muted small">Sütunlar, başlıklar, satır sırası ve sayfa adı GMS içe aktarma şablonunuza göre ayarlanır; her firmanın kendi şablonu vardır. Kısa yol: üst çubukta Excel üret'in yanındaki <b>Şablon</b>. Dosya adı: <code>AY YIL FİRMA_ADI FATURA.xlsx</code> (ay = faturaların baskın ayı).</div>
+                <div class="muted small">Sütunlar, başlıklar, satır sırası ve sayfa adı muhasebe programınızın içe aktarma şablonuna göre ayarlanır. Genel şablon bütün firmalara geçer; bir firmaya ya da döneme özel şablon da yapılabilir. Liste görünümü ve önizleme başlıklarından da düzenlenir. Kısa yol: üst çubukta Excel üret'in yanındaki <b>Şablon</b>. Dosya adı: <code>AY YIL FİRMA_ADI FATURA.xlsx</code> (ay = faturaların baskın ayı).</div>
                 <div class="settings-links">
                   <button onClick={() => openOther(() => (S.templateOpen.value = true))}>Şablonu düzenle…</button>
                   <button onClick={() => openOther(() => (S.previewOpen.value = true))}>Önizle (F5)</button>

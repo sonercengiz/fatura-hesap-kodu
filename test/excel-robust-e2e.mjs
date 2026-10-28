@@ -16,7 +16,7 @@ const errors = [];
 let fails = 0;
 const check = (name, ok, got) => { if (!ok) fails++; console.log(ok ? '✓' : '✗', name, ok ? '' : `→ ${got}`); };
 const ctx = await browser.newContext({ viewport: { width: 1366, height: 768 }, acceptDownloads: true });
-await ctx.addInitScript(() => { try { localStorage.setItem('guideSeen', '1'); } catch {} });
+await ctx.addInitScript(() => { try { localStorage.setItem('guideSeen', '1'); localStorage.setItem('tplMode', 'advanced');  } catch {} });
 const a = await ctx.newPage();
 a.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
 await a.goto('http://localhost:5179/'); await a.waitForSelector('.welcome');
@@ -48,7 +48,7 @@ await a.locator('.tpl-date-cells').selectOption('date');
 const before = await headers(a);
 check('aynı alan ikinci kez eklendi', before.filter((h) => h === 'Fatura Tarihi' || h === 'Belge Tarihi').length === 2, before.join(' | '));
 check('önizlemede boş başlık "(boş)", sütun harfleri', (await a.locator('.tpl-preview th').last().innerText()).includes('(boş)') && (await a.locator('.tpl-preview th .col-letter').first().innerText()) === 'A', await a.locator('.tpl-preview th').last().innerText());
-await a.locator('.tpl-modal button.primary:has-text("Kaydet")').click(); await a.waitForTimeout(400);
+await a.locator('.tpl-modal button:has-text("Kapat")').click(); await a.waitForTimeout(400);
 
 // Öteki sekme aynı şablonu görür
 await b.waitForTimeout(800);

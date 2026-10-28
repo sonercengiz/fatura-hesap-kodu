@@ -244,3 +244,32 @@ export function moneyColumns(t: OutputTemplate): number[] {
 export function codeColumnIndexOf(t: OutputTemplate): number {
   return t.columns.findIndex((c) => c.id === 'code');
 }
+
+/* Şablon düzenleme işlemleri (saf): şablon penceresi, önizleme ve liste aynı işlemleri kullanır */
+
+export const withColumns = (t: OutputTemplate, columns: OutputColumn[]): OutputTemplate => ({ ...t, columns });
+export const addColumn = (t: OutputTemplate, id: OutputFieldId, header = FIELD_DEFS[id].header): OutputTemplate => withColumns(t, [...t.columns, { id, header }]);
+export const removeColumn = (t: OutputTemplate, k: number): OutputTemplate => withColumns(t, t.columns.filter((_, i) => i !== k));
+export const renameColumn = (t: OutputTemplate, k: number, header: string): OutputTemplate => withColumns(t, t.columns.map((c, i) => (i === k ? { ...c, header } : c)));
+export function moveColumn(t: OutputTemplate, from: number, to: number): OutputTemplate {
+  if (from === to || from < 0 || to < 0 || from >= t.columns.length || to >= t.columns.length) return t;
+  const cols = t.columns.slice();
+  const [c] = cols.splice(from, 1);
+  cols.splice(to, 0, c);
+  return withColumns(t, cols);
+}
+/** Alanı şablona ekler (sona) ya da bütün sütunlarını çıkarır */
+export const toggleField = (t: OutputTemplate, id: OutputFieldId, on: boolean): OutputTemplate =>
+  on ? (t.columns.some((c) => c.id === id) ? t : addColumn(t, id)) : withColumns(t, t.columns.filter((c) => c.id !== id));
+
+/** Basit görünümde alan grupları (sıra ekrandaki sıra) */
+export const FIELD_GROUPS: { title: string; ids: OutputFieldId[] }[] = [
+  { title: 'Fatura', ids: ['no', 'date', 'type', 'profile', 'uuid', 'currency', 'lineCount'] },
+  { title: 'Satıcı', ids: ['name', 'vkn'] },
+  { title: 'Tutarlar', ids: ['amount', 'taxInclusive', 'taxExclusive', 'tax'] },
+  { title: 'KDV dökümü', ids: ['vat0Base', 'vat1Base', 'vat1Tax', 'vat10Base', 'vat10Tax', 'vat20Base', 'vat20Tax', 'vat8Base', 'vat8Tax', 'vat18Base', 'vat18Tax', 'vatOddTax'] },
+  { title: 'Hesap kodu', ids: ['code', 'accountName', 'source'] },
+  { title: 'EDM listesinden (yüklenmediyse boş)', ids: ['arrival', 'status', 'responseStatus', 'localStatus', 'envelope', 'kepObjection', 'gibCancel', 'officialObjection', 'gibObjection', 'branch', 'hash', 'tag'] },
+  { title: 'Diğer', ids: ['firm', 'batch'] },
+];
+
