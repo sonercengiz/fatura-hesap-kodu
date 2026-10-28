@@ -19,12 +19,26 @@ export function hasNativeXslt(): boolean {
   return typeof XSLTProcessor === 'function' && /\[native code\]/.test(Function.prototype.toString.call(XSLTProcessor));
 }
 
+/** Yerleşik motor gerçekten dönüştürüyor mu: kaldırılma sürecinde ya da yönetici politikasıyla kapatılmışken var görünüp hata verebilir */
+function nativeWorks(): boolean {
+  try {
+    const p = new DOMParser();
+    const xsl = p.parseFromString('<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"><xsl:template match="/"><b><xsl:value-of select="a"/></b></xsl:template></xsl:stylesheet>', 'application/xml');
+    const proc = new XSLTProcessor();
+    proc.importStylesheet(xsl);
+    return proc.transformToDocument(p.parseFromString('<a>1</a>', 'application/xml'))?.documentElement?.textContent === '1';
+  } catch {
+    return false;
+  }
+}
+
 /** XSLT motorunu hazırlar; hangi motorun kullanıldığını döndürür. */
 export function ensureXslt(): Promise<'native' | 'polyfill'> {
   if (readyPromise) return readyPromise;
   readyPromise = (async () => {
-    if (hasNativeXslt()) return 'native';
-    window.xsltUsePolyfillOnlyIfNeeded = true;
+    if (hasNativeXslt() && nativeWorks()) return 'native';
+    // Yerleşik motor yoksa ya da çalışmıyorsa polyfill window.XSLTProcessor'ı koşulsuz değiştirir
+    window.xsltUsePolyfillOnlyIfNeeded = false;
     window.xsltDontAutoloadXmlDocs = true;
     await new Promise<void>((resolve, reject) => {
       const s = document.createElement('script');
