@@ -139,7 +139,7 @@ export function Toolbar() {
       {acts.slice(0, 3).map((a) => <button data-act={a.id} class={a.cls ?? ''} onClick={a.on} disabled={a.disabled} title={a.title}>{a.label}{a.kbd && a.id === 'preview' && <kbd>F5</kbd>}</button>)}
       <span class="excel-split">
         <button class="primary excel-btn" onClick={() => S.exportExcel()} disabled={!b || n === 0} title="Excel üret (F1)">Excel üret <kbd>F1</kbd></button>
-        <button class="primary excel-tpl" onClick={() => (S.templateOpen.value = true)} title={`Excel şablonu (${S.firm.value.name}): hangi sütunlar, hangi sırayla, hangi başlıkla`}>Şablon</button>
+        <button class="excel-tpl" onClick={() => (S.templateOpen.value = true)} title={`Excel şablonu (${S.firm.value.name}): hangi sütunlar, hangi sırayla, hangi başlıkla`}>Şablon</button>
       </span>
       {acts.slice(3).map((a) => <button data-act={a.id} class={a.cls ?? ''} onClick={a.on} disabled={a.disabled} title={a.title}>{a.label}</button>)}
       <div class="tb-more-wrap">
