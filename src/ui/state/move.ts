@@ -2,7 +2,7 @@ import { dominantMonth } from '../../core/xml/parseUbl';
 import { db, newId } from '../../storage/db';
 import { forgetHtml } from '../../render/xslt';
 import { batchRec, firms, invoiceRecs, selected, showToast } from './core';
-import { openBatch, refreshBatchList, switchFirm } from './firms';
+import { openBatch, refreshBatchList, reloadBatch, switchFirm } from './firms';
 
 /** Satıcı geçmişi sayaçlarını bir firmadan diğerine aktarır (öneriler doğru firmada kalsın) */
 export async function transferHistory(fromFirm: string, toFirm: string, pairs: { vkn: string; code: string }[]) {
@@ -71,6 +71,6 @@ export async function moveInvoicesToFirm(nos: string[], targetFirmId: string, ta
   selected.value = new Set();
   const name = firms.value.find((f) => f.id === targetFirmId)?.name ?? '';
   await refreshBatchList();
-  await openBatch(b.id);
+  await reloadBatch();
   showToast(`${moved.length} fatura ${name} › "${target.name}" dönemine taşındı${skipped ? ` · ${skipped} fatura orada zaten vardı, burada bırakıldı` : ''}.`, 5000);
 }

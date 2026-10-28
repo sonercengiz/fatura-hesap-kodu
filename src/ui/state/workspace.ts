@@ -4,7 +4,7 @@ import { sheetToInvoices, type EdmSheet } from '../../core/legacy';
 import { db, newId, type BatchRecord, type InvoiceRecord, type AssignmentRecord, type AccountRecord, type FirmRecord, type FirmHistoryEntry } from '../../storage/db';
 import { upgradeRule, type Rule } from '../../core/rules';
 import { batchList, batchRec, busy, currentFirmId, firm, firms, lastExportAt, settings, showToast, updateSettings } from './core';
-import { loadFirmData, openBatch, refreshBatchList } from './firms';
+import { loadFirmData, openBatch, refreshBatchList, reloadBatch } from './firms';
 import { mergeRule } from './rules';
 
 /** Yedekte XML ve XSLT taşınmaz (boyut); başlık alanları yeter, çıktı üretilebilir, görsel için XML yeniden yüklenir. */
@@ -149,7 +149,8 @@ export async function importWorkspace(file: File) {
     await loadFirmData();
     await refreshBatchList();
     const latest = batchList.value[0];
-    if (latest) await openBatch(batchRec.value?.id ?? latest.id);
+    if (batchRec.value) await reloadBatch();
+    else if (latest) await openBatch(latest.id);
     showToast(`İçe aktarıldı: ${srcFirms.length} firma, ${nb} yeni dönem, ${ni} fatura, ${na} atama${nr ? `, ${nr} kural` : ''}${tplNote}`, 6000);
   } catch (e) {
     showToast((e as Error).message, 5000);

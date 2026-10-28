@@ -133,7 +133,8 @@ export const chartResults = computed<Account[]>(() => searchAccounts(accounts.va
 /** Geri al / yinele yığınları */
 export interface Change { no: string; code: string | null; source: AssignmentSource }
 
-export interface UndoEntry { label: string; inverse: Change[]; redo: Change[]; index: number }
+/** `at`: işlem yapılırken açık olan fatura (geri alınca oraya dönülür; fatura çıkarılsa da sıra kaymaz) */
+export interface UndoEntry { label: string; inverse: Change[]; redo: Change[]; at: string | null }
 
 export const undoStack = signal<UndoEntry[]>([]);
 
@@ -490,7 +491,7 @@ export async function applyChanges(changes: Change[]): Promise<Change[]> {
 
 export function pushUndo(label: string, inverse: Change[], redo: Change[]) {
   if (inverse.length === 0) return;
-  undoStack.value = [...undoStack.value.slice(-49), { label, inverse, redo, index: currentIndex.value }];
+  undoStack.value = [...undoStack.value.slice(-49), { label, inverse, redo, at: current.value?.no ?? null }];
   redoStack.value = [];
 }
 
@@ -518,13 +519,24 @@ export async function clearAssignment() {
   pushUndo(`${inv.no} atama kaldırıldı`, inverse, [change]);
 }
 
+/**
+ * Kayıt sonrası başka yoldan (başka sekme, yedekten içe aktarma) kodu değişmiş fatura sayısı. Böyle bir kaydı
+ * uygulamak o değişikliği sessizce ezerdi. Dönemden çıkarılmış faturalar sayılmaz (applyChanges onları atlar).
+ */
+function staleCount(expect: Change[]): number {
+  return expect.filter((ch) => recByNo.value.has(ch.no) && (assignments.value.get(ch.no) ?? null) !== ch.code).length;
+}
+
 export async function undo() {
   const e = undoStack.value[undoStack.value.length - 1];
   if (!e) { showToast('Geri alınacak işlem yok'); return; }
   undoStack.value = undoStack.value.slice(0, -1);
+  const stale = staleCount(e.redo);
+  if (stale) { showToast(`Geri alınamadı: ${e.label} — ${stale} faturanın kodu sonradan başka yerde (başka sekme ya da yedek) değişti.`, 5000); return; }
   await applyChanges(e.inverse);
   redoStack.value = [...redoStack.value, e];
-  goTo(e.index);
+  const idx = e.at ? invoices.value.findIndex((i) => i.no === e.at) : -1;
+  if (idx >= 0) goTo(idx);
   showToast(`Geri alındı: ${e.label}`);
 }
 
@@ -532,6 +544,8 @@ export async function redo() {
   const e = redoStack.value[redoStack.value.length - 1];
   if (!e) return;
   redoStack.value = redoStack.value.slice(0, -1);
+  const stale = staleCount(e.inverse);
+  if (stale) { showToast(`Yinelenemedi: ${e.label} — ${stale} faturanın kodu sonradan başka yerde değişti.`, 5000); return; }
   await applyChanges(e.redo);
   undoStack.value = [...undoStack.value, e];
   showToast(`Yinelendi: ${e.label}`);

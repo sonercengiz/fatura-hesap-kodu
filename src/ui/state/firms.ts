@@ -22,19 +22,14 @@ export function notifyOtherTabs() {
 export async function refreshFromDb() {
   suppressBroadcast = true;
   try {
-    const keepNo = current.value?.no;
-    const keepIdx = currentIndex.value;
     settings.value = { ...(await loadSettings(DEFAULT_SETTINGS)), outputTemplate: settings.value.outputTemplate };
     firms.value = await db.firms.orderBy('name').toArray();
     if (!firms.value.some((f) => f.id === currentFirmId.value)) { await switchFirm(firms.value[0]?.id ?? DEFAULT_FIRM_ID); return; }
     await loadFirmData();
     await refreshBatchList();
     const b = batchRec.value;
-    if (b && (await db.batches.get(b.id))) {
-      await openBatch(b.id);
-      const idx = keepNo ? invoices.value.findIndex((i) => i.no === keepNo) : -1;
-      goTo(idx >= 0 ? idx : keepIdx);
-    } else if (batchList.value[0]) await openBatch(batchList.value[0].id);
+    if (b && (await db.batches.get(b.id))) await reloadBatch();
+    else if (batchList.value[0]) await openBatch(batchList.value[0].id);
     else { batchRec.value = null; invoiceRecs.value = []; assignments.value = new Map(); }
   } finally {
     suppressBroadcast = false;
@@ -170,9 +165,40 @@ export async function openBatch(id: string) {
     mode.value = 'nav';
     searchText.value = '';
   });
-  // ilk atanmamış faturaya git
+  goFirstUnassigned();
+}
+
+function goFirstUnassigned() {
   const idx = invoices.value.findIndex((i) => !assignments.value.has(i.no));
   currentIndex.value = idx >= 0 ? idx : firstNavigable();
+}
+
+/**
+ * Açık dönemi veritabanından yeniden okur (XML ekleme, fatura çıkarma, arşivleme, sekme eşitleme sonrası).
+ * openBatch'ten farkı: geri alma yığını, süzgeç, arama ve seçim korunur; açık fatura yerinde kalır.
+ */
+export async function reloadBatch() {
+  const b = batchRec.value;
+  if (!b) return;
+  const rec = await db.batches.get(b.id);
+  if (!rec) return;
+  const keepNo = current.value?.no;
+  const keepIdx = currentIndex.value;
+  const asg = await db.assignments.where('batchId').equals(b.id).toArray();
+  const recs = (await db.invoices.where('batchId').equals(b.id).toArray()).sort((a, b) => a.order - b.order);
+  const have = new Set(recs.map((r) => r.no));
+  sbatch(() => {
+    if (recs.length !== invoiceRecs.value.length) lastClicked.value = -1; // aralık seçimi çapası sıra numarasıdır
+    batchRec.value = rec;
+    invoiceRecs.value = recs;
+    assignments.value = new Map(asg.map((a) => [a.no, a.code]));
+    bulkNos.value = new Set(asg.filter((a) => a.source === 'bulk').map((a) => a.no));
+    ruleNos.value = new Set(asg.filter((a) => a.source === 'rule').map((a) => a.no));
+    if ([...selected.value].some((no) => !have.has(no))) selected.value = new Set([...selected.value].filter((no) => have.has(no)));
+  });
+  if (!keepNo) { goFirstUnassigned(); return; }
+  const idx = invoices.value.findIndex((i) => i.no === keepNo);
+  goTo(idx >= 0 ? idx : keepIdx);
 }
 
 /** Yeni, boş dönem oluşturur ve açar. Ad verilmezse ilk XML yüklemesinde baskın aya göre adlanır. */
@@ -244,7 +270,7 @@ export async function archiveBatchVisuals(batchId: string): Promise<number> {
   await db.invoices.where('batchId').equals(batchId).modify((r) => { if (r.xml) { r.xml = null; r.xsltId = null; n++; } });
   await cleanupXslts();
   forgetHtml(`${batchId}|`);
-  if (batchRec.value?.id === batchId) { const idx = currentIndex.value; await openBatch(batchId); goTo(idx); }
+  if (batchRec.value?.id === batchId) await reloadBatch();
   notifyOtherTabs();
   return n;
 }
@@ -266,9 +292,7 @@ export async function removeInvoices(nos: string[]) {
     await db.batches.update(b.id, { updatedAt: Date.now() });
   });
   for (const no of nos) forgetHtml(`${b.id}|${no}`);
-  const idx = currentIndex.value;
-  await openBatch(b.id);
-  goTo(idx);
+  await reloadBatch();
   await cleanupXslts();
   notifyOtherTabs();
   showToast(`${nos.length} fatura dönemden çıkarıldı`);

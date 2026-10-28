@@ -5,8 +5,8 @@ import { readEdmSheet, edmRowsByNo } from '../../core/excel/readEdm';
 import { db, type BatchRecord, type InvoiceRecord, type AssignmentRecord } from '../../storage/db';
 import { forgetHtml } from '../../render/xslt';
 import { readZip, ZipError } from '../../core/zip';
-import { batchRec, busy, current, currentIndex, importReport, invoiceRecs, invoices, lastImportReport, settingsOpen, settingsTab, showToast } from './core';
-import { createBatch, isQuotaError, notifyOtherTabs, openBatch, refreshBatchList } from './firms';
+import { batchRec, busy, importReport, invoiceRecs, lastImportReport, settingsOpen, settingsTab, showToast } from './core';
+import { createBatch, isQuotaError, notifyOtherTabs, refreshBatchList, reloadBatch } from './firms';
 import { applyRules } from './rules';
 
 /** ZIP dosyalarını açar (iç içe bir düzey dahil); XML'leri dosya olarak döndürür, diğerlerini olduğu gibi geçirir. */
@@ -160,12 +160,7 @@ export async function importXml(rawList: File[]): Promise<ImportReport> {
       await db.batches.update(b.id, patch);
       report.added = recs.length;
       await refreshBatchList();
-      const keepNo = current.value?.no;
-      await openBatch(b.id);
-      if (keepNo && existing.size) {
-        const idx = invoices.value.findIndex((i) => i.no === keepNo);
-        if (idx >= 0) currentIndex.value = idx;
-      }
+      await reloadBatch();
       // Kurallar: yeni gelen ve kod almamış faturalara kendiliğinden uygula
       const newNos = new Set(recs.map((r) => r.no));
       report.ruled = await applyRules((i) => newNos.has(i.no), true);
@@ -235,9 +230,7 @@ export async function applyEdmList(sheet: EdmSheet, report: ImportReport) {
     await db.invoices.bulkPut(puts);
     await db.batches.update(b.id, { updatedAt: now });
     await refreshBatchList();
-    const keepNo = current.length ? current[0].no : undefined;
-    await openBatch(b.id);
-    if (keepNo) { const idx = invoices.value.findIndex((i) => i.no === keepNo); if (idx >= 0) currentIndex.value = idx; }
+    await reloadBatch();
     const newNos = new Set(fields.map((f) => f.no));
     report.ruled += await applyRules((i) => newNos.has(i.no), true);
   }
