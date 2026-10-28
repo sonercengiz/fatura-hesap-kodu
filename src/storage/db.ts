@@ -59,6 +59,8 @@ export interface InvoiceRecord {
   vatRates?: number[];
   /** KDV oranına göre matrah ve vergi; eski kayıtlarda v12 XML'den tamamlar */
   vatBreakdown?: VatPart[];
+  /** Excel çıktısına girmez (kullanıcı çıkardı) */
+  excluded?: boolean;
   xml: string | null;
   xsltId: string | null;
   /** EDM Excel listesinden gelen ham sütunlar (başlık → değer) */

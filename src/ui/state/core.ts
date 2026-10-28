@@ -136,7 +136,8 @@ export interface Change { no: string; code: string | null; source: AssignmentSou
 /** Kural değişikliğinde değişen kuralların öncesi/sonrası (geri alınca kural da döner; listede olmayan id = yoktu) */
 export interface RuleSnap { ids: string[]; before: Rule[]; after: Rule[] }
 
-export interface UndoEntry { label: string; inverse: Change[]; redo: Change[]; at: string | null; rules?: RuleSnap }
+/** `excl`: Excel'den çıkarma/geri alma (nos, yeni değer) */
+export interface UndoEntry { label: string; inverse: Change[]; redo: Change[]; at: string | null; rules?: RuleSnap; excl?: { nos: string[]; value: boolean } }
 
 export const undoStack = signal<UndoEntry[]>([]);
 
@@ -161,7 +162,7 @@ export function dismissBackup() {
   try { localStorage.setItem('backupDismissedAt', String(backupDismissedAt.value)); } catch { /* yok say */ }
 }
 
-export const FILTER_LABELS: Record<FilterMode, string> = { all: 'Tümü', unassigned: 'Atanmamış', manual: 'Elle atanmış', bulk: 'Toplu atanmış', rule: 'Kuralla atanmış' };
+export const FILTER_LABELS: Record<FilterMode, string> = { all: 'Tümü', unassigned: 'Atanmamış', manual: 'Elle atanmış', bulk: 'Toplu atanmış', rule: 'Kuralla atanmış', excluded: 'Excel\'den çıkarılanlar' };
 
 export function toInvoice(r: InvoiceRecord): Invoice {
   return {
@@ -184,6 +185,7 @@ export function toInvoice(r: InvoiceRecord): Invoice {
     lines: r.lines ?? [],
     vatRates: r.vatRates ?? [],
     vatBreakdown: r.vatBreakdown ?? [],
+    excluded: !!r.excluded,
     lineCount: r.lineCount,
     edm: r.edm,
   };
@@ -202,6 +204,12 @@ export const outputOrder = computed<Invoice[]>(() => {
   // tarih, sonra fatura no
   return sortInvoices(rawInvoices.value, 'date-supplier').slice().sort((a, b) => (dateKeyOf(a) - dateKeyOf(b)) || (a.no < b.no ? -1 : a.no > b.no ? 1 : 0));
 });
+
+/** Excel'e yazılacak faturalar (kullanıcının çıkardıkları hariç), çıktı sırasıyla */
+export const outputIncluded = computed<Invoice[]>(() => outputOrder.value.filter((i) => !i.excluded));
+
+/** Kod bekleyen fatura: Excel'den çıkarılmamış ve kodu yok */
+export const needsCode = (i: Invoice) => !i.excluded && !assignments.value.has(i.no);
 
 export const dateKeyOf = (i: Invoice) => Number(i.isoDate.replace(/-/g, '')) || 0;
 
@@ -231,7 +239,11 @@ export const knownCodes = computed(() => {
   return set;
 });
 
-export const assignedCount = computed(() => invoices.value.filter((i) => assignments.value.has(i.no)).length);
+export const assignedCount = computed(() => invoices.value.filter((i) => !i.excluded && assignments.value.has(i.no)).length);
+
+/** Sayaçlarda payda: Excel'e girecek fatura sayısı; çıkarılanlar ayrıca gösterilir */
+export const outputCount = computed(() => invoices.value.filter((i) => !i.excluded).length);
+export const excludedCount = computed(() => invoices.value.length - outputCount.value);
 
 export const viewCount = computed(() => invoices.value.filter((i) => i.hasView).length);
 
@@ -269,6 +281,8 @@ export const rulePending = computed(() => invoices.value.filter((i) => !assignme
 export type IssueKind = 'no-code' | 'not-in-chart' | 'type' | 'vat-gap' | 'no-view';
 
 export function issuesFor(inv: Invoice): IssueKind[] {
+  // Excel'den çıkarılan fatura çıktıyla ilgili uyarı almaz
+  if (inv.excluded) return inv.hasView ? [] : ['no-view'];
   const out: IssueKind[] = [];
   const code = assignments.value.get(inv.no);
   if (!code) out.push('no-code');
@@ -354,7 +368,8 @@ export function passesFilter(inv: Invoice): boolean {
   const code = assignments.value.get(inv.no);
   const bulk = bulkNos.value.has(inv.no);
   switch (filterMode.value) {
-    case 'unassigned': if (code) return false; break;
+    case 'unassigned': if (code || inv.excluded) return false; break;
+    case 'excluded': if (!inv.excluded) return false; break;
     case 'manual': if (!code || bulk || ruleNos.value.has(inv.no)) return false; break;
     case 'bulk': if (!bulk) return false; break;
     case 'rule': if (!ruleNos.value.has(inv.no)) return false; break;
@@ -384,6 +399,7 @@ export function navigable(inv: Invoice, all: boolean): boolean {
   if (!passesFilter(inv)) return false;
   if (!all && bulkNos.value.has(inv.no) && filterMode.value !== 'bulk') return false;
   if (!all && ruleNos.value.has(inv.no) && filterMode.value !== 'rule') return false;
+  if (!all && inv.excluded && filterMode.value !== 'excluded') return false;
   return true;
 }
 
@@ -425,9 +441,9 @@ export function last(all = false) {
 export function jumpUnassigned(dir: 1 | -1) {
   const list = invoices.value;
   for (let i = currentIndex.value + dir; i >= 0 && i < list.length; i += dir) {
-    if (passesFilter(list[i]) && !assignments.value.has(list[i].no)) { currentIndex.value = i; return; }
+    if (passesFilter(list[i]) && needsCode(list[i])) { currentIndex.value = i; return; }
   }
-  const left = list.filter((x) => passesFilter(x) && !assignments.value.has(x.no)).length;
+  const left = list.filter((x) => passesFilter(x) && needsCode(x)).length;
   showToast(left === 0 ? 'Atanmamış fatura kalmadı.' : dir > 0 ? 'İleride atanmamış fatura yok (geride var).' : 'Geride atanmamış fatura yok (ileride var).');
 }
 
@@ -550,6 +566,25 @@ function staleCount(expect: Change[]): number {
   return expect.filter((ch) => recByNo.value.has(ch.no) && (assignments.value.get(ch.no) ?? null) !== ch.code).length;
 }
 
+/** Faturaları Excel çıktısından çıkarır (value=true) ya da geri alır; geri alınabilir */
+export async function setExcluded(nos: string[], value: boolean) {
+  const changed = nos.filter((no) => { const r = recByNo.value.get(no); return r && !!r.excluded !== value; });
+  if (!batchRec.value || changed.length === 0) return;
+  await writeExcluded(changed, value);
+  undoStack.value = [...undoStack.value.slice(-49), { label: `${changed.length} fatura Excel'den ${value ? 'çıkarıldı' : 'geri alındı'}`, inverse: [], redo: [], at: current.value?.no ?? null, excl: { nos: changed, value } }];
+  redoStack.value = [];
+  showToast(value ? `${changed.length} fatura Excel'e girmeyecek (Ctrl+Z geri alır)` : `${changed.length} fatura yeniden Excel'e girecek`, 3500);
+}
+
+async function writeExcluded(nos: string[], value: boolean) {
+  const b = batchRec.value;
+  if (!b) return;
+  const set = new Set(nos);
+  await db.transaction('rw', db.invoices, async () => { for (const no of nos) await db.invoices.update([b.id, no], { excluded: value }); });
+  invoiceRecs.value = invoiceRecs.value.map((r) => (set.has(r.no) ? { ...r, excluded: value } : r));
+  notifyOtherTabs();
+}
+
 /** Geri al / yinele: kuralları kayıttaki hallerine getirir */
 async function writeRules(ids: string[], snap: Rule[]) {
   const byId = new Map(snap.map((r) => [r.id, r]));
@@ -565,6 +600,7 @@ export async function undo() {
   const stale = staleCount(e.redo);
   if (stale) { showToast(`Geri alınamadı: ${e.label} — ${stale} faturanın kodu sonradan başka yerde (başka sekme ya da yedek) değişti.`, 5000); return; }
   if (e.rules) await writeRules(e.rules.ids, e.rules.before);
+  if (e.excl) await writeExcluded(e.excl.nos, !e.excl.value);
   await applyChanges(e.inverse);
   redoStack.value = [...redoStack.value, e];
   const idx = e.at ? invoices.value.findIndex((i) => i.no === e.at) : -1;
@@ -579,6 +615,7 @@ export async function redo() {
   const stale = staleCount(e.inverse);
   if (stale) { showToast(`Yinelenemedi: ${e.label} — ${stale} faturanın kodu sonradan başka yerde değişti.`, 5000); return; }
   if (e.rules) await writeRules(e.rules.ids, e.rules.after);
+  if (e.excl) await writeExcluded(e.excl.nos, e.excl.value);
   await applyChanges(e.redo);
   undoStack.value = [...undoStack.value, e];
   showToast(`Yinelendi: ${e.label}`);
@@ -594,6 +631,12 @@ export function outputContext(): RowContext {
 
 export function outputRows() {
   if (!batchRec.value) return [];
+  return buildTemplateRows(outputIncluded.value, outputTemplate.value, outputContext());
+}
+
+/** Önizleme için: çıkarılanlar dahil bütün faturaların satırları (çıktı sırasıyla) */
+export function outputRowsAll() {
+  if (!batchRec.value) return [];
   return buildTemplateRows(outputOrder.value, outputTemplate.value, outputContext());
 }
 
@@ -604,8 +647,9 @@ export async function setOutputTemplate(t: OutputTemplate) {
 export async function exportExcel() {
   const b = batchRec.value;
   if (!b) return;
-  const bytes = await buildTemplateWorkbook(outputOrder.value, outputTemplate.value, outputContext());
-  const name = buildFileName(firm.value.name, outputOrder.value);
+  if (outputIncluded.value.length === 0) { showToast('Excel\'e girecek fatura yok: hepsi çıkarılmış.', 4000); return; }
+  const bytes = await buildTemplateWorkbook(outputIncluded.value, outputTemplate.value, outputContext());
+  const name = buildFileName(firm.value.name, outputIncluded.value);
   const blob = new Blob([bytes as unknown as ArrayBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');

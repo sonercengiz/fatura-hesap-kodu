@@ -4,7 +4,7 @@ import { normalizeTemplate, edmTemplate, FIELD_DEFS, type OutputTemplate } from 
 import { SORT_LABELS } from '../../core/sort';
 import { db, DEFAULT_FIRM_ID, loadSettings, newId, type BatchRecord, type FirmRecord } from '../../storage/db';
 import { ensureXslt, forgetHtml } from '../../render/xslt';
-import { ready, outputTemplate, accounts, assignments, backupDismissedAt, batchList, batchRec, bulkNos, bumpHistory, historyDelta, current, currentFirmId, currentIndex, filterMode, firm, firms, firstNavigable, goTo, history, invoiceRecs, invoices, lastClicked, lastExportAt, mode, redoStack, ruleNos, rules, searchText, selected, settings, showToast, undoStack } from './core';
+import { ready, needsCode, outputTemplate, accounts, assignments, backupDismissedAt, batchList, batchRec, bulkNos, bumpHistory, historyDelta, current, currentFirmId, currentIndex, filterMode, firm, firms, firstNavigable, goTo, history, invoiceRecs, invoices, lastClicked, lastExportAt, mode, redoStack, ruleNos, rules, searchText, selected, settings, showToast, undoStack } from './core';
 
 /** Diğer sekmelere "veri değişti" sinyali; alan sekme görünürse yeniler, değilse görünür olunca yeniler */
 export const channel: BroadcastChannel | null = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('fatura-hesap-kodu') : null;
@@ -175,7 +175,7 @@ export async function openBatch(id: string) {
 }
 
 function goFirstUnassigned() {
-  const idx = invoices.value.findIndex((i) => !assignments.value.has(i.no));
+  const idx = invoices.value.findIndex(needsCode);
   currentIndex.value = idx >= 0 ? idx : firstNavigable();
 }
 

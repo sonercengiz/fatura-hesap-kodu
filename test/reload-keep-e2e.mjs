@@ -41,7 +41,7 @@ check('XML ekleme: seçim korunur (2)', (await a.locator('.list .row.selected').
 check('XML ekleme: açık fatura yerinde', (await curNo()) === 'AYT2026000000003', await curNo());
 
 // 2) Fatura çıkarma (seçili olanlardan biri) → seçimden düşer; geri alma doğru faturaya döner
-await row('AYT2026000000001').click(); await a.locator('button:has-text("çıkar")').first().click();
+await row('AYT2026000000001').click(); await a.locator('button[title^="Bu faturayı dönemden çıkar"]').click();
 await a.waitForSelector('.modal.dialog'); await a.locator('.modal.dialog button.danger').click(); await settle();
 check('çıkarma: arama korunur', (await a.locator('#search').inputValue()) === 'telekom', await a.locator('#search').inputValue());
 check('çıkarma: geri alma yığını korunur', (await undoTitle()).includes('600.02'), await undoTitle());

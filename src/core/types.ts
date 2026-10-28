@@ -39,6 +39,8 @@ export interface Invoice {
   vatRates: number[];
   /** KDV oranına göre matrah ve vergi; XML'siz kayıtlarda boş */
   vatBreakdown: VatPart[];
+  /** Excel çıktısına girmez (istisnai fatura; kullanıcı çıkardı). Kod beklemez, sayaçlara girmez */
+  excluded: boolean;
   /** EDM Excel listesinden gelen ham sütunlar (başlık → değer); XML'de olmayan alanlar çıktıda buradan dolar */
   edm?: Record<string, CellValue>;
 }
@@ -50,7 +52,7 @@ export interface ShortcutSlot {
 
 export type ViewMode = 'top' | 'last' | 'margin';
 export type SortMode = 'date-supplier' | 'added';
-export type FilterMode = 'all' | 'unassigned' | 'manual' | 'bulk' | 'rule';
+export type FilterMode = 'all' | 'unassigned' | 'manual' | 'bulk' | 'rule' | 'excluded';
 
 export type Layout = 'hybrid' | 'list';
 /** Liste görünümü sütunu: Excel çıktısının alanlarından biri ya da yalnızca listede olan "Dikkat" (uyarılar). */

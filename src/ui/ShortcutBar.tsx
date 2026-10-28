@@ -92,8 +92,8 @@ function AssignStatus() {
 
 /** Dönem ilerlemesi: atanmamış varken sessiz (zemin rengi), hepsi atanınca renklenir ve sıradaki adımı gösterir. */
 function ProgressCard() {
-  const total = S.invoices.value.length;
-  if (total === 0) return null;
+  const total = S.outputCount.value;
+  if (S.invoices.value.length === 0) return null;
   const done = S.assignedCount.value;
   const left = total - done;
   if (left === 0) {

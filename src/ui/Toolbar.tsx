@@ -18,6 +18,7 @@ export function Toolbar() {
   const bar = useRef<HTMLElement>(null);
   const b = S.batchRec.value;
   const n = S.invoices.value.length;
+  const no = S.outputCount.value;
   const issues = S.invoices.value.filter((i) => S.attentionIssues(i).length > 0).length;
   const [hidden, setHidden] = useState<ActId[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -130,10 +131,10 @@ export function Toolbar() {
       <button class={b ? '' : 'primary'} onClick={() => xml.current?.click()} title={(b ? 'Açık döneme e-Fatura XML ya da ZIP dosyaları ekle' : 'e-Fatura XML ya da ZIP dosyalarını yükle (yeni dönem açılır)') + '. EDM fatura listesi (Excel) de yüklenebilir: boş kalan sütunları doldurur. Klasörü pencereye sürükleyerek de yükleyebilirsiniz.'}>Yükle</button>
       <div class="spacer" />
       {b && (
-        <div class={`progress ${n > 0 && S.assignedCount.value === n ? 'complete' : ''}`} title={`Atanan / toplam${issues ? ` · dikkat gerektiren: ${issues}` : ''} · her atama anında bu tarayıcıya kaydedilir`}>
-          <b>{S.assignedCount.value}</b>/{n} atandı
+        <div class={`progress ${no > 0 && S.assignedCount.value === no ? 'complete' : ''}`} title={`Atanan / Excel'e girecek${S.excludedCount.value ? ` · ${S.excludedCount.value} fatura Excel'den çıkarıldı` : ''}${issues ? ` · dikkat gerektiren: ${issues}` : ''} · her atama anında bu tarayıcıya kaydedilir`}>
+          <b>{S.assignedCount.value}</b>/{no} atandı{S.excludedCount.value > 0 && <span class="muted"> · {S.excludedCount.value} hariç</span>}
           {issues > 0 && <span class="warn"> · dikkat: {issues}</span>}
-          {n > 0 && S.assignedCount.value === n ? <span class="saved"> · tamam, <kbd class="always">F1</kbd> Excel üret</span> : <span class="saved" title="Her atama anında bu tarayıcıya kaydedilir; ayrıca kaydetmeniz gerekmez"> · ✓ anında kaydedilir</span>}
+          {no > 0 && S.assignedCount.value === no ? <span class="saved"> · tamam, <kbd class="always">F1</kbd> Excel üret</span> : <span class="saved" title="Her atama anında bu tarayıcıya kaydedilir; ayrıca kaydetmeniz gerekmez"> · ✓ anında kaydedilir</span>}
         </div>
       )}
       {acts.slice(0, 3).map((a) => <button data-act={a.id} class={a.cls ?? ''} onClick={a.on} disabled={a.disabled} title={a.title}>{a.label}{a.kbd && a.id === 'preview' && <kbd>F5</kbd>}</button>)}

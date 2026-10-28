@@ -155,7 +155,7 @@ export function ListView() {
               const src = bulk ? 'toplu' : ruled ? 'kural' : c ? 'elle' : '';
               return (
                 <tr
-                  class={`row ${k === idx ? 'current' : ''} ${c ? `done slot-row-${si}` : ''} ${sel ? 'selected' : ''} ${bulk || ruled ? 'bulk' : ''}`}
+                  class={`row ${k === idx ? 'current' : ''} ${c ? `done slot-row-${si}` : ''} ${sel ? 'selected' : ''} ${bulk || ruled ? 'bulk' : ''} ${i.excluded ? 'excluded' : ''}`}
                   onClick={(e) => {
                     if (e.shiftKey && S.lastClicked.value >= 0) { S.selectRange(S.lastClicked.value, k); S.lastClicked.value = k; return; }
                     if (e.ctrlKey || e.metaKey) { S.toggleSelect(i.no); S.lastClicked.value = k; return; }
@@ -169,7 +169,7 @@ export function ListView() {
                   {cols.map(({ id }) => {
                     if (id === 'code') return (
                       <td class={`lv-code code-col slot-${si}`} title="Tıkla: kodu elle yaz" onClick={(e) => { e.stopPropagation(); S.goTo(k); S.enterManual(c ?? ''); }}>
-                        <span class="row-code">{c ?? <span class="muted">—</span>}</span>
+                        <span class="row-code">{i.excluded && <span class="excl-tag" title="Excel'e girmez">hariç</span>}{c ?? <span class="muted">—</span>}</span>
                       </td>
                     );
                     if (id === 'issues') return <td class="lv-issues">{iss.length > 0 && <span class="warn" title={iss.map((x) => S.ISSUE_LABEL[x]).join('\n')}>! {iss.map((x) => S.ISSUE_LABEL[x]).join(' · ')}</span>}</td>;

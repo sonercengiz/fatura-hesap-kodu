@@ -571,3 +571,11 @@ tr.iss-chart td.code-col { color: var(--warn); text-decoration: underline wavy v
 .app:not(.wide).density-comfortable .bar-mid { max-width: none; }
 .app.narrow .bar { grid-template-columns: minmax(0, 1fr) minmax(190px, 250px); }
 .app.narrow.density-comfortable .slots { max-width: none; }
+
+/* Excel'den çıkarılan faturalar: soluk, "hariç" etiketi; önizlemede üstü çizili */
+.row.excluded > *:not(.lv-check):not(.row-check) { opacity: .5; }
+.excl-tag { display: inline-block; font-size: 11px; font-weight: 600; padding: 0 6px; margin-right: 6px; border-radius: 999px; background: var(--neutral); color: var(--muted); font-family: system-ui, sans-serif; }
+.excl-note { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 8px; margin-bottom: 6px; border-radius: 6px; background: var(--neutral); color: var(--muted); font-size: 13px; }
+.bulk-excl { gap: 6px; }
+.modal tr.excluded td:not(.pv-incl):not(.num) { text-decoration: line-through; color: var(--muted); }
+.pv-incl { width: 44px; text-align: center; }

@@ -139,6 +139,7 @@ export const sections: Section[] = [
           <><b>Bu satıcıyı seç</b> ya da <b>Görünenleri seç</b>; kodu yazıp <K k="Enter" /> hepsine verir. Kısayol düğmesine tıklamak da olur.</>,
           <>Seçili satırlar. <K k="Shift" />+tık aralık, <K k="Ctrl" />+tık tekil seçer; <K k="Esc" /> bırakır.</>,
         ]} />
+        <p>Seçim varken <b>Excel'den çıkar</b> seçili faturaları çıktı dosyasının dışında bırakır (istisnai faturalar için; bkz. Önizleme).</p>
         <Tip>Toplu verilen kodlar "toplu" etiketi alır ve ok tuşlarıyla gezerken atlanır; kontrol etmek isterseniz süzgeçten "Toplu atanmış"ı seçin ya da <K k="Ctrl+→" /> ile gezin.</Tip>
       </>
     ),
@@ -202,6 +203,7 @@ export const sections: Section[] = [
           <>Sarı satır = kod yok. Çift tıklayınca o faturaya gidersiniz.</>,
           <>Sütunları GMS'inize göre düzenlemek için <b>Şablonu düzenle</b> (ya da üst çubukta Excel üret'in yanındaki <b>Şablon</b>).</>,
         ]} />
+        <Tip><b>İstisnai faturayı Excel'e koymamak:</b> önizlemede satırın başındaki <b>Excel</b> kutusunu kaldırın; ya da listede faturaları seçip <b>Excel'den çıkar</b>'a basın. Çıkarılan fatura soluk görünür, "hariç" etiketi alır, kod beklemez (sayaç ve <K k="Tab" /> onu atlar). Süzgeçten "Excel'den çıkarılanlar" ile hepsini görür, kutuyu yeniden işaretleyerek ya da panelde <b>Geri al</b> ile geri alırsınız; <K k="Ctrl+Z" /> da geri alır.</Tip>
         <p><K k="F1" /> dosyayı indirir: <code>AY YIL FİRMA_ADI FATURA.xlsx</code>. Ay, faturaların ayıdır. GMS'te "Excel içe aktar" ile açılır.</p>
         <Shot src="15-sablon.png" alt="Çıktı şablonu" notes={[
           <>Hesap Kodu sütunu; sürükleyerek yerini değiştirin, başlığını yazın. İsterseniz kaldırın: uygulamayı yalnızca fatura verisi toplamak için de kullanabilirsiniz.</>,

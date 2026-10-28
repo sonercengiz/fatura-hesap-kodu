@@ -60,6 +60,7 @@ export function SidePanel() {
       <PanelDivider />
       {inv && (
         <div class="detail">
+          {inv.excluded && <div class="excl-note">Bu fatura Excel'e girmez <button class="ghost tiny" onClick={() => S.setExcluded([inv.no], false)}>Geri al</button></div>}
           <div class="detail-name" title={inv.supplierName}>{inv.supplierName}</div>
           <div class="detail-rows">
             <div class="detail-row full"><span>Fatura No</span><b title={inv.no}>{inv.no}</b></div>
@@ -142,7 +143,7 @@ export function SidePanel() {
           const si = S.slotIndexOf(c);
           return (
             <div
-              class={`row ${k === idx ? 'current' : ''} ${c ? `done slot-row-${si}` : ''} ${sel ? 'selected' : ''} ${bulk || ruled ? 'bulk' : ''}`}
+              class={`row ${k === idx ? 'current' : ''} ${c ? `done slot-row-${si}` : ''} ${sel ? 'selected' : ''} ${bulk || ruled ? 'bulk' : ''} ${i.excluded ? 'excluded' : ''}`}
               onClick={(e) => {
                 if (e.shiftKey && S.lastClicked.value >= 0) { S.selectRange(S.lastClicked.value, k); S.lastClicked.value = k; return; }
                 if (e.ctrlKey || e.metaKey) { S.toggleSelect(i.no); S.lastClicked.value = k; return; }
@@ -156,7 +157,7 @@ export function SidePanel() {
                 <span class="row-name">{i.supplierName}</span>
                 <span class="row-sub">{i.no} · {i.date}</span>
               </span>
-              <span class="row-code">{bulk && <span class="bulk-tag" title="Toplu atandı (doğal gezintide atlanır, Ctrl+ok ile görülür)">toplu</span>}{ruled && <span class="bulk-tag" title="Kuralla atandı (doğal gezintide atlanır, Ctrl+ok ile görülür)">kural</span>}{c ?? ''}{iss.length > 0 && <span class="warn-dot" title={iss.map((x) => S.ISSUE_LABEL[x]).join('\n')}>!</span>}</span>
+              <span class="row-code">{i.excluded && <span class="excl-tag" title="Excel'e girmez">hariç</span>}{bulk && <span class="bulk-tag" title="Toplu atandı (doğal gezintide atlanır, Ctrl+ok ile görülür)">toplu</span>}{ruled && <span class="bulk-tag" title="Kuralla atandı (doğal gezintide atlanır, Ctrl+ok ile görülür)">kural</span>}{c ?? ''}{iss.length > 0 && <span class="warn-dot" title={iss.map((x) => S.ISSUE_LABEL[x]).join('\n')}>!</span>}</span>
             </div>
           );
         })}
@@ -219,6 +220,17 @@ export function BulkBar() {
           <button class="primary tiny" onClick={() => S.assignBulk(code).then(() => setCode(''))} disabled={!code.trim()}>Toplu ata</button>
         </div>
       )}
+      {n > 0 && (() => {
+        const sel = S.invoices.value.filter((i) => S.selected.value.has(i.no));
+        const inn = sel.filter((i) => !i.excluded).map((i) => i.no);
+        const out = sel.filter((i) => i.excluded).map((i) => i.no);
+        return (
+          <div class="bulk-row bulk-excl">
+            {inn.length > 0 && <button class="ghost tiny" onClick={() => S.setExcluded(inn, true)} title="Seçili faturalar Excel çıktısına yazılmaz (istisnai faturalar); kod beklemezler, sayaçlara girmezler. Ctrl+Z geri alır.">Excel'den çıkar ({inn.length})</button>}
+            {out.length > 0 && <button class="ghost tiny" onClick={() => S.setExcluded(out, false)} title="Seçili çıkarılmış faturalar yeniden Excel'e girer">Excel'e geri al ({out.length})</button>}
+          </div>
+        );
+      })()}
       {n > 0 && S.slots.value.some(Boolean) && (
         <div class="bulk-row bulk-slots">
           {S.slots.value.map((c, i) => c && <button class={`tiny slot-${i}`} onClick={() => S.assignBulk(c)} title={`${n} faturaya ${c} ata`}>{c}</button>)}
