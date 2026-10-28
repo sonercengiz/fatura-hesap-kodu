@@ -4,16 +4,47 @@ import { ruleLabel } from '../core/rules';
 import { BulkBar } from './SidePanel';
 import { fmtAmount } from './InvoiceCard';
 import { SORT_LABELS, type SortMode } from '../core/sort';
-import { LIST_COLUMNS, type FilterMode, type ListColumnId } from '../core/types';
+import { DEFAULT_LIST_COLUMNS, normalizeListColumns, type FilterMode, type ListColumnId } from '../core/types';
+import { FIELD_DEFS, KDV_FIELD_IDS, type OutputFieldId } from '../core/excel/template';
+import type { CellValue } from '../core/types';
+
+/** Listede kısa başlıklar; diğer alanlarda Excel'deki başlık */
+const SHORT: Partial<Record<ListColumnId, string>> = { date: 'Tarih', name: 'Satıcı', vkn: 'VKN / TCKN', type: 'Tip', profile: 'Tür', amount: 'Tutar', taxExclusive: 'Matrah', tax: 'Vergi', currency: 'Döviz', lineCount: 'Kalem', source: 'Kaynak', accountName: 'Hesap adı', issues: 'Dikkat' };
+const colLabel = (id: ListColumnId) => SHORT[id] ?? (id === 'issues' ? 'Dikkat' : FIELD_DEFS[id].header || FIELD_DEFS[id].label);
+const isField = (id: string) => id in FIELD_DEFS;
+/** Eklenebilecek alanlar: boş sütun hariç bütün çıktı alanları + Dikkat */
+const ALL_LIST_IDS: ListColumnId[] = [...(Object.keys(FIELD_DEFS) as OutputFieldId[]).filter((id) => id !== 'blank'), 'issues'];
+const MONO = new Set<ListColumnId>(['no', 'date', 'vkn', 'uuid']);
+
+/** Bir alan hücresi: para sağa yaslı Türkçe biçimli, numara/VKN/ETTN eşit aralıklı, satıcı ve hesap adı kırpılır */
+function cell(id: OutputFieldId, v: CellValue) {
+  if (FIELD_DEFS[id].money) return <td class="r">{typeof v === 'number' ? fmtAmount(v, '') : String(v ?? '')}</td>;
+  const t = v == null ? '' : String(v);
+  if (MONO.has(id)) return <td class="mono">{t}</td>;
+  if (id === 'name') return <td class="lv-supplier" title={t}>{t}</td>;
+  if (id === 'accountName') return <td class="lv-account muted" title={t}>{t}</td>;
+  if (typeof v === 'number') return <td class="r">{t}</td>;
+  return <td class="lv-text" title={t.length > 30 ? t : undefined}>{t}</td>;
+}
 
 /** Yalın liste görünümü: tam genişlikte tablo; kısayollar, manuel giriş, toplu seçim ve filtreler aynen çalışır. */
 export function ListView() {
   const idx = S.currentIndex.value;
   const box = useRef<HTMLDivElement>(null);
   const [colsOpen, setColsOpen] = useState(false);
-  const cols = S.settings.value.listColumns;
-  const show = (id: ListColumnId) => cols.includes(id);
+  const follow = S.settings.value.listFollowsTemplate;
+  const own = normalizeListColumns(S.settings.value.listColumns, isField);
+  // Excel şablonuyla aynı: şablonun sütunları, sırası ve başlıkları (boş sütun hariç) + listede Dikkat
+  const cols: { id: ListColumnId; head: string }[] = follow
+    ? [...S.outputTemplate.value.columns.filter((c) => c.id !== 'blank').map((c) => ({ id: c.id as ListColumnId, head: c.header || colLabel(c.id) })), { id: 'issues', head: 'Dikkat' }]
+    : own.map((id) => ({ id, head: colLabel(id) }));
+  const ctx = S.outputContext();
   const inv = S.current.value;
+  const stop = (e: KeyboardEvent) => e.stopPropagation();
+  const moveCol = (k: number, d: -1 | 1) => { const a = own.slice(); const j = k + d; if (j < 0 || j >= a.length) return; [a[k], a[j]] = [a[j], a[k]]; S.setListColumns(a); };
+  const addable = ALL_LIST_IDS.filter((id) => !own.includes(id));
+  const missingKdv = KDV_FIELD_IDS.filter((id) => !own.includes(id));
+  const openTemplate = () => { setColsOpen(false); S.templateOpen.value = true; };
 
   useEffect(() => {
     box.current?.querySelector<HTMLElement>('tr.current')?.scrollIntoView({ block: 'nearest' });
@@ -55,13 +86,36 @@ export function ListView() {
           <button class="tiny cols-btn" title="Gösterilecek sütunlar" onClick={() => setColsOpen(!colsOpen)}>Sütunlar ▾</button>
           {colsOpen && (
             <div class="cols-pop">
-              {LIST_COLUMNS.map((c) => (
-                <label class="cols-item">
-                  <input type="checkbox" checked={show(c.id)} disabled={c.id === 'code'} onChange={() => S.toggleColumn(c.id)} />
-                  <span>{c.label}</span>
-                </label>
-              ))}
-              <div class="muted small">Seçim bu tarayıcıda hatırlanır. Çıktı dosyasını etkilemez.</div>
+              <div class="cols-mode">
+                <label><input type="radio" name="lv-cols" checked={!follow} onChange={() => S.setListFollowsTemplate(false)} /> Kendi seçimim</label>
+                <label title="Liste, açık firmanın Excel şablonundaki sütunları aynı sırayla ve aynı başlıklarla gösterir"><input type="radio" name="lv-cols" checked={follow} onChange={() => S.setListFollowsTemplate(true)} /> Excel şablonuyla aynı</label>
+              </div>
+              {follow ? (
+                <div class="muted small cols-note">Liste, <b>{S.firm.value.name}</b> firmasının Excel şablonunu ({S.outputTemplate.value.columns.length} sütun) aynı sırayla ve başlıklarla gösterir; ekranda ne görüyorsanız Excel'e o çıkar. Sona yalnızca listede olan "Dikkat" eklenir.</div>
+              ) : (
+                <>
+                  <div class="cols-list">
+                    {own.map((id, k) => (
+                      <div class={`cols-row ${id === 'code' ? 'is-code' : ''}`}>
+                        <span class="cols-name" title={id === 'issues' ? 'Uyarılar (yalnızca listede)' : FIELD_DEFS[id].label}>{colLabel(id)}</span>
+                        <button class="ghost tiny" title="Sola (yukarı)" disabled={k === 0} onClick={() => moveCol(k, -1)}>↑</button>
+                        <button class="ghost tiny" title="Sağa (aşağı)" disabled={k === own.length - 1} onClick={() => moveCol(k, 1)}>↓</button>
+                        <button class="ghost tiny" title={id === 'code' ? 'Hesap Kodu sütunu kaldırılamaz' : 'Sütunu kaldır'} disabled={id === 'code'} onClick={() => S.setListColumns(own.filter((x) => x !== id))}>✕</button>
+                      </div>
+                    ))}
+                  </div>
+                  <select class="cols-add" value="" onKeyDown={stop} onChange={(e) => { const v = (e.currentTarget as HTMLSelectElement).value as ListColumnId; if (v) S.setListColumns([...own, v]); }}>
+                    <option value="">+ Sütun ekle…</option>
+                    {addable.map((id) => <option value={id}>{id === 'issues' ? 'Dikkat (uyarılar)' : FIELD_DEFS[id].label}</option>)}
+                  </select>
+                  <div class="cols-foot">
+                    {missingKdv.length > 0 && <button class="tiny" onClick={() => S.setListColumns([...own, ...missingKdv])} title="KDV oranına göre matrah ve KDV sütunları">+ KDV dökümü</button>}
+                    <button class="tiny ghost" onClick={() => S.setListColumns(DEFAULT_LIST_COLUMNS)}>Varsayılana dön</button>
+                  </div>
+                  <div class="muted small cols-note">Seçim bu tarayıcıda hatırlanır; Excel dosyasını etkilemez.</div>
+                </>
+              )}
+              <button class="tiny cols-tpl" onClick={openTemplate}>Excel şablonunu düzenle ({S.firm.value.name})…</button>
             </div>
           )}
         </div>
@@ -86,7 +140,7 @@ export function ListView() {
             <tr>
               <th class="lv-check"><input type="checkbox" title="Görünenleri seç / bırak" checked={S.selected.value.size > 0 && S.invoices.value.filter(S.passesFilter).every((i) => S.selected.value.has(i.no))} onChange={(e) => ((e.currentTarget as HTMLInputElement).checked ? S.selectVisible() : S.clearSelection())} /></th>
               <th class="num">#</th>
-              {LIST_COLUMNS.filter((c) => show(c.id)).map((c) => <th class={`lv-${c.id}`}>{c.label}</th>)}
+              {cols.map((c) => <th class={`lv-${c.id}`}>{c.head}</th>)}
             </tr>
           </thead>
           <tbody>
@@ -112,23 +166,16 @@ export function ListView() {
                 >
                   <td class="lv-check"><input type="checkbox" class="row-check" checked={sel} onClick={(e) => { e.stopPropagation(); const ev = e as MouseEvent; if (ev.shiftKey && S.lastClicked.value >= 0) S.selectRange(S.lastClicked.value, k); else S.toggleSelect(i.no); S.lastClicked.value = k; }} /></td>
                   <td class="num">{k + 1}</td>
-                  {show('no') && <td class="mono">{i.no}</td>}
-                  {show('date') && <td class="mono">{i.date}</td>}
-                  {show('supplier') && <td class="lv-supplier" title={i.supplierName}>{i.supplierName}</td>}
-                  {show('vkn') && <td class="mono">{i.supplierVkn}</td>}
-                  {show('type') && <td>{i.invoiceType}</td>}
-                  {show('profile') && <td>{i.profile}</td>}
-                  {show('amount') && <td class="r">{fmtAmount(i.amount, '')}</td>}
-                  {show('taxExclusive') && <td class="r">{fmtAmount(i.taxExclusive, '')}</td>}
-                  {show('tax') && <td class="r">{fmtAmount(i.taxAmount, '')}</td>}
-                  {show('currency') && <td>{i.currency}</td>}
-                  {show('lines') && <td class="r">{i.lineCount ?? ''}</td>}
-                  {show('source') && <td class="muted">{src}</td>}
-                  <td class={`lv-code code-col slot-${si}`} title="Tıkla: kodu elle yaz" onClick={(e) => { e.stopPropagation(); S.goTo(k); S.enterManual(c ?? ''); }}>
-                    <span class="row-code">{c ?? <span class="muted">—</span>}</span>
-                  </td>
-                  {show('account') && <td class="lv-account muted" title={c ? S.accountMap.value.get(c) : ''}>{c ? S.accountMap.value.get(c) ?? '' : ''}</td>}
-                  {show('issues') && <td class="lv-issues">{iss.length > 0 && <span class="warn" title={iss.map((x) => S.ISSUE_LABEL[x]).join('\n')}>! {iss.map((x) => S.ISSUE_LABEL[x]).join(' · ')}</span>}</td>}
+                  {cols.map(({ id }) => {
+                    if (id === 'code') return (
+                      <td class={`lv-code code-col slot-${si}`} title="Tıkla: kodu elle yaz" onClick={(e) => { e.stopPropagation(); S.goTo(k); S.enterManual(c ?? ''); }}>
+                        <span class="row-code">{c ?? <span class="muted">—</span>}</span>
+                      </td>
+                    );
+                    if (id === 'issues') return <td class="lv-issues">{iss.length > 0 && <span class="warn" title={iss.map((x) => S.ISSUE_LABEL[x]).join('\n')}>! {iss.map((x) => S.ISSUE_LABEL[x]).join(' · ')}</span>}</td>;
+                    if (id === 'source') return <td class="muted">{src}</td>;
+                    return cell(id, FIELD_DEFS[id].value(i, ctx));
+                  })}
                 </tr>
               );
             })}

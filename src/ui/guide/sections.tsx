@@ -123,7 +123,7 @@ export const sections: Section[] = [
         <p>Ayın faturalarını zaten tanıyorsanız görüntüye gerek yok. Üst çubuktaki <b>☰ Liste</b> tam genişlikte tabloya geçer; bütün tuşlar aynı çalışır.</p>
         <Shot src="10-liste.png" alt="Liste görünümü" notes={[
           <>Arama, sıra, süzgeç, seçim ve <b>Sütunlar</b>.</>,
-          <>Gösterilecek sütunları seçin; seçim hatırlanır, Excel çıktısını etkilemez.</>,
+          <>Sütunları kendiniz seçip sıralayın (Excel'deki bütün alanlar, KDV dökümü dahil) ya da <b>Excel şablonuyla aynı</b>yı seçin: ekranda ne görüyorsanız Excel'e o çıkar.</>,
           <>Seçili satır. Çift tıklayınca o fatura görsel görünümde açılır.</>,
           <>Hesap Kodu hücresine tıklamak elle girişi açar.</>,
         ]} />
@@ -200,7 +200,7 @@ export const sections: Section[] = [
           <>Dikkat sayacı: kod almamış, listede olmayan kod, tevkifat/iade.</>,
           <>Hesap Kodu sütunu (varsayılan C). Diğer sütunlar EDM listesiyle aynı düzendedir.</>,
           <>Sarı satır = kod yok. Çift tıklayınca o faturaya gidersiniz.</>,
-          <>Sütunları GMS'inize göre düzenlemek için <b>Şablonu düzenle</b>.</>,
+          <>Sütunları GMS'inize göre düzenlemek için <b>Şablonu düzenle</b> (ya da üst çubukta Excel üret'in yanındaki <b>Şablon</b>).</>,
         ]} />
         <p><K k="F1" /> dosyayı indirir: <code>AY YIL FİRMA_ADI FATURA.xlsx</code>. Ay, faturaların ayıdır. GMS'te "Excel içe aktar" ile açılır.</p>
         <Shot src="15-sablon.png" alt="Çıktı şablonu" notes={[
@@ -210,6 +210,7 @@ export const sections: Section[] = [
           <>Canlı önizleme.</>,
           <>Karıştıysa <b>EDM varsayılanına dön</b>.</>,
         ]} />
+        <Tip>Her firmanın kendi Excel şablonu vardır: firmalar farklı GMS düzenleriyle çalışıyorsa her birini ayrı ayarlayın. Yeni firma, açık firmanın şablonuyla başlar; şablon penceresindeki <b>Başka firmadan al</b> bir firmanın şablonunu kopyalar.</Tip>
         <Tip><b>KDV dökümü</b> sütunları: Matrah %0 · Matrah ve KDV %1, %10, %20 · Matrah ve KDV Diğer. Değerler faturanın XML'indeki KDV özetinden gelir; faturada o oran yoksa hücre boş kalır. "Diğer" eski oranları (%8, %18) ve bazı operatör faturalarında oranı tutarıyla uyuşmayan KDV satırlarının vergisini toplar. ÖİV, ÖTV gibi KDV dışı vergiler bu sütunlara girmez; bu yüzden matrah + KDV her faturada Tutar'ı vermeyebilir.</Tip>
         <Warn>İlk kez GMS'e verirken küçük bir dönemle deneyin. GMS bazı sütunları bekliyorsa <T t="edm listesi" />ni de yükleyin; çıktı EDM'nin dosyasıyla birebir olur.</Warn>
       </>
@@ -305,7 +306,7 @@ export const troubles: [string, string][] = [
   ['Q tuşu "yuva boş" diyor', 'Alt çubukta o yuvaya tıklayıp bir kod yazın. Yuvalar kendiliğinden dolmaz.'],
   ['Kod verdim ama listede göremiyorum', 'Süzgeç "Atanmamış" olabilir; "Tümü" yapın. Toplu/kural atananlar gezerken atlanır; Ctrl+ok ile görülür.'],
   ['Yanlış firmaya yükledim', 'Sağ alttaki "taşı" ile dönemi ya da seçili faturaları doğru firmaya taşıyın; atamalar gider.'],
-  ['GMS dosyayı almadı', 'Ayarlar › Çıktı › Şablon ile sütun ve başlıkları GMS\'in beklediği gibi yapın. Emin olmak için EDM listesini de yükleyin; çıktı EDM dosyasıyla birebir olur.'],
+  ['GMS dosyayı almadı', 'Üst çubuktaki Şablon (ya da Ayarlar › Çıktı) ile sütun ve başlıkları GMS\'in beklediği gibi yapın. Emin olmak için EDM listesini de yükleyin; çıktı EDM dosyasıyla birebir olur.'],
   ['"Depolama alanı doldu" uyarısı', 'Ayarlar › Yedek › Depolama\'dan eski dönemlerin görsellerini arşivleyin ya da gereksiz dönemi silin.'],
   ['Başka bilgisayarda devam etmek istiyorum', 'Ayarlar › Yedek › Dışa aktar; diğer bilgisayarda İçe aktar. XML\'leri orada yeniden yüklerseniz görseller de gelir.'],
   ['İki sekmede açtım', 'Sorun değil; değişiklikler diğer sekmeye kendiliğinden yansır.'],

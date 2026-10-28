@@ -1,5 +1,5 @@
 import { signal, computed, batch as sbatch } from '@preact/signals';
-import { DEFAULT_SETTINGS, DEFAULT_SHORTCUT_KEYS, LIST_COLUMNS, typeLabel, profileLabel, toDisplayDate, type Settings, type Invoice, type FilterMode, type ListColumnId } from '../../core/types';
+import { DEFAULT_SETTINGS, DEFAULT_SHORTCUT_KEYS, typeLabel, profileLabel, toDisplayDate, type Settings, type Invoice, type FilterMode, type ListColumnId } from '../../core/types';
 import { buildTemplateWorkbook, buildFileName } from '../../core/excel/writeOutput';
 import { buildTemplateRows, normalizeTemplate, codeColumnIndexOf, type OutputTemplate, type RowContext } from '../../core/excel/template';
 import { supplierHint, type HistoryEntry } from '../../core/suggest/engine';
@@ -22,6 +22,9 @@ export const EMPTY_FIRM: FirmRecord = { id: DEFAULT_FIRM_ID, name: '', createdAt
 
 /** Seçili firma; kısayollar, hesap listesi ve öneri geçmişi buna bağlıdır */
 export const firm = computed<FirmRecord>(() => firms.value.find((f) => f.id === currentFirmId.value) ?? firms.value[0] ?? EMPTY_FIRM);
+
+/** Açık firmanın çıktı şablonu (eski kayıtlarda genel ayardaki şablon) */
+export const outputTemplate = computed<OutputTemplate>(() => firm.value.outputTemplate ?? settings.value.outputTemplate);
 
 export const batchRec = signal<BatchRecord | null>(null);
 
@@ -193,7 +196,7 @@ export const invoices = computed<Invoice[]>(() => sortInvoices(rawInvoices.value
 
 /** Çıktı dosyası sırası: şablondaki satır sırası (ekran sırasından bağımsız, kararlı). */
 export const outputOrder = computed<Invoice[]>(() => {
-  const o = settings.value.outputTemplate.rowOrder;
+  const o = outputTemplate.value.rowOrder;
   if (o === 'added') return sortInvoices(rawInvoices.value, 'added');
   if (o === 'date-supplier') return sortInvoices(rawInvoices.value, 'date-supplier');
   // tarih, sonra fatura no
@@ -203,7 +206,7 @@ export const outputOrder = computed<Invoice[]>(() => {
 export const dateKeyOf = (i: Invoice) => Number(i.isoDate.replace(/-/g, '')) || 0;
 
 /** Çıktıda Hesap Kodu sütununun 0 tabanlı konumu */
-export const outputCodeAt = computed(() => codeColumnIndexOf(settings.value.outputTemplate));
+export const outputCodeAt = computed(() => codeColumnIndexOf(outputTemplate.value));
 
 export const current = computed<Invoice | null>(() => invoices.value[currentIndex.value] ?? null);
 
@@ -589,17 +592,17 @@ export function outputContext(): RowContext {
 
 export function outputRows() {
   if (!batchRec.value) return [];
-  return buildTemplateRows(outputOrder.value, settings.value.outputTemplate, outputContext());
+  return buildTemplateRows(outputOrder.value, outputTemplate.value, outputContext());
 }
 
 export async function setOutputTemplate(t: OutputTemplate) {
-  await updateSettings({ outputTemplate: normalizeTemplate(t) });
+  await updateFirm({ outputTemplate: normalizeTemplate(t) });
 }
 
 export async function exportExcel() {
   const b = batchRec.value;
   if (!b) return;
-  const bytes = await buildTemplateWorkbook(outputOrder.value, settings.value.outputTemplate, outputContext());
+  const bytes = await buildTemplateWorkbook(outputOrder.value, outputTemplate.value, outputContext());
   const name = buildFileName(firm.value.name, outputOrder.value);
   const blob = new Blob([bytes as unknown as ArrayBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   const url = URL.createObjectURL(blob);
@@ -622,11 +625,13 @@ export async function setLayout(layout: Settings['layout'], no?: string) {
   }
 }
 
-export async function toggleColumn(id: ListColumnId) {
-  if (id === 'code') return;
-  const cur = settings.value.listColumns;
-  const next = cur.includes(id) ? cur.filter((c) => c !== id) : LIST_COLUMNS.map((c) => c.id).filter((c) => c === id || cur.includes(c));
-  await updateSettings({ listColumns: next });
+/** Liste görünümü sütunları (kendi seçimim): sıra korunur, Hesap Kodu çıkarılamaz */
+export async function setListColumns(ids: ListColumnId[]) {
+  await updateSettings({ listColumns: ids.includes('code') ? ids : [...ids, 'code'] });
+}
+
+export async function setListFollowsTemplate(on: boolean) {
+  await updateSettings({ listFollowsTemplate: on });
 }
 
 export async function updateSettings(patch: Partial<Settings>) {

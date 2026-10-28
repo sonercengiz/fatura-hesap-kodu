@@ -137,7 +137,7 @@ await shot('09-ilerleme.png', { clip: await clipOf('.bar', 4) }); await clear();
 await page.locator('.layout-btn').click(); await page.waitForSelector('.listview'); await wait(200);
 await page.locator('.cols-btn').click(); await page.waitForSelector('.cols-pop');
 await annotate([{ sel: '.lv-head', n: 1, pad: 2 }, { sel: '.cols-pop', n: 2 }, { sel: 'tr.current', n: 3, pad: 0 }, { sel: 'tr.current td.lv-code', n: 4, pos: 'tr' }]);
-await shot('10-liste.png'); await clear(); await page.mouse.click(700, 500); await wait(100);
+await shot('10-liste.png'); await clear(); await page.locator('.cols-btn').click(); await page.waitForSelector('.cols-pop', { state: 'detached' });
 // toplu seçim
 await page.locator('.bulk-toggle').click(); await page.locator('button:has-text("Bu satıcıyı seç")').click(); await wait(150);
 await page.locator('.bulk-input').fill('770.03');

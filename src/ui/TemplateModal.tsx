@@ -6,11 +6,13 @@ const colName = (i: number) => { let s = ''; let n = i; do { s = String.fromChar
 
 /** Çıktı Excel şablonu: sütunlar (sıra, başlık), satır sırası, sayfa adı; canlı önizleme. */
 export function TemplateModal() {
-  const [t, setT] = useState<OutputTemplate>(() => JSON.parse(JSON.stringify(S.settings.value.outputTemplate)));
+  const [t, setT] = useState<OutputTemplate>(() => JSON.parse(JSON.stringify(S.outputTemplate.value)));
   const [addId, setAddId] = useState<OutputFieldId>('uuid');
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const close = () => (S.templateOpen.value = false);
-  const save = async () => { await S.setOutputTemplate(t); close(); S.showToast('Çıktı şablonu kaydedildi'); };
+  const save = async () => { await S.setOutputTemplate(t); close(); S.showToast(`Çıktı şablonu kaydedildi (${S.firm.value.name})`); };
+  const others = S.firms.value.filter((f) => f.id !== S.firm.value.id && f.outputTemplate);
+  const copyFrom = (id: string) => { const f = others.find((x) => x.id === id); if (f?.outputTemplate) setT(JSON.parse(JSON.stringify(f.outputTemplate))); };
   const used = new Set(t.columns.map((c) => c.id));
   const addable = (Object.keys(FIELD_DEFS) as OutputFieldId[]).filter((id) => id === 'blank' || !used.has(id));
   const update = (k: number, patch: Partial<typeof t.columns[number]>) => setT({ ...t, columns: t.columns.map((c, i) => (i === k ? { ...c, ...patch } : c)) });
@@ -28,8 +30,15 @@ export function TemplateModal() {
       <div class="modal wide tpl-modal" onClick={(e) => e.stopPropagation()} onKeyDownCapture={(e) => { if (e.key === 'Escape') { e.stopPropagation(); close(); } }}>
         <div class="modal-head">
           <b>Çıktı Excel şablonu</b>
+          <span class="tpl-firm" title="Her firmanın kendi şablonu var; burada yaptığınız değişiklik yalnızca bu firmanın Excel'ini etkiler">{S.firm.value.name}</span>
           <span class="muted">{t.columns.length} sütun · {isEdmDefault(t) ? 'EDM düzeni' : 'özelleştirilmiş'}</span>
           <div class="spacer" />
+          {others.length > 0 && (
+            <select class="tpl-copy" value="" title="Başka bir firmanın şablonunu buraya kopyala (Kaydet'e basana kadar bir şey değişmez)" onChange={(e) => { copyFrom((e.currentTarget as HTMLSelectElement).value); (e.currentTarget as HTMLSelectElement).value = ''; }} onKeyDown={(e) => e.stopPropagation()}>
+              <option value="">Başka firmadan al…</option>
+              {others.map((f) => <option value={f.id}>{f.name}</option>)}
+            </select>
+          )}
           <button class="ghost" onClick={() => setT(JSON.parse(JSON.stringify(DEFAULT_OUTPUT_TEMPLATE)))} title="EDM fatura listesinin 20 sütunu + C'de Hesap Kodu">EDM varsayılanına dön</button>
           <button class="primary" onClick={save} disabled={!codeOk || t.columns.length === 0}>Kaydet</button>
           <button class="ghost" onClick={close}>Vazgeç <kbd>Esc</kbd></button>
@@ -71,7 +80,7 @@ export function TemplateModal() {
             <label><span>Sayfa adı</span>
               <input value={t.sheetName} onInput={(e) => setT({ ...t, sheetName: (e.currentTarget as HTMLInputElement).value })} onKeyDown={(e) => e.stopPropagation()} placeholder="Sheet0" />
             </label>
-            <div class="muted small">Hesap kodu, VKN ve ETTN metin tipinde yazılır (Excel sayıya çevirmez). Tutar, matrah, vergi sayıdır. Şablon çalışma alanı yedeğine girer.</div>
+            <div class="muted small">Hesap kodu, VKN ve ETTN metin tipinde yazılır (Excel sayıya çevirmez). Tutar, matrah, vergi sayıdır. Şablon bu firmaya özeldir ve çalışma alanı yedeğine girer; yeni firma açık firmanın şablonuyla başlar.</div>
             <div class="tpl-preview">
               <div class="muted small">Önizleme (ilk {sample.length} satır)</div>
               <div class="table-box">

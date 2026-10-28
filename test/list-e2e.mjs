@@ -25,7 +25,7 @@ await page.locator('.lv-table tbody tr').nth(5).locator('td.lv-code').click(); a
 log('hücre tıkla → kod:', (await page.locator('.lv-table td.lv-code').allInnerTexts())[5]);
 // sütun seçici: Matrah ekle, Tip kaldır
 await page.locator('.cols-btn').click(); await page.waitForSelector('.cols-pop');
-await page.locator('.cols-item:has-text("Matrah") input').check(); await page.locator('.cols-item:has-text("Tip") input').uncheck(); await page.waitForTimeout(100);
+await page.locator('.cols-add').selectOption('taxExclusive'); await page.locator('.cols-row').filter({ has: page.locator('.cols-name', { hasText: /^Tip$/ }) }).locator('button[title="Sütunu kaldır"]').click(); await page.waitForTimeout(100);
 log('sütunlar:', (await page.locator('.lv-table thead th').allInnerTexts()).join(' | '));
 await page.mouse.click(900, 600); await page.waitForTimeout(100);
 await page.screenshot({path:`${S}/shots/list-1.png`});

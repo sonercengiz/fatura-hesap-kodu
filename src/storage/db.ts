@@ -4,6 +4,7 @@ import { DEFAULT_SHORTCUT_KEYS } from '../core/types';
 import type { HistoryEntry } from '../core/suggest/engine';
 import { sheetToInvoices, type EdmSheet } from '../core/legacy';
 import type { Rule } from '../core/rules';
+import type { OutputTemplate } from '../core/excel/template';
 import { itemTextOf, linesOf, vatBreakdownOf, vatRatesOf, type LineInfo, type VatPart } from '../core/xml/parseUbl';
 import { upgradeRule } from '../core/rules';
 
@@ -18,6 +19,8 @@ export interface FirmRecord {
   createdAt: number;
   shortcuts: ShortcutSlot[];
   chartName: string;
+  /** Firmanın çıktı Excel şablonu (her firma kendi GMS düzenine göre); eski kayıtlarda yok → açılışta genel şablon kopyalanır */
+  outputTemplate?: OutputTemplate;
 }
 
 /** Dönem: bir dönemin faturaları (XML'ler peyderpey eklenebilir). */

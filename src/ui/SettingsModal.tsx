@@ -135,9 +135,9 @@ export function SettingsModal() {
             {tab === 'output' && (
               <>
                 <div class="muted">
-                  Çıktı: <b>{s.outputTemplate.columns.length} sütun</b> · Hesap Kodu <b>{String.fromCharCode(65 + Math.min(S.outputCodeAt.value, 25))}</b> sütununda · {isEdmDefault(s.outputTemplate) ? 'EDM düzeni (varsayılan)' : 'özelleştirilmiş'} · sayfa "{s.outputTemplate.sheetName}".
+                  <b>{S.firm.value.name}</b> çıktısı: <b>{S.outputTemplate.value.columns.length} sütun</b> · Hesap Kodu <b>{String.fromCharCode(65 + Math.min(S.outputCodeAt.value, 25))}</b> sütununda · {isEdmDefault(S.outputTemplate.value) ? 'EDM düzeni (varsayılan)' : 'özelleştirilmiş'} · sayfa "{S.outputTemplate.value.sheetName}".
                 </div>
-                <div class="muted small">Sütunlar, başlıklar, satır sırası ve sayfa adı GMS içe aktarma şablonunuza göre ayarlanır. Dosya adı: <code>AY YIL FİRMA_ADI FATURA.xlsx</code> (ay = faturaların baskın ayı).</div>
+                <div class="muted small">Sütunlar, başlıklar, satır sırası ve sayfa adı GMS içe aktarma şablonunuza göre ayarlanır; her firmanın kendi şablonu vardır. Kısa yol: üst çubukta Excel üret'in yanındaki <b>Şablon</b>. Dosya adı: <code>AY YIL FİRMA_ADI FATURA.xlsx</code> (ay = faturaların baskın ayı).</div>
                 <div class="settings-links">
                   <button onClick={() => openOther(() => (S.templateOpen.value = true))}>Şablonu düzenle…</button>
                   <button onClick={() => openOther(() => (S.previewOpen.value = true))}>Önizle (F5)</button>

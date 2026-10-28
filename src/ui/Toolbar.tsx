@@ -137,7 +137,10 @@ export function Toolbar() {
         </div>
       )}
       {acts.slice(0, 3).map((a) => <button data-act={a.id} class={a.cls ?? ''} onClick={a.on} disabled={a.disabled} title={a.title}>{a.label}{a.kbd && a.id === 'preview' && <kbd>F5</kbd>}</button>)}
-      <button class="primary excel-btn" onClick={() => S.exportExcel()} disabled={!b || n === 0} title="Excel üret (F1)">Excel üret <kbd>F1</kbd></button>
+      <span class="excel-split">
+        <button class="primary excel-btn" onClick={() => S.exportExcel()} disabled={!b || n === 0} title="Excel üret (F1)">Excel üret <kbd>F1</kbd></button>
+        <button class="primary excel-tpl" onClick={() => (S.templateOpen.value = true)} title={`Excel şablonu (${S.firm.value.name}): hangi sütunlar, hangi sırayla, hangi başlıkla`}>Şablon</button>
+      </span>
       {acts.slice(3).map((a) => <button data-act={a.id} class={a.cls ?? ''} onClick={a.on} disabled={a.disabled} title={a.title}>{a.label}</button>)}
       <div class="tb-more-wrap">
         <button class={`ghost tb-more ${menuOpen ? 'on' : ''}`} title="Diğer düğmeler (sığmayanlar burada)" aria-haspopup="menu" aria-expanded={menuOpen} onClick={(e) => (menuOpen ? setMenuOpen(false) : openMenu(e.currentTarget as HTMLElement))}>⋯</button>

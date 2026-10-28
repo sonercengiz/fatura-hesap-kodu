@@ -1,4 +1,4 @@
-import { DEFAULT_OUTPUT_TEMPLATE, type OutputTemplate } from './excel/template';
+import { DEFAULT_OUTPUT_TEMPLATE, type OutputFieldId, type OutputTemplate } from './excel/template';
 import type { LineInfo, VatPart } from './xml/parseUbl';
 
 export type CellValue = string | number | boolean | null;
@@ -53,34 +53,33 @@ export type SortMode = 'date-supplier' | 'added';
 export type FilterMode = 'all' | 'unassigned' | 'manual' | 'bulk' | 'rule';
 
 export type Layout = 'hybrid' | 'list';
-/** Liste görünümü sütunları (kimlik, başlık). Hesap Kodu her zaman gösterilir. */
-export const LIST_COLUMNS = [
-  { id: 'no', label: 'Fatura No' },
-  { id: 'date', label: 'Tarih' },
-  { id: 'supplier', label: 'Satıcı' },
-  { id: 'vkn', label: 'VKN / TCKN' },
-  { id: 'type', label: 'Tip' },
-  { id: 'profile', label: 'Tür' },
-  { id: 'amount', label: 'Tutar' },
-  { id: 'taxExclusive', label: 'Matrah' },
-  { id: 'tax', label: 'Vergi' },
-  { id: 'currency', label: 'Döviz' },
-  { id: 'lines', label: 'Kalem' },
-  { id: 'source', label: 'Kaynak' },
-  { id: 'code', label: 'Hesap Kodu' },
-  { id: 'account', label: 'Hesap adı' },
-  { id: 'issues', label: 'Dikkat' },
-] as const;
-export type ListColumnId = (typeof LIST_COLUMNS)[number]['id'];
-export const DEFAULT_LIST_COLUMNS: ListColumnId[] = ['no', 'date', 'supplier', 'vkn', 'type', 'amount', 'code', 'account', 'issues'];
+/** Liste görünümü sütunu: Excel çıktısının alanlarından biri ya da yalnızca listede olan "Dikkat" (uyarılar). Hesap Kodu hep vardır. */
+export type ListColumnId = OutputFieldId | 'issues';
+export const DEFAULT_LIST_COLUMNS: ListColumnId[] = ['no', 'date', 'name', 'vkn', 'type', 'amount', 'code', 'accountName', 'issues'];
+/** Eski (15 sabit sütunlu) liste seçimindeki kimliklerin karşılıkları */
+const LEGACY_LIST_IDS: Record<string, ListColumnId> = { supplier: 'name', lines: 'lineCount', account: 'accountName' };
+
+/** Kayıtlı liste seçimini toparlar: eski kimlikler çevrilir, bilinmeyen/yinelenen atılır, Hesap Kodu yoksa eklenir */
+export function normalizeListColumns(ids: unknown, valid: (id: string) => boolean): ListColumnId[] {
+  if (!Array.isArray(ids)) return DEFAULT_LIST_COLUMNS;
+  const out: ListColumnId[] = [];
+  for (const raw of ids) {
+    const id = (LEGACY_LIST_IDS[String(raw)] ?? raw) as ListColumnId;
+    if ((id === 'issues' || (valid(id) && id !== 'blank')) && !out.includes(id)) out.push(id);
+  }
+  if (!out.includes('code')) out.push('code');
+  return out.length > 1 ? out : DEFAULT_LIST_COLUMNS;
+}
 
 export interface Settings {
   /** Çıktı Excel şablonu: sütunlar, başlıklar, satır sırası, sayfa adı */
   outputTemplate: OutputTemplate;
   /** Ana ekran: görsel (görsel + panel) ya da yalın liste */
   layout: Layout;
-  /** Liste görünümünde gösterilen sütunlar */
+  /** Liste görünümünde gösterilen sütunlar, sırasıyla (kendi seçimim) */
   listColumns: ListColumnId[];
+  /** Liste görünümü açık firmanın Excel şablonundaki sütunları gösterir (ekranda ne varsa Excel'e o çıkar) */
+  listFollowsTemplate: boolean;
   viewMode: ViewMode;
   marginPx: number;
   theme: 'light' | 'dark';
@@ -97,6 +96,7 @@ export const DEFAULT_SETTINGS: Settings = {
   outputTemplate: DEFAULT_OUTPUT_TEMPLATE,
   layout: 'hybrid',
   listColumns: DEFAULT_LIST_COLUMNS,
+  listFollowsTemplate: false,
   viewMode: 'top',
   marginPx: 0,
   theme: 'light',
