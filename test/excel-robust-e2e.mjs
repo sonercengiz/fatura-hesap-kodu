@@ -45,6 +45,8 @@ await addField('blank');
 const k20 = (await headers(a)).indexOf('Matrah %20');
 await a.locator('.tpl-header').nth(k20).fill('%20');
 await a.locator('.tpl-date-cells').selectOption('date');
+// Bütün şablon sütunları Excel'de beklenir (KDV %0/%1/%10 boş): "Boş sütunları atla" kapalı (atlama ayrı testte)
+await a.locator('.tpl-modal .skip-empty input').uncheck();
 const before = await headers(a);
 check('aynı alan ikinci kez eklendi', before.filter((h) => h === 'Fatura Tarihi' || h === 'Belge Tarihi').length === 2, before.join(' | '));
 check('önizlemede boş başlık "(boş)", sütun harfleri', (await a.locator('.tpl-preview th').last().innerText()).includes('(boş)') && (await a.locator('.tpl-preview th .col-letter').first().innerText()) === 'A', await a.locator('.tpl-preview th').last().innerText());

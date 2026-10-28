@@ -28,6 +28,8 @@ check('düğme sütun sayısını söyler', (await btn.innerText()).includes('8 
 await btn.click();
 check('8 sütun eklendi', (await a.locator('.tpl-header').count()) === n0 + 8, await a.locator('.tpl-header').count());
 check('düğme artık "ekli"', (await btn.innerText()).includes('ekli') && (await btn.isDisabled()), await btn.innerText());
+// Oran yoksa hücre boş kalır, sütun yine yazılır: "Boş sütunları atla" kapalı (atlama ayrı testte)
+await a.locator('.tpl-modal .skip-empty input').uncheck(); await a.waitForTimeout(100);
 await a.locator('.tpl-modal button:has-text("Kapat")').click(); await a.waitForTimeout(300);
 await a.keyboard.press('Escape').catch(() => {}); await a.waitForTimeout(200);
 

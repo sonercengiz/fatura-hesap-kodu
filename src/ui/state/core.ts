@@ -1,7 +1,7 @@
 import { signal, computed, batch as sbatch } from '@preact/signals';
 import { DEFAULT_SETTINGS, DEFAULT_SHORTCUT_KEYS, typeLabel, profileLabel, toDisplayDate, type Settings, type Invoice, type FilterMode } from '../../core/types';
 import { buildTemplateWorkbook, buildFileName } from '../../core/excel/writeOutput';
-import { buildTemplateRows, normalizeTemplate, codeColumnIndexOf, vatUncovered, usesVat, type OutputTemplate, type RowContext } from '../../core/excel/template';
+import { buildTemplateRows, normalizeTemplate, codeColumnIndexOf, vatUncovered, usesVat, emptyColumns, skipEmpty, excelLettersOf, type OutputTemplate, type RowContext } from '../../core/excel/template';
 import { supplierHint, type HistoryEntry } from '../../core/suggest/engine';
 import { sortInvoices } from '../../core/sort';
 import { fmtMoney } from '../../core/num';
@@ -258,7 +258,13 @@ export const needsCode = (i: Invoice) => !i.excluded && !assignments.value.has(i
 export const dateKeyOf = (i: Invoice) => Number(i.isoDate.replace(/-/g, '')) || 0;
 
 /** Çıktıda Hesap Kodu sütununun 0 tabanlı konumu */
-export const outputCodeAt = computed(() => codeColumnIndexOf(outputTemplate.value));
+/** Excel'e girecek faturaların hepsinde boş olan sütunlar (şablon sırası; Boş sütun ve Hesap Kodu sayılmaz) */
+export const emptyCols = computed(() => emptyColumns(outputTemplate.value, outputIncluded.value, outputContext()));
+/** Excel'e yazılan şablon: "Boş sütunları atla" açıksa boş sütunlar çıkmış hali */
+export const writtenTemplate = computed(() => skipEmpty(outputTemplate.value, emptyCols.value));
+/** Şablondaki her sütunun Excel'deki gerçek harfi (atlanan sütun null) */
+export const excelLetters = computed(() => excelLettersOf(outputTemplate.value, emptyCols.value));
+export const outputCodeAt = computed(() => codeColumnIndexOf(writtenTemplate.value));
 
 export const current = computed<Invoice | null>(() => invoices.value[currentIndex.value] ?? null);
 
@@ -704,13 +710,13 @@ export function outputContext(): RowContext {
 
 export function outputRows() {
   if (!batchRec.value) return [];
-  return buildTemplateRows(outputIncluded.value, outputTemplate.value, outputContext());
+  return buildTemplateRows(outputIncluded.value, writtenTemplate.value, outputContext());
 }
 
 /** Önizleme için: çıkarılanlar dahil bütün faturaların satırları (çıktı sırasıyla) */
 export function outputRowsAll() {
   if (!batchRec.value) return [];
-  return buildTemplateRows(outputOrder.value, outputTemplate.value, outputContext());
+  return buildTemplateRows(outputOrder.value, writtenTemplate.value, outputContext());
 }
 
 /** Şablonu bir kapsama yazar (anında kayıt); kapsam verilmezse geçerli şablonun geldiği kapsam */
@@ -740,7 +746,7 @@ export async function exportExcel() {
   const b = batchRec.value;
   if (!b) return;
   if (outputIncluded.value.length === 0) { showToast('Excel\'e girecek fatura yok: hepsi çıkarılmış.', 4000); return; }
-  const bytes = await buildTemplateWorkbook(outputIncluded.value, outputTemplate.value, outputContext());
+  const bytes = await buildTemplateWorkbook(outputIncluded.value, writtenTemplate.value, outputContext());
   const name = buildFileName(firm.value.name, outputIncluded.value);
   const blob = new Blob([bytes as unknown as ArrayBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   const url = URL.createObjectURL(blob);

@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import * as S from './state';
 import { askConfirm } from './dialog';
 import { fmtCell } from '../core/num';
-import { HeaderCell, AddColumnSelect, scopeNote } from './TemplateParts';
+import { HeaderCell, AddColumnSelect, SkipEmptyToggle, scopeNote } from './TemplateParts';
 import {
-  FIELD_DEFS, FIELD_GROUPS, KDV_FIELD_IDS, DATE_CELLS_LABELS, ROW_ORDER_LABELS, DEFAULT_OUTPUT_TEMPLATE, colName, vatFieldsFor, vatUncovered, isEdmDefault, buildTemplateRows,
-  addColumn, removeColumn, renameColumn, moveColumn, toggleField, withColumns, type OutputTemplate, type OutputFieldId, type RowOrder, type DateCells,
+  FIELD_DEFS, FIELD_GROUPS, KDV_FIELD_IDS, DATE_CELLS_LABELS, ROW_ORDER_LABELS, DEFAULT_OUTPUT_TEMPLATE, vatFieldsFor, vatUncovered, isEdmDefault, buildTemplateRows,
+  addColumn, removeColumn, renameColumn, moveColumn, toggleField, withColumns, emptyColumns, excelLettersOf, type OutputTemplate, type OutputFieldId, type RowOrder, type DateCells,
 } from '../core/excel/template';
 
 type Mode = 'simple' | 'advanced';
@@ -129,6 +129,7 @@ export function TemplateModal() {
         )}
         <div class="tpl-foot muted small">
           <span>{t ? `${t.columns.length} sütun · ${isEdmDefault(t) ? 'EDM düzeni' : 'özelleştirilmiş'}` : ''}</span>
+          {t && <SkipEmptyToggle t={t} empty={emptyOf(t).size} onChange={(n) => change(n)} />}
           <span class="spacer" />
           {t && scope !== 'general' && <button class="ghost tiny" onClick={dropSpecific}>Özel şablonu sil</button>}
         </div>
@@ -138,6 +139,12 @@ export function TemplateModal() {
 }
 
 type Change = (next: OutputTemplate, key?: string) => void;
+
+/** Açık dönemde boş sütunlar ve her sütunun Excel'deki gerçek harfi (atlanan sütun null) */
+const emptyOf = (t: OutputTemplate) => emptyColumns(t, S.outputIncluded.value, S.outputContext());
+const lettersOf = (t: OutputTemplate) => excelLettersOf(t, emptyOf(t));
+/** Bir alanın Excel'deki harfleri (atlanıyorsa "atlanır") */
+const fieldLetters = (t: OutputTemplate, id: OutputFieldId, L: (string | null)[]) => t.columns.map((c, k) => (c.id === id ? L[k] ?? 'atlanır' : '')).filter(Boolean).join(', ');
 
 /** Açık dönemde şablonun KDV dökümüne yazılamayan oranlar: söylenir, tek tıkla eklenir */
 function VatGap({ t, change }: { t: OutputTemplate; change: Change }) {
@@ -160,6 +167,7 @@ function Preview({ t, change, rows = 4 }: { t: OutputTemplate; change: Change; r
   const sample = S.outputOrder.value.slice(0, rows);
   const data = buildTemplateRows(sample, t, S.outputContext());
   const cls = (k: number) => (t.columns[k].id === 'code' ? 'code-col' : FIELD_DEFS[t.columns[k].id]?.money ? 'r' : '');
+  const L = lettersOf(t);
   // Sütun eklenince (sona eklenir) önizleme sona kayar: eklenen sütun görünsün
   const tbox = useRef<HTMLDivElement>(null);
   const prevN = useRef(t.columns.length);
@@ -176,7 +184,7 @@ function Preview({ t, change, rows = 4 }: { t: OutputTemplate; change: Change; r
       </div>
       <div class="table-box" ref={tbox}>
         <table>
-          <thead><tr>{t.columns.map((_, k) => <HeaderCell t={t} k={k} cls={cls(k)} onChange={(n) => change(n)} />)}</tr></thead>
+          <thead><tr>{t.columns.map((_, k) => <HeaderCell t={t} k={k} letter={L[k]} cls={cls(k)} onChange={(n) => change(n)} />)}</tr></thead>
           <tbody>{data.slice(1).map((r) => <tr>{r.map((v, c) => <td class={cls(c)}>{fmtCell(v, !!FIELD_DEFS[t.columns[c].id]?.money)}</td>)}</tr>)}</tbody>
         </table>
       </div>
@@ -188,7 +196,8 @@ const shortLabel = (id: OutputFieldId) => FIELD_DEFS[id].label.replace(/ \(EDM l
 
 /** Basit: alan grupları onay kutusu; işaretlenen sona eklenir, işareti kalkan bütün sütunlarıyla çıkar */
 function SimpleBody({ t, change }: { t: OutputTemplate; change: Change }) {
-  const letters = (id: OutputFieldId) => t.columns.map((c, k) => (c.id === id ? colName(k) : '')).filter(Boolean).join(', ');
+  const L = lettersOf(t);
+  const letters = (id: OutputFieldId) => fieldLetters(t, id, L);
   const missingKdv = KDV_FIELD_IDS.filter((id) => !t.columns.some((c) => c.id === id));
   return (
     <div class="tpl-simple">
@@ -223,7 +232,8 @@ function SimpleBody({ t, change }: { t: OutputTemplate; change: Change }) {
 function AdvancedBody({ t, change, dragIdx, setDragIdx }: { t: OutputTemplate; change: Change; dragIdx: number | null; setDragIdx: (k: number | null) => void }) {
   const [addId, setAddId] = useState<OutputFieldId>('uuid');
   const used = new Set(t.columns.map((c) => c.id));
-  const lettersOf = (id: OutputFieldId) => t.columns.map((c, k) => (c.id === id ? colName(k) : '')).filter(Boolean).join(', ');
+  const L = lettersOf(t);
+  const lettersFor = (id: OutputFieldId) => fieldLetters(t, id, L);
   const addable = Object.keys(FIELD_DEFS) as OutputFieldId[];
   const missingKdv = KDV_FIELD_IDS.filter((id) => !used.has(id));
   const sources = [
@@ -245,7 +255,7 @@ function AdvancedBody({ t, change, dragIdx, setDragIdx }: { t: OutputTemplate; c
             onDrop={(e) => { e.preventDefault(); const from = Number(e.dataTransfer?.getData('text/plain') || String(dragIdx)); if (!Number.isNaN(from)) change(moveColumn(t, from, k)); setDragIdx(null); }}
             onDragEnd={() => setDragIdx(null)}
           >
-            <span class="tpl-letter">{colName(k)}</span>
+            <span class={`tpl-letter ${L[k] === null ? 'skipped' : ''}`} title={L[k] === null ? 'Bu dönemde boş: Excel\'e yazılmıyor (Boş sütunları atla)' : `Excel'de ${L[k]} sütunu`}>{L[k] ?? '—'}</span>
             <input class="tpl-header" value={c.header} placeholder={c.id === 'blank' ? '(boş başlık)' : FIELD_DEFS[c.id].header} onInput={(e) => change(renameColumn(t, k, (e.currentTarget as HTMLInputElement).value), `h${k}`)} onKeyDown={stop} />
             <span class="tpl-field muted small" title={FIELD_DEFS[c.id].label}>{FIELD_DEFS[c.id].label}</span>
             <button class="ghost tiny" title="Yukarı" disabled={k === 0} onClick={() => change(moveColumn(t, k, k - 1))}>↑</button>
@@ -255,7 +265,7 @@ function AdvancedBody({ t, change, dragIdx, setDragIdx }: { t: OutputTemplate; c
         ))}
         <div class="tpl-add">
           <select value={addId} onChange={(e) => setAddId((e.currentTarget as HTMLSelectElement).value as OutputFieldId)} onKeyDown={stop}>
-            {addable.map((id) => <option value={id}>{FIELD_DEFS[id].label}{id !== 'blank' && used.has(id) ? ` · ekli: ${lettersOf(id)}` : ''}</option>)}
+            {addable.map((id) => <option value={id}>{FIELD_DEFS[id].label}{id !== 'blank' && used.has(id) ? ` · ekli: ${lettersFor(id)}` : ''}</option>)}
           </select>
           <button onClick={add}>+ Sütun ekle</button>
           <button class="tpl-add-kdv" onClick={() => change(withColumns(t, [...t.columns, ...missingKdv.map((id) => ({ id, header: FIELD_DEFS[id].header }))]))} disabled={!missingKdv.length} title="KDV oranına göre matrah ve KDV tutarı sütunları: %0, %1, %10, %20 ve oranı uyuşmayan KDV. Faturada o oran yoksa hücre boş kalır.">{missingKdv.length ? `+ KDV dökümü (${missingKdv.length} sütun)` : 'KDV dökümü ekli'}</button>

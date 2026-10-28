@@ -623,3 +623,8 @@ button.link { border: none; background: none; color: var(--accent); padding: 0 2
 .lv-cols { display: flex; align-items: center; gap: 6px; }
 .lv-empty { white-space: nowrap; }
 
+/* Boş sütunları atla: kutu ve atlanan sütunun harfi */
+.skip-empty { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; white-space: nowrap; cursor: pointer; }
+.skip-count { color: var(--muted); }
+.col-letter.skipped, .tpl-letter.skipped { color: var(--warn); font-style: italic; }
+th.hdr-edit.skipped .hdr-text { color: var(--muted); }

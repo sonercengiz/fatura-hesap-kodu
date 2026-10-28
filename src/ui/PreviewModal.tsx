@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'preact/hooks';
 import * as S from './state';
 import { FIELD_DEFS, colName } from '../core/excel/template';
-import { HeaderCell, AddColumnSelect } from './TemplateParts';
+import { HeaderCell, AddColumnSelect, SkipEmptyToggle } from './TemplateParts';
 import { fmtCell } from '../core/num';
 
 export function PreviewModal() {
@@ -12,7 +12,11 @@ export function PreviewModal() {
   let excelRow = 1;
   const byRow = new Map(invs.map((i, k) => [k, i]));
   const at = S.outputCodeAt.value;
-  const money = S.outputTemplate.value.columns.map((c) => !!FIELD_DEFS[c.id]?.money);
+  const t = S.outputTemplate.value;
+  const money = S.writtenTemplate.value.columns.map((c) => !!FIELD_DEFS[c.id]?.money);
+  // Excel'e yazılan sütunların şablondaki sırası (boş sütunlar atlanıyorsa onlar yok); başlık düzenlemesi şablona yazar
+  const shownIdx = t.columns.map((_, k) => k).filter((k) => S.excelLetters.value[k] !== null);
+  const skipped = t.columns.length - shownIdx.length;
   const box = useRef<HTMLDivElement>(null);
   const counts = Object.fromEntries(Object.keys(S.ISSUE_LABEL).map((k) => [k, 0])) as Record<S.IssueKind, number>;
   // Şablonda Hesap Kodu sütunu yoksa (yalnızca veri toplama) kodsuzluk çıktı için sorun değildir
@@ -34,8 +38,9 @@ export function PreviewModal() {
       <div class="modal wide" onClick={(e) => e.stopPropagation()}>
         <div class="modal-head">
           <b>Çıktı önizlemesi</b>
-          <span class="muted">{rows.length - 1 - excl} satır{excl > 0 ? ` (+${excl} çıkarıldı)` : ''} · {rows[0]?.length ?? 0} sütun · {at >= 0 ? `Hesap Kodu ${colName(at)} sütununda` : 'Hesap Kodu sütunu yok'}</span>
-          <AddColumnSelect t={S.outputTemplate.value} />
+          <span class="muted">{rows.length - 1 - excl} satır{excl > 0 ? ` (+${excl} çıkarıldı)` : ''} ·  <span title={skipped > 0 ? `${skipped} boş sütun Excel'e yazılmıyor (Boş sütunları atla)` : undefined}>{rows[0]?.length ?? 0} sütun</span> · {at >= 0 ? `Hesap Kodu ${colName(at)} sütununda` : 'Hesap Kodu sütunu yok'}</span>
+          <SkipEmptyToggle t={t} empty={S.emptyCols.value.size} />
+          <AddColumnSelect t={t} />
           <button class="ghost tiny" onClick={() => { S.previewOpen.value = false; S.templateOpen.value = true; }} title="Şablon penceresi: genel / firma / dönem şablonu, satır sırası, sayfa adı, tarih biçimi">Şablon penceresi…</button>
           <div class="spacer" />
           <span class="legend">
@@ -54,7 +59,7 @@ export function PreviewModal() {
                 <th class="num">#</th>
                 <th class="pv-incl" title="İşareti kaldırılan fatura Excel'e yazılmaz (istisnai faturalar). Ctrl+Z geri alır.">Excel</th>
                 {/* Başlıklar burada da düzenlenir (ad, sıra, kaldır); değişiklik Excel şablonuna anında yazılır */}
-                {S.outputTemplate.value.columns.map((_, c) => <HeaderCell t={S.outputTemplate.value} k={c} cls={c === at ? 'code-col' : money[c] ? 'r' : ''} />)}
+                {shownIdx.map((k, c) => <HeaderCell t={t} k={k} letter={S.excelLetters.value[k]} cls={c === at ? 'code-col' : money[c] ? 'r' : ''} />)}
               </tr>
             </thead>
             <tbody>

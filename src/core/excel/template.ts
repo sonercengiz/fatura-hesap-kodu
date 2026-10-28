@@ -24,6 +24,8 @@ export interface OutputTemplate {
   sheetName: string;
   /** Yoksa metin */
   dateCells?: DateCells;
+  /** Dönemde bütün faturalarda boş olan sütunlar da Excel'e yazılır. Yoksa (varsayılan) boş sütunlar atlanır */
+  keepEmpty?: true;
 }
 
 export const DATE_CELLS_LABELS: Record<DateCells, string> = {
@@ -187,7 +189,7 @@ export function normalizeTemplate(t: Partial<OutputTemplate> | undefined | null)
   // Hesap Kodu zorunlu değil: uygulama yalnızca veri toplamak için de kullanılabilir
   if (cols.length === 0) return DEFAULT_OUTPUT_TEMPLATE;
   const rowOrder: RowOrder = t?.rowOrder && t.rowOrder in ROW_ORDER_LABELS ? t.rowOrder : 'date-no';
-  return { columns: cols, rowOrder, sheetName: (t?.sheetName ?? '').trim() || 'Sheet0', ...(t?.dateCells === 'date' ? { dateCells: 'date' as const } : {}) };
+  return { columns: cols, rowOrder, sheetName: (t?.sheetName ?? '').trim() || 'Sheet0', ...(t?.dateCells === 'date' ? { dateCells: 'date' as const } : {}), ...(t?.keepEmpty === true ? { keepEmpty: true as const } : {}) };
 }
 
 /** Şablonun EDM varsayılanıyla aynı olup olmadığı (bilgi amaçlı) */
@@ -272,4 +274,29 @@ export const FIELD_GROUPS: { title: string; ids: OutputFieldId[] }[] = [
   { title: 'EDM listesinden (yüklenmediyse boş)', ids: ['arrival', 'status', 'responseStatus', 'localStatus', 'envelope', 'kepObjection', 'gibCancel', 'officialObjection', 'gibObjection', 'branch', 'hash', 'tag'] },
   { title: 'Diğer', ids: ['firm', 'batch'] },
 ];
+
+/**
+ * Faturaların hepsinde boş olan sütunlar (şablondaki sıra). Bilerek eklenen "Boş sütun" ve Hesap Kodu hiç sayılmaz: onlar boş da olsa
+ * yazılır (kod henüz atanmamış olabilir). Fatura yoksa hiçbir sütun boş sayılmaz.
+ */
+export function emptyColumns(t: OutputTemplate, invoices: Invoice[], ctx: RowContext): Set<number> {
+  const out = new Set<number>();
+  if (!invoices.length) return out;
+  t.columns.forEach((c, k) => {
+    if (c.id === 'blank' || c.id === 'code') return;
+    if (invoices.every((i) => { const v = FIELD_DEFS[c.id].value(i, ctx); return v === null || v === undefined || v === ''; })) out.add(k);
+  });
+  return out;
+}
+
+/** Excel'e yazılacak şablon: "Boş sütunları atla" açıksa (varsayılan) boş sütunlar çıkar */
+export function skipEmpty(t: OutputTemplate, empty: Set<number>): OutputTemplate {
+  return t.keepEmpty || !empty.size ? t : withColumns(t, t.columns.filter((_, k) => !empty.has(k)));
+}
+
+/** Şablondaki her sütunun Excel'deki harfi; atlanan sütun null */
+export function excelLettersOf(t: OutputTemplate, empty: Set<number>): (string | null)[] {
+  let n = 0;
+  return t.columns.map((_, k) => (!t.keepEmpty && empty.has(k) ? null : colName(n++)));
+}
 

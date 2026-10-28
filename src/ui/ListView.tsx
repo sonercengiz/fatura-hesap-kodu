@@ -6,7 +6,7 @@ import { SORT_LABELS, type SortMode } from '../core/sort';
 import type { FilterMode, ListColumnId } from '../core/types';
 import { FIELD_DEFS, ROW_ORDER_LABELS, type OutputFieldId } from '../core/excel/template';
 import type { CellValue } from '../core/types';
-import { HeaderCell, AddColumnSelect, scopeNote } from './TemplateParts';
+import { HeaderCell, AddColumnSelect, SkipEmptyToggle, scopeNote } from './TemplateParts';
 
 const readShowEmpty = () => { try { return localStorage.getItem('listShowEmpty') === '1'; } catch { return false; } };
 const MONO = new Set<ListColumnId>(['no', 'date', 'vkn', 'uuid']);
@@ -33,10 +33,10 @@ export function ListView() {
   const inv = S.current.value;
   // Liste = Excel şablonu (aynı sütunlar, sıra, başlıklar); burada yapılan değişiklik Excel'i de değiştirir. Boş sütun (başlıksız) ve
   // dönemde bütün satırlarda boş olan sütunlar yalnızca ekranda gizlenir (Excel'e yine yazılır); no ve hesap kodu hep görünür.
-  const all = S.invoices.value;
-  const isEmpty = (id: OutputFieldId) => id !== 'no' && id !== 'code' && all.length > 0 && all.every((i) => { const v = FIELD_DEFS[id].value(i, ctx); return v === null || v === undefined || v === ''; });
-  const hidden = t.columns.map((c, k) => (c.id === 'blank' || (!showEmpty && isEmpty(c.id)) ? k : -1)).filter((k) => k >= 0);
-  const emptyCount = t.columns.filter((c) => c.id !== 'blank' && isEmpty(c.id)).length;
+  // "Boş" = Excel'e girecek faturaların hepsinde boş (Excel'deki atlama ile aynı ölçü)
+  const empty = S.emptyCols.value;
+  const hidden = t.columns.map((c, k) => (c.id === 'blank' || (!showEmpty && empty.has(k)) ? k : -1)).filter((k) => k >= 0);
+  const emptyCount = empty.size;
   const cols: { id: ListColumnId; k: number }[] = [...t.columns.map((c, k) => ({ id: c.id as ListColumnId, k })).filter((c) => !hidden.includes(c.k)), { id: 'issues', k: -1 }];
 
   useEffect(() => {
@@ -70,8 +70,9 @@ export function ListView() {
         <button class={`tiny bulk-toggle ${S.bulkMode.value || S.selected.value.size ? 'on' : ''}`} title="Toplu seçim yardımcılarını aç/kapat" onClick={() => (S.bulkMode.value = !S.bulkMode.value)}>☑ Seç</button>
         <div class="lv-cols" title={`Liste, Excel şablonunun aynısıdır: başlığa tıklayıp adını değiştirin, sürükleyip sırasını değiştirin, ✕ ile kaldırın. Değişiklik Excel'e de yansır (${scopeNote(S.templateScope.value)}).`}>
           <AddColumnSelect t={t} />
+          <SkipEmptyToggle t={t} empty={emptyCount} />
           {emptyCount > 0 && (
-            <button class="tiny ghost lv-empty" onClick={() => setShowEmpty(!showEmpty)} title="Bu dönemde bütün satırlarda boş olan sütunlar (çoğunlukla EDM listesi yüklenmediği için). Yalnızca ekranda gizlenir; Excel'e yine yazılır.">
+            <button class="tiny ghost lv-empty" onClick={() => setShowEmpty(!showEmpty)} title={`Bu dönemde bütün satırlarda boş olan sütunlar (çoğunlukla EDM listesi yüklenmediği için). Göz atmak için açabilirsiniz. ${t.keepEmpty ? 'Excel\'e yine yazılırlar ("Boş sütunları atla" kapalı).' : 'Excel\'e yazılmazlar ("Boş sütunları atla" açık).'}`}>
               {showEmpty ? `Boş sütunları gizle (${emptyCount})` : `+${emptyCount} boş sütun gizli · göster`}
             </button>
           )}
@@ -95,7 +96,7 @@ export function ListView() {
             <tr>
               <th class="lv-check"><input type="checkbox" title="Görünenleri seç / bırak" checked={S.selected.value.size > 0 && S.invoices.value.filter(S.passesFilter).every((i) => S.selected.value.has(i.no))} onChange={(e) => ((e.currentTarget as HTMLInputElement).checked ? S.selectVisible() : S.clearSelection())} /></th>
               <th class="num">#</th>
-              {cols.map((c) => (c.id === 'issues' ? <th class="lv-issues" title="Yalnızca listede: uyarılar (Excel'e girmez)">Dikkat</th> : <HeaderCell t={t} k={c.k} cls={`lv-${c.id}`} />))}
+              {cols.map((c) => (c.id === 'issues' ? <th class="lv-issues" title="Yalnızca listede: uyarılar (Excel'e girmez)">Dikkat</th> : <HeaderCell t={t} k={c.k} letter={S.excelLetters.value[c.k]} cls={`lv-${c.id}`} />))}
             </tr>
           </thead>
           <tbody>

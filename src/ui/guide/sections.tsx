@@ -123,7 +123,7 @@ export const sections: Section[] = [
         <p>Ayın faturalarını zaten tanıyorsanız görüntüye gerek yok. Üst çubuktaki <b>☰ Liste</b> tam genişlikte tabloya geçer; bütün tuşlar aynı çalışır.</p>
         <Shot src="10-liste.png" alt="Liste görünümü" notes={[
           <>Arama, sıra, süzgeç, seçim; <b>+ Sütun</b> Excel'e sütun ekler.</>,
-          <>Liste Excel şablonunun aynısıdır: başlığa tıklayıp adını değiştirin, sürükleyip sırasını değiştirin, ✕ ile kaldırın; Excel de öyle çıkar. Dönemde bütün satırları boş olan sütunlar (çoğunlukla EDM listesi yüklenmediği için) yalnızca ekranda gizlenir: "+n boş sütun gizli · göster".</>,
+          <>Liste Excel şablonunun aynısıdır: başlığa tıklayıp adını değiştirin, sürükleyip sırasını değiştirin, ✕ ile kaldırın; Excel de öyle çıkar. Dönemde bütün satırları boş olan sütunlar (çoğunlukla EDM listesi yüklenmediği için) listede gizlenir; "+n boş sütun gizli · göster" ile göz atarsınız. <b>Boş sütunları atla</b> işaretliyken (varsayılan) bu sütunlar Excel'e de yazılmaz ve harfler Excel'deki gerçek harfi gösterir; kutuyu kaldırırsanız ekranda gördüğünüz gibi hepsi yazılır.</>,
           <>Seçili satır. Çift tıklayınca o fatura görsel görünümde açılır.</>,
           <>Hesap Kodu hücresine tıklamak elle girişi açar.</>,
         ]} />
@@ -212,6 +212,7 @@ export const sections: Section[] = [
           <>Değişiklik anında kaydedilir; <b>Geri al</b> (<K k="Ctrl+Z" />) bu pencerede yapılanı geri alır.</>,
           <>Hesap Kodu sütunu zorunlu değil: uygulamayı yalnızca fatura verisi toplamak için de kullanabilirsiniz.</>,
         ]} />
+        <Tip><b>Boş sütunları atla</b> (liste, önizleme ve şablon penceresinde aynı kutu; varsayılan işaretli): dönemde Excel'e girecek faturaların hepsinde boş olan sütunlar Excel'e yazılmaz, sonraki sütunların harfi kayar ("— atlanır"). Bilerek eklediğiniz Boş sütun ve Hesap Kodu her zaman yazılır. İçe aktarma tanımınız sütunları harfle eşliyorsa ve her ay aynı harfleri istiyorsanız kutuyu kaldırın. Seçim şablonla birlikte saklanır.</Tip>
         <Tip>Genel şablon, özel şablonu olmayan bütün firmalara ve dönemlere geçer. Bir firma farklı düzenle çalışıyorsa <b>Bu firma</b> › <b>Bu firmaya özel şablon oluştur</b>; tek bir dönem farklıysa <b>Bu dönem</b>. <b>Özel şablonu sil</b> genele döndürür. Liste görünümünde ve önizlemede yaptığınız değişiklik de Excel'in kullandığı şablona yazılır.</Tip>
         <Tip><b>KDV dökümü</b> sütunları: Matrah %0 · Matrah ve KDV %1, %10, %20 · Oranı Uyuşmayan KDV. Değerler faturanın XML'indeki KDV özetinden gelir; faturada o oran yoksa hücre boş kalır. Temmuz 2023 öncesi oranlar (%8, %18) için sütunları <b>+ Sütun ekle</b>'den ekleyin; açık dönemde sütunu olmayan bir oran varsa pencere söyler ve tek tıkla ekler, önizleme de uyarır. <b>Oranı Uyuşmayan KDV</b>: bazı operatör faturalarında (ör. GSM) KDV satırının oran alanına tutar yazılmış; bu satırların vergisi burada toplanır, matrahları başka satırın tekrarı olduğu için sayılmaz. ÖİV, ÖTV gibi KDV dışı vergiler bu sütunlara girmez; bu yüzden matrah + KDV her faturada Tutar'ı vermeyebilir.</Tip>
         <Warn>İlk kez GMS'e verirken küçük bir dönemle deneyin. GMS bazı sütunları bekliyorsa <T t="edm listesi" />ni de yükleyin; çıktı EDM'nin dosyasıyla birebir olur.</Warn>

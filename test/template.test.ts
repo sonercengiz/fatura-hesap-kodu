@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as XLSX from 'xlsx';
-import { edmTemplate, DEFAULT_OUTPUT_TEMPLATE, normalizeTemplate, buildTemplateRows, isEdmDefault, codeColumnIndexOf, moneyColumns, FIELD_DEFS, KDV_FIELD_IDS, vatUncovered, vatFieldsFor, excelDateSerial, dateColumns, addColumn, removeColumn, renameColumn, moveColumn, toggleField, FIELD_GROUPS, type OutputTemplate, type OutputFieldId } from '../src/core/excel/template';
+import { edmTemplate, DEFAULT_OUTPUT_TEMPLATE, normalizeTemplate, buildTemplateRows, isEdmDefault, codeColumnIndexOf, moneyColumns, FIELD_DEFS, KDV_FIELD_IDS, vatUncovered, vatFieldsFor, excelDateSerial, dateColumns, addColumn, removeColumn, renameColumn, moveColumn, toggleField, FIELD_GROUPS, emptyColumns, skipEmpty, excelLettersOf, type OutputTemplate, type OutputFieldId } from '../src/core/excel/template';
 import { buildTemplateWorkbook, EDM_HEADERS } from '../src/core/excel/writeOutput';
 import { unzipSync, strFromU8 } from 'fflate';
 import type { Invoice } from '../src/core/types';
@@ -149,5 +149,24 @@ describe('çıktı şablonu', () => {
     const grouped = FIELD_GROUPS.flatMap((g) => g.ids);
     const all = (Object.keys(FIELD_DEFS) as OutputFieldId[]).filter((id) => id !== 'blank');
     expect([...grouped].sort()).toEqual([...all].sort());
+  });
+  it('boş sütunları atla (varsayılan): bütün faturalarda boş sütun Excel\'e yazılmaz, harfler kayar; Boş sütun ve Hesap Kodu hep yazılır', async () => {
+    const t: OutputTemplate = { columns: [{ id: 'no', header: 'No' }, { id: 'arrival', header: 'Geliş' }, { id: 'code', header: 'Kod' }, { id: 'blank', header: '' }, { id: 'amount', header: 'Tutar' }, { id: 'vat10Base', header: 'Matrah %10' }], rowOrder: 'date-no', sheetName: 'S' };
+    const noCodes = { codes: new Map<string, string>() };
+    const empty = emptyColumns(t, list, noCodes);
+    expect([...empty]).toEqual([1, 5]); // geliş zamanı ve %10 matrahı boş; kod ve boş sütun sayılmaz
+    expect(emptyColumns(t, [], noCodes).size).toBe(0);
+    const w = skipEmpty(t, empty);
+    expect(w.columns.map((c) => c.header)).toEqual(['No', 'Kod', '', 'Tutar']);
+    expect(excelLettersOf(t, empty)).toEqual(['A', null, 'B', 'C', 'D', null]);
+    const ws = XLSX.read(await buildTemplateWorkbook(list, w, noCodes)).Sheets.S;
+    expect(['A1', 'B1', 'D1'].map((a) => ws[a].v)).toEqual(['No', 'Kod', 'Tutar']);
+    expect(ws.E1).toBeUndefined();
+    // Kutu kaldırılınca (keepEmpty) ekrandaki gibi hepsi yazılır
+    const keep = normalizeTemplate({ ...t, keepEmpty: true });
+    expect(keep.keepEmpty).toBe(true);
+    expect(normalizeTemplate(t).keepEmpty).toBeUndefined();
+    expect(skipEmpty(keep, empty)).toBe(keep);
+    expect(excelLettersOf(keep, empty)).toEqual(['A', 'B', 'C', 'D', 'E', 'F']);
   });
 });
