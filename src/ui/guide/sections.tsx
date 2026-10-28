@@ -88,7 +88,7 @@ export const sections: Section[] = [
           <>Sıra ve süzgeç (tümü / atanmamış / elle / toplu / kural) ve <b>☑ Seç</b> (<T t="toplu atama" />).</>,
           <>Arama: numara, satıcı, tutar (<K k="Ctrl+F" />).</>,
           <>Liste: kod alan satır yuvanın rengini alır. Tıklayınca o fatura açılır.</>,
-          <>Fatura sayısı; yanlış yüklenen faturayı <b>çıkar</b>, başka firmaya <b>taşı</b>.</>,
+          <>Fatura sayısı; yanlış yüklenen faturayı <b>dönemden sil</b>, başka firmaya <b>taşı</b>.</>,
           <>Kalemler: ad, miktar × birim fiyat = tutar, KDV oranı. Yanındaki ⚡ "Bu faturadan kural" penceresini o kalem işaretli açar (bkz. Kurallar).</>,
         ]} />
       </>
@@ -189,7 +189,7 @@ export const sections: Section[] = [
         <p>Böylece "VKN + kalem" ya da "unvan + KDV %10" gibi birleşik kurallar, kural penceresine hiç girmeden iki rozet işaretleyerek kurulur. Birim fiyat rozeti demirbaş sınırı için işe yarar: sınırın üstündeki alışlar 255'e, altındakiler gidere.</p>
         <p>Örnek: Lezzet Gıda'dan alınan <b>30'lu yumurta</b> ikramdır (770.09), <b>3000 yumurta</b> ise satış için alınmıştır (153). İki kural: kalem "yumurta" + miktar ≤ 999 → 770.09; kalem "yumurta" + miktar ≥ 1000 → 153. Miktar, aynı kuraldaki kalem adıyla aynı kalemde aranır. Benzer biçimde "unvan ABC Kırtasiye + kalem klasör → 543" ya da "KDV %10 → 153" yazılabilir.</p>
         <p><b>Birden çok kural uyarsa</b> hangisi kazanır? Önce döneme özel olan, sonra daha çok koşullu (daha belirgin) olan, sonra VKN › unvan › kalem › tip › KDV › miktar › birim fiyat › kalem tutarı › tutar › tarih sırası, sonra en son güncellenen. Yani "VKN 123… → 770" ile "VKN 123… + kalem klasör → 543" birlikte varsa klasörlü faturalar 543, diğerleri 770 alır.</p>
-        <Tip>Kuralla verilen kodlar "kural" etiketi alır ve gezerken atlanır. Bir faturada kural başka bir şey diyorsa panelde "Kural diyor ki" ipucu çıkar; <K k="Boşluk" /> kuralın kodunu verir. Kuralla verilen kodlar kuralı izler: kuralın kodunu ya da koşullarını değiştirirseniz bu dönemde o kuralla verilmiş kodlar da düzelir; kuralı kapatır ya da silerseniz kalkar (kapatılan kural yeniden açılınca geri gelir). Elle verdiğiniz kodlara ve geçmiş dönemlere dokunulmaz. <K k="Ctrl+Z" /> kuralı da kodları da geri getirir; Kurallar penceresi açıkken de çalışır.</Tip>
+        <Tip>Kuralla verilen kodlar "kural" etiketi alır ve gezerken atlanır. Bir faturada kural başka bir şey diyorsa panelde "Kural: …" ipucu çıkar; <K k="Boşluk" /> kuralın kodunu verir. Kuralla verilen kodlar kuralı izler: kuralın kodunu ya da koşullarını değiştirirseniz bu dönemde o kuralla verilmiş kodlar da düzelir; kuralı kapatır ya da silerseniz kalkar (kapatılan kural yeniden açılınca geri gelir). Elle verdiğiniz kodlara ve geçmiş dönemlere dokunulmaz. <K k="Ctrl+Z" /> kuralı da kodları da geri getirir; Kurallar penceresi açıkken de çalışır.</Tip>
       </>
     ),
   },
@@ -279,17 +279,19 @@ export const sections: Section[] = [
   },
 ];
 
+/** Klavye listesi: rehberde ve Ayarlar › Klavye'de aynı tablo */
 export const keys: [string, string][] = [
   ['←  →', 'Önceki / sonraki fatura'],
-  ['Tab  Shift+Tab', 'Sonraki / önceki kod almamış fatura'],
-  ['Ctrl+→', 'Toplu ve kuralla atananlar dahil gez'],
+  ['Tab  Shift+Tab', 'Sonraki / önceki kod almamış fatura (Shift+ok da olur)'],
+  ['Ctrl+←  Ctrl+→', 'Toplu ve kuralla atananlar dahil gez'],
   ['Q W E A S D', 'Yuvadaki kodu ver (ayara göre sıradakine geç)'],
   ['Boşluk', 'Kuralın ya da satıcıya önce verilen kodu ver'],
-  ['/  Enter  0–9', 'Elle kod girişi'],
+  ['/  Enter  0–9', 'Elle kod girişi (Esc vazgeçer)'],
   ['Ctrl+.', 'Hesap kodu listesinde ara ve ver'],
   ['Backspace', 'Kodu kaldır (elle girişte boş Enter da kaldırır)'],
   ['Ctrl+Z  Ctrl+Y', 'Geri al / yinele'],
   ['Shift+tık  Ctrl+tık', 'Listede aralık / tekil seçim'],
+  ['Çift tık', 'Liste görünümünde faturayı görselde aç'],
   ['Esc', 'Pencereyi kapat, seçimi bırak'],
   ['Ctrl+F', 'Ara'],
   ['F5', 'Önizleme'],
@@ -307,7 +309,7 @@ export const troubles: [string, string][] = [
   ['Fatura görüntüsü yerine kart görünüyor', 'O faturanın XML\'i yok (EDM listesinden ya da arşivden geldi). XML\'ini yükleyin, görüntü gelir; atama korunur.'],
   ['Q tuşu "yuva boş" diyor', 'Alt çubukta o yuvaya tıklayıp bir kod yazın. Yuvalar kendiliğinden dolmaz.'],
   ['Kod verdim ama listede göremiyorum', 'Süzgeç "Atanmamış" olabilir; "Tümü" yapın. Toplu/kural atananlar gezerken atlanır; Ctrl+ok ile görülür.'],
-  ['Yanlış firmaya yükledim', 'Sağ alttaki "taşı" ile dönemi ya da seçili faturaları doğru firmaya taşıyın; atamalar gider.'],
+  ['Yanlış firmaya yükledim', 'Sağ alttaki "taşı" ile dönemi ya da seçili faturaları doğru firmaya taşıyın; atamalar da birlikte taşınır.'],
   ['GMS dosyayı almadı', 'Üst çubuktaki Şablon (ya da Ayarlar › Çıktı) ile sütun ve başlıkları GMS\'in beklediği gibi yapın. Emin olmak için EDM listesini de yükleyin; çıktı EDM dosyasıyla birebir olur.'],
   ['"Depolama alanı doldu" uyarısı', 'Ayarlar › Yedek › Depolama\'dan eski dönemlerin görsellerini arşivleyin ya da gereksiz dönemi silin.'],
   ['Başka bilgisayarda devam etmek istiyorum', 'Ayarlar › Yedek › Dışa aktar; diğer bilgisayarda İçe aktar. XML\'leri orada yeniden yüklerseniz görseller de gelir.'],

@@ -298,7 +298,7 @@ export const ISSUE_LABEL: Record<IssueKind, string> = {
   'not-in-chart': 'Kod hesap kodu listesinde yok',
   type: 'Tevkifat / İade faturası, kontrol edin',
   'vat-gap': 'KDV oranının Excel şablonunda sütunu yok',
-  'no-view': 'XML yok (eski Excel dönemi); görsel çizilemez',
+  'no-view': 'XML yok (EDM listesinden geldi ya da görseli arşivlendi); görsel çizilemez',
 };
 
 /** Toolbar ve listede gösterilecek uyarılar: atanmamış kod ve görsel eksikliği hariç. */
@@ -350,8 +350,8 @@ export async function getInvoiceView(no: string): Promise<InvoiceView | null> {
   } else if (rec.xml) {
     html = '<!--fallback-->' + fallbackHtml(inv, rec.xml, 'Bu faturada görünüm şablonu (XSLT) yok; XML içeriği sade biçimde gösteriliyor.');
   } else {
-    // XML'siz (eski Excel dönemi): ekranda kart gösterilir, yazdırmada sade özet
-    return { html: '<!--fallback-->' + fallbackHtml(inv, null, 'Bu faturanın XML\'i yok (eski Excel dönemi); yalnızca liste bilgileri.'), official: false };
+    // XML'siz (EDM listesinden ya da arşivden): ekranda kart gösterilir, yazdırmada sade özet
+    return { html: '<!--fallback-->' + fallbackHtml(inv, null, 'Bu faturanın XML\'i yok (EDM listesinden geldi ya da görseli arşivlendi); yalnızca liste bilgileri.'), official: false };
   }
   rememberHtml(key, html);
   return { html, official };
@@ -383,6 +383,9 @@ function amountTexts(n: number): string[] {
   const tr = n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   return [String(n), tr, tr.replace(/\./g, '')];
 }
+
+/** Arama kutularının yer tutucusu: matchesSearch neye bakıyorsa o yazar */
+export const SEARCH_HINT = 'Ara: no, satıcı, VKN, ETTN, tutar';
 
 export function matchesSearch(i: Invoice, q: string): boolean {
   return (

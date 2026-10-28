@@ -3,6 +3,7 @@ import * as S from './state';
 import { askName, askConfirm } from './dialog';
 import type { ViewMode, Layout } from '../core/types';
 import { isEdmDefault } from '../core/excel/template';
+import { keys } from './guide/sections';
 
 import { SCALE_STEPS, describeScreen, type Density } from '../core/layout';
 
@@ -106,7 +107,7 @@ export function SettingsModal() {
                 </fieldset>
                 <div class="settings-links">
                   <button onClick={() => openOther(() => (S.accountsOpen.value = true))}>Hesap kodu listesi <span class="muted">({S.accounts.value.length} kod)</span></button>
-                  <button onClick={() => openOther(() => S.openRules())}>Otomatik atama kuralları <span class="muted">({S.rules.value.filter((r) => !r.batchId).length} kalıcı)</span></button>
+                  <button onClick={() => openOther(() => S.openRules())}>Otomatik atama kuralları <span class="muted">(bu dönemde {S.batchRules.value.length})</span></button>
                 </div>
                 <div class="row-inline" style="margin-top:8px">
                   <span class="muted small">{S.firms.value.length} firma kayıtlı.</span>
@@ -222,14 +223,7 @@ export function SettingsModal() {
               </>
             )}
             {tab === 'keys' && (
-              <div class="keys">
-                <div><kbd>←</kbd><kbd>→</kbd> önceki / sonraki fatura · <kbd>Tab</kbd> / <kbd>Shift+Tab</kbd> (ya da <kbd>Shift+ok</kbd>) sonraki / önceki <b>atanmamış</b> fatura · <kbd>Ctrl+ok</kbd> toplu/kural atananlar dahil</div>
-                <div><kbd>Q</kbd><kbd>W</kbd><kbd>E</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> kısayolla ata{s.autoAdvance ? ', sonrakine geç' : ''} · <kbd>Boşluk</kbd> kural ya da satıcıya önce verilen kod</div>
-                <div><kbd>/</kbd> <kbd>Enter</kbd> <kbd>0–9</kbd> manuel kod girişi (boş bırakıp <kbd>Enter</kbd>: kodu kaldır) · <kbd>Esc</kbd> vazgeç · <kbd>Backspace</kbd> atamayı kaldır</div>
-                <div><kbd>Ctrl+F</kbd> ara · <kbd>Ctrl+.</kbd> hesap kodu listesinde ara ve ata · <kbd>Ctrl+Z</kbd> geri al · <kbd>Ctrl+Y</kbd> yinele</div>
-                <div><kbd>F5</kbd> önizle · <kbd>F1</kbd> Excel üret · <kbd>Ctrl+P</kbd> faturayı yazdır · <kbd>Ctrl+Shift+P</kbd> yazdırma planı</div>
-                <div><kbd>Shift+tık</kbd> aralık seç · <kbd>Ctrl+tık</kbd> tekil seç · <kbd>Esc</kbd> seçimi bırak · çift tık: faturayı görselde aç</div>
-              </div>
+              <table class="keys-table"><tbody>{keys.map(([k, d]) => <tr><td>{k.split(/\s{2,}/).map((x) => <kbd>{x}</kbd>)}</td><td>{d}</td></tr>)}</tbody></table>
             )}
           </div>
         </div>

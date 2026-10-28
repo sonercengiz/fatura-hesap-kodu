@@ -28,7 +28,7 @@ let h = await hintAt('YLD2026000000003');
 check('iki atama → ×2', /760\.01\s*×2/.test(h), h);
 
 // Fatura çıkarma → sayaç düşer
-await row('YLD2026000000002').click(); await a.locator('button[title^="Bu faturayı dönemden çıkar"]').click();
+await row('YLD2026000000002').click(); await a.locator('button[title^="Bu faturayı dönemden sil"]').click();
 await a.waitForSelector('.modal.dialog'); await a.locator('.modal.dialog button.danger').click(); await settle();
 h = await hintAt('YLD2026000000003');
 check('atanmış fatura çıkarıldı → ×1', /760\.01\s*×1/.test(h), h);

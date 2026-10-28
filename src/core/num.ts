@@ -22,3 +22,15 @@ export function parseTrNumber(s: string): number | null {
 export function fmtTrNumber(n: number | null | undefined): string {
   return n === null || n === undefined || Number.isNaN(n) ? '' : n.toLocaleString('tr-TR', { maximumFractionDigits: 3 });
 }
+
+/** Para tutarı: her yerde 2 ondalık (1.234,50); null → "" */
+export function fmtMoney(n: number | null | undefined): string {
+  return n === null || n === undefined || Number.isNaN(n) ? '' : n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+/** Önizleme hücresi: para alanı 2 ondalık, diğer sayılar en çok 3, metin olduğu gibi */
+export function fmtCell(v: unknown, money: boolean): string {
+  if (v === null || v === undefined) return '';
+  if (typeof v === 'number') return money ? fmtMoney(v) : fmtTrNumber(v);
+  return String(v);
+}

@@ -141,13 +141,14 @@ export function RulesModal() {
   const f = filter.trim().toLocaleLowerCase('tr');
   const list = S.batchRules.value.filter((r) => !f || ruleLabel(r).toLocaleLowerCase('tr').includes(f) || r.code.includes(f)).sort((a, b) => Number(!!b.batchId) - Number(!!a.batchId) || b.updatedAt - a.updatedAt);
   const otherBatchRules = S.rules.value.length - S.batchRules.value.length;
+  const scopedHere = S.batchRules.value.filter((r) => r.batchId).length;
 
   return (
     <div class="modal-backdrop" onClick={() => S.closeRules()}>
       <div class="modal rules" tabIndex={-1} onClick={(e) => e.stopPropagation()} onMouseUp={(e) => { if (document.activeElement === document.body) (e.currentTarget as HTMLElement).focus(); }} onKeyDownCapture={(e) => { if (e.key === 'Escape') { e.stopPropagation(); e.preventDefault(); if (editing) reset(); else S.closeRules(); } }}>
         <div class="modal-head">
           <b>Otomatik atama kuralları</b>
-          <span class="muted">{S.firm.value.name} · {S.rules.value.length} kural</span>
+          <span class="muted">{S.firm.value.name} · bu dönemde {S.batchRules.value.length} kural{scopedHere > 0 ? ` (${S.batchRules.value.length - scopedHere} kalıcı, ${scopedHere} döneme özel)` : ''}</span>
           <div class="spacer" />
           <button class="ghost" onClick={() => S.closeRules()}>Kapat <kbd>Esc</kbd></button>
         </div>

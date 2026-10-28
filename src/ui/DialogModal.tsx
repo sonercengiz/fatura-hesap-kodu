@@ -7,7 +7,7 @@ export function DialogModal() {
   const [value, setValue] = useState(d?.kind === 'name' ? d.initial ?? '' : '');
   useEffect(() => { input.current?.focus(); input.current?.select(); }, []);
   if (!d) return null;
-  // Yıkıcı onayda (Sil, Çıkar) odak Vazgeç'te açılır ve Enter yalnızca odaktaki düğmeyi çalıştırır: dalgın bir Enter silmez
+  // Yıkıcı onayda (Sil) odak Vazgeç'te açılır ve Enter yalnızca odaktaki düğmeyi çalıştırır: dalgın bir Enter silmez
   const danger = d.kind === 'confirm' && !!d.danger;
   const ok = () => {
     if (d.kind === 'name') { const v = value.trim(); if (!v && !d.allowEmpty) return; closeDialog(v); }

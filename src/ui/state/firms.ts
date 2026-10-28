@@ -287,7 +287,7 @@ export function isQuotaError(e: unknown): boolean {
   return /QuotaExceeded|quota/i.test(name) || /quota|QuotaExceeded/i.test(msg);
 }
 
-/** Faturaları dönemden çıkarır (atamalarıyla birlikte). */
+/** Faturaları dönemden siler (atamalarıyla birlikte). */
 export async function removeInvoices(nos: string[]) {
   const b = batchRec.value;
   if (!b || nos.length === 0) return;
@@ -302,7 +302,7 @@ export async function removeInvoices(nos: string[]) {
   await reloadBatch();
   await cleanupXslts();
   notifyOtherTabs();
-  showToast(`${nos.length} fatura dönemden çıkarıldı`);
+  showToast(`${nos.length} fatura dönemden silindi`);
 }
 
 /** Hiçbir faturanın kullanmadığı XSLT kayıtlarını siler */

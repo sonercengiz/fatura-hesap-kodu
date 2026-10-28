@@ -1,5 +1,6 @@
 import type { Invoice } from './types';
 import { dateKey } from './sort';
+import { fmtMoney } from './num';
 
 /** Yazdırma sırası ölçütleri */
 export type SortKey = 'date' | 'supplier' | 'code' | 'amount' | 'no' | 'added';
@@ -96,7 +97,7 @@ export function describePlan(s: PlanSort, items: Invoice[], codes: Map<string, s
   if (s.primary === 'code') parts.push('Hesap kodu atanmamışlar en sonda.');
   const show = (inv: Invoice | undefined) => {
     if (!inv) return '—';
-    const v = s.primary === 'code' ? codes.get(inv.no) ?? 'kodsuz' : s.primary === 'amount' ? `${inv.amount?.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ${inv.currency}` : s.primary === 'date' ? inv.date : s.primary === 'added' ? `${inv.order + 1}. yüklenen` : '';
+    const v = s.primary === 'code' ? codes.get(inv.no) ?? 'kodsuz' : s.primary === 'amount' ? `${fmtMoney(inv.amount)} ${inv.currency}` : s.primary === 'date' ? inv.date : s.primary === 'added' ? `${inv.order + 1}. yüklenen` : '';
     return `${v ? v + ' · ' : ''}${inv.supplierName} · ${inv.no}`;
   };
   return { summary: parts.join(' '), top: show(items[0]), bottom: show(items[items.length - 1]) };

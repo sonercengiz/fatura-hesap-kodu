@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import * as S from './state';
 import { db, type BatchRecord } from '../storage/db';
 
@@ -12,26 +12,32 @@ export function MoveModal() {
   const [batches, setBatches] = useState<BatchRecord[]>([]);
   const [batchId, setBatchId] = useState<string>('__new');
   const close = () => (S.moveOpen.value = false);
+  // Açılınca odak pencerede: Enter/Esc arkadaki "taşı" düğmesine değil pencereye gitsin
+  const root = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => { root.current?.focus(); }, []);
   useEffect(() => {
     if (!firmId) return;
     db.batches.where('firmId').equals(firmId).toArray().then((l) => { setBatches(l.sort((a, b) => b.updatedAt - a.updatedAt)); setBatchId('__new'); });
   }, [firmId]);
   const b = S.batchRec.value;
   if (!b) return null;
+  const can = !!firmId && !(scope === 'selected' && sel.size === 0);
   const go = async () => {
-    if (!firmId) return;
+    if (!can) return;
     if (scope === 'batch') await S.moveBatchToFirm(firmId);
     else await S.moveInvoicesToFirm(Array.from(sel), firmId, batchId === '__new' ? null : batchId);
     close();
   };
   return (
     <div class="modal-backdrop" onClick={close}>
-      <div class="modal" onClick={(e) => e.stopPropagation()} onKeyDownCapture={(e) => { if (e.key === 'Escape') { e.stopPropagation(); close(); } }}>
+      <div class="modal" ref={root} tabIndex={-1} onClick={(e) => e.stopPropagation()} onKeyDownCapture={(e) => {
+        if (e.key === 'Escape') { e.stopPropagation(); close(); }
+        // Enter = Taşı (onay pencereleri gibi; taşıma geri taşınabilir). Açılır listede Enter seçim demektir, ona dokunulmaz.
+        else if (e.key === 'Enter' && !(e.target instanceof HTMLSelectElement)) { e.stopPropagation(); e.preventDefault(); go(); }
+      }}>
         <div class="modal-head">
           <b>Başka firmaya taşı</b>
           <span class="muted">{cur.name} › …</span>
-          <div class="spacer" />
-          <button class="ghost" onClick={close}>Vazgeç <kbd>Esc</kbd></button>
         </div>
         <div class="form">
           {others.length === 0 ? (
@@ -58,11 +64,12 @@ export function MoveModal() {
                 </label>
               )}
               <div class="muted small">Taşıma geri alınabilir: hedef firmada aynı pencereyle geri taşıyın. Satıcı bazlı öneri geçmişi de taşınır. Hedefte zaten olan fatura burada bırakılır.</div>
-              <div class="row-inline" style="justify-content:flex-end">
-                <button class="primary" onClick={go} disabled={!firmId || (scope === 'selected' && sel.size === 0)}>Taşı</button>
-              </div>
             </>
           )}
+          <div class="row-inline" style="justify-content:flex-end; gap:8px">
+            <button class="ghost" onClick={close}>{others.length ? 'Vazgeç' : 'Kapat'} <kbd>Esc</kbd></button>
+            {others.length > 0 && <button class="primary" onClick={go} disabled={!can}>Taşı <kbd>Enter</kbd></button>}
+          </div>
         </div>
       </div>
     </div>

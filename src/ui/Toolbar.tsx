@@ -39,7 +39,7 @@ export function Toolbar() {
     { id: 'undo', label: '↶', title: S.undoStack.value.length ? `Geri al: ${S.undoStack.value[S.undoStack.value.length - 1].label} (Ctrl+Z)` : 'Geri alınacak işlem yok', kbd: 'Ctrl+Z', cls: 'ghost', disabled: !S.undoStack.value.length, on: () => S.undo() },
     { id: 'preview', label: 'Önizle', title: 'Çıktıyı önizle (F5)', kbd: 'F5', disabled: !b, on: () => (S.previewOpen.value = true) },
     { id: 'print', label: '🖨 Yazdır', title: 'Yazdırma planı: faturaları istediğiniz sırada yazdırın ya da PDF kaydedin (Ctrl+Shift+P)', kbd: 'Ctrl+Shift+P', cls: 'ghost', disabled: !b || n === 0, on: () => S.openPrint() },
-    { id: 'rules', label: `Kurallar${S.batchRules.value.length ? ` ${S.batchRules.value.length}` : ''}`, title: 'Otomatik atama kuralları (satıcı → hesap kodu)', cls: 'ghost', on: () => S.openRules() },
+    { id: 'rules', label: `Kurallar${S.batchRules.value.length ? ` ${S.batchRules.value.length}` : ''}`, title: `Otomatik atama kuralları${S.batchRules.value.length ? ` · bu dönemde ${S.batchRules.value.length} kural` : ''}`, cls: 'ghost', on: () => S.openRules() },
     { id: 'guide', label: 'Rehber', title: 'Kullanım rehberi', cls: 'ghost', on: () => (S.guideOpen.value = true) },
     { id: 'theme', label: dark ? '☀' : '☾', title: dark ? 'Açık temaya geç' : 'Koyu temaya geç', cls: 'ghost theme-btn', on: () => S.updateSettings({ theme: dark ? 'light' : 'dark' }) },
   ];

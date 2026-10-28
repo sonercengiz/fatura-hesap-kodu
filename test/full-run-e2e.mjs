@@ -113,7 +113,7 @@ log('yeniden yükleme sonrası:', await page.locator('.progress').innerText(), '
 
 // 8) Faturayı partiden çıkar
 const before = await page.locator('.list .row').count();
-await page.locator('.files button', { hasText: 'çıkar' }).first().click(); await page.locator('.modal.dialog button.danger').click();
+await page.locator('.files button', { hasText: 'dönemden sil' }).first().click(); await page.locator('.modal.dialog button.danger').click();
 await page.waitForTimeout(300);
 log('çıkarma:', before, '→', await page.locator('.list .row').count());
 

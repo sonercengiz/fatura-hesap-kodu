@@ -20,18 +20,18 @@ await a.goto('http://localhost:5179/'); await a.waitForSelector('.welcome');
 await a.locator('input[accept*=".zip"]').setInputFiles(files); await a.waitForSelector('.inv-frame'); await a.waitForFunction(() => !document.querySelector('.busy')); await a.waitForTimeout(400);
 const n0 = await count();
 
-await a.locator('button[title^="Bu faturayı dönemden çıkar"]').click(); await a.waitForSelector('.modal.dialog');
+await a.locator('button[title^="Bu faturayı dönemden sil"]').click(); await a.waitForSelector('.modal.dialog');
 check('yıkıcı onayda odak Vazgeç\'te', (await focused()).startsWith('Vazgeç'), await focused());
 check('Sil düğmesinde Enter ipucu yok', (await a.locator('.modal.dialog button.danger kbd').count()) === 0, await a.locator('.modal.dialog button.danger').innerText());
 await a.keyboard.press('Enter'); await a.waitForTimeout(400);
 check('Enter: pencere kapandı, fatura silinmedi', (await a.locator('.modal.dialog').count()) === 0 && (await count()) === n0, `${await a.locator('.modal.dialog').count()} pencere, ${await count()}/${n0}`);
 
-await a.locator('button[title^="Bu faturayı dönemden çıkar"]').click(); await a.waitForSelector('.modal.dialog');
-await a.keyboard.press('Tab'); check('Tab → Çıkar', (await focused()).startsWith('Çıkar'), await focused());
+await a.locator('button[title^="Bu faturayı dönemden sil"]').click(); await a.waitForSelector('.modal.dialog');
+await a.keyboard.press('Tab'); check('Tab → Sil', (await focused()).startsWith('Sil'), await focused());
 await a.keyboard.press('Enter'); await a.waitForTimeout(500);
-check('Tab + Enter: çıkarıldı', (await count()) === n0 - 1, `${await count()}/${n0}`);
+check('Tab + Enter: dönemden silindi', (await count()) === n0 - 1, `${await count()}/${n0}`);
 
-await a.locator('button[title^="Bu faturayı dönemden çıkar"]').click(); await a.waitForSelector('.modal.dialog');
+await a.locator('button[title^="Bu faturayı dönemden sil"]').click(); await a.waitForSelector('.modal.dialog');
 await a.keyboard.press('Escape'); await a.waitForTimeout(300);
 check('Esc: vazgeçildi', (await count()) === n0 - 1 && (await a.locator('.modal.dialog').count()) === 0, await count());
 

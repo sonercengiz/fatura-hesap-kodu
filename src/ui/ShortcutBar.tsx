@@ -98,7 +98,7 @@ function ProgressCard() {
   const left = total - done;
   if (left === 0) {
     return (
-      <div class="status progress-card complete" title="Bu partideki tüm faturalar hesap kodu aldı">
+      <div class="status progress-card complete" title="Bu dönemdeki tüm faturalar hesap kodu aldı">
         <span class="status-label">Tamamlandı</span>
         <b class="status-code">{done}/{total}</b>
         <span class="status-sub"><kbd>F1</kbd> Excel üret</span>
@@ -176,7 +176,7 @@ export function ShortcutBar() {
           </>
         ) : (
           <button class="ghost" onClick={() => S.enterManual()} disabled={!inv}>
-            Manuel kod gir <kbd>/</kbd> <kbd>Enter</kbd> <kbd>0–9</kbd>
+            Elle kod gir <kbd>/</kbd> <kbd>Enter</kbd> <kbd>0–9</kbd>
           </button>
         )}
       </div>

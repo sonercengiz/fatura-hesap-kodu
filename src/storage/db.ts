@@ -34,7 +34,7 @@ export interface BatchRecord {
   updatedAt: number;
 }
 
-/** Bir fatura; XML'i (XSLT'si ayrılmış) ve başlık alanları. Eski Excel dönemlerinde xml null. */
+/** Bir fatura; XML'i (XSLT'si ayrılmış) ve başlık alanları. EDM listesinden gelen ya da görseli arşivlenen faturada xml null. */
 export interface InvoiceRecord {
   batchId: string;
   no: string;

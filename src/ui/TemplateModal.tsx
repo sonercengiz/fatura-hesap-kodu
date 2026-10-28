@@ -1,5 +1,6 @@
 import { useState } from 'preact/hooks';
 import * as S from './state';
+import { fmtCell } from '../core/num';
 import { FIELD_DEFS, KDV_FIELD_IDS, vatFieldsFor, vatUncovered, ROW_ORDER_LABELS, DEFAULT_OUTPUT_TEMPLATE, isEdmDefault, buildTemplateRows, type OutputTemplate, type OutputFieldId, type RowOrder } from '../core/excel/template';
 
 const colName = (i: number) => { let s = ''; let n = i; do { s = String.fromCharCode(65 + (n % 26)) + s; n = Math.floor(n / 26) - 1; } while (n >= 0); return s; };
@@ -95,8 +96,8 @@ export function TemplateModal() {
               <div class="muted small">Önizleme (ilk {sample.length} satır)</div>
               <div class="table-box">
                 <table>
-                  <thead><tr>{preview[0]?.map((h, c) => <th class={t.columns[c].id === 'code' ? 'code-col' : ''}>{String(h ?? '') || <span class="muted">(boş)</span>}</th>)}</tr></thead>
-                  <tbody>{preview.slice(1).map((r) => <tr>{r.map((v, c) => <td class={t.columns[c].id === 'code' ? 'code-col' : ''}>{v == null ? '' : typeof v === 'number' ? v.toLocaleString('tr-TR') : String(v)}</td>)}</tr>)}</tbody>
+                  <thead><tr>{preview[0]?.map((h, c) => <th class={t.columns[c].id === 'code' ? 'code-col' : FIELD_DEFS[t.columns[c].id]?.money ? 'r' : ''}>{String(h ?? '') || <span class="muted">(boş)</span>}</th>)}</tr></thead>
+                  <tbody>{preview.slice(1).map((r) => <tr>{r.map((v, c) => <td class={t.columns[c].id === 'code' ? 'code-col' : FIELD_DEFS[t.columns[c].id]?.money ? 'r' : ''}>{fmtCell(v, !!FIELD_DEFS[t.columns[c].id]?.money)}</td>)}</tr>)}</tbody>
                 </table>
               </div>
             </div>

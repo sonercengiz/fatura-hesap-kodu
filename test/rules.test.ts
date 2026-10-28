@@ -74,6 +74,7 @@ describe('otomatik atama kuralları (çok koşullu)', () => {
     expect(ruleMatches(mk([{ kind: 'date', to: '2026-09-30' }], 'x'), { ...ofis, isoDate: '' })).toBe(false);
     expect(ruleMatches(mk([{ kind: 'price', min: 1, max: null }], 'x'), { ...ofis, lines: [{ name: 'x', qty: 1, unit: '', vat: null }] })).toBe(false); // eski kayıt: fiyat yok
     expect(condLabel({ kind: 'price', min: 9900, max: null })).toBe('birim fiyat ≥ 9.900 ₺');
+    expect(condLabel({ kind: 'price', min: 0.125, max: null })).toBe('birim fiyat ≥ 0,125 ₺'); // kutudaki gibi 3 ondalık, 0,13'e yuvarlanmaz
     expect(condLabel({ kind: 'date', from: '2026-09-22', to: '2026-09-22' })).toBe('tarih 22.09.2026');
     expect(condLabel({ kind: 'date', from: '2026-09-01', to: '2026-09-30' })).toBe('tarih 01.09.2026–30.09.2026');
     expect(validateCond({ kind: 'date' })).toMatch(/başlangıç/);

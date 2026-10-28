@@ -96,7 +96,7 @@ export function PrintModal() {
               <select value={pfilter} onChange={(e) => { setPfilter((e.currentTarget as HTMLSelectElement).value as FilterMode); setManual(null); }} onKeyDown={(e) => e.stopPropagation()}>
                 {(Object.keys(S.FILTER_LABELS) as FilterMode[]).map((m) => <option value={m}>{S.FILTER_LABELS[m]}</option>)}
               </select>
-              <input placeholder="Ara: no, satıcı, VKN, hesap kodu" value={psearch} onInput={(e) => { setPsearch((e.currentTarget as HTMLInputElement).value); setManual(null); }} onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Escape') { setPsearch(''); (e.currentTarget as HTMLInputElement).blur(); } }} />
+              <input placeholder={`${S.SEARCH_HINT}, hesap kodu`} value={psearch} onInput={(e) => { setPsearch((e.currentTarget as HTMLInputElement).value); setManual(null); }} onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Escape') { setPsearch(''); (e.currentTarget as HTMLInputElement).blur(); } }} />
               <div class="muted small">{base.length} / {pool.length} fatura süzgeçten geçti. Listedeki kutucuklarla tek tek de seçebilirsiniz.</div>
             </fieldset>
             <fieldset>

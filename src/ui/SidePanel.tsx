@@ -4,6 +4,8 @@ import { ruleLabel, unitLabel } from '../core/rules';
 import { askConfirm } from './dialog';
 import { fmtAmount } from './InvoiceCard';
 import { SORT_LABELS, type SortMode } from '../core/sort';
+import { ROW_ORDER_LABELS } from '../core/excel/template';
+import { fmtMoney, fmtTrNumber } from '../core/num';
 import type { FilterMode } from '../core/types';
 import { useState } from 'preact/hooks';
 
@@ -17,8 +19,8 @@ const readLinesOpen = () => { try { return localStorage.getItem(LINES_KEY) !== '
 function Lines({ inv }: { inv: NonNullable<typeof S.current.value> }) {
   const [open, setOpen] = useState(readLinesOpen);
   const toggle = () => { setOpen(!open); try { localStorage.setItem(LINES_KEY, open ? '0' : '1'); } catch { /* yok say */ } };
-  const fmtQty = (q: number | null, u: string) => (q === null ? '' : `${q.toLocaleString('tr-TR', { maximumFractionDigits: 3 })} ${unitLabel(u)}`);
-  const money = (n: number | null | undefined) => (n == null ? '' : n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+  const fmtQty = (q: number | null, u: string) => (q === null ? '' : `${fmtTrNumber(q)} ${unitLabel(u)}`);
+  const money = fmtMoney;
   return (
     <div class={`lines ${open ? '' : 'closed'}`}>
       <button class="lines-head" onClick={toggle} title={open ? 'Kalemleri gizle' : 'Kalemleri göster'}>
@@ -79,7 +81,7 @@ export function SidePanel() {
             const perm = r?.batchId ? S.overriddenBy(r) : null;
             if (r && r.code !== code) return (
               <button class="hint" onClick={() => S.assign(r.code)} title={`${r.batchId ? 'Dönem kuralı' : 'Kalıcı kural'}: ${ruleLabel(r)}`}>
-                {r.batchId ? 'Dönem kuralı' : 'Kural'} diyor ki: <b>{r.code}</b> <span class="muted">({ruleLabel(r)})</span> <kbd>Boşluk</kbd>
+                {r.batchId ? 'Dönem kuralı' : 'Kural'}: <b>{r.code}</b> <span class="muted">({ruleLabel(r)})</span> <kbd>Boşluk</kbd>
               </button>
             );
             if (r && r.batchId && perm && perm.count > 0 && S.ruleNos.value.has(inv.no)) return (
@@ -105,7 +107,7 @@ export function SidePanel() {
         </div>
       )}
       <div class="list-controls">
-        <select class="sort-select" value={S.settings.value.sortMode} title="Liste sırası (çıktı her zaman tarih sırasındadır)" onChange={(e) => S.setSortMode((e.currentTarget as HTMLSelectElement).value as SortMode)}>
+        <select class="sort-select" value={S.settings.value.sortMode} title={`Ekrandaki liste sırası. Excel'in satır sırası şablondan gelir: ${ROW_ORDER_LABELS[S.outputTemplate.value.rowOrder]}`} onChange={(e) => S.setSortMode((e.currentTarget as HTMLSelectElement).value as SortMode)}>
           {(Object.keys(SORT_LABELS) as SortMode[]).map((m) => <option value={m}>Sıra: {SORT_LABELS[m]}</option>)}
         </select>
         <select class="filter-select" value={S.filterMode.value} title="Hangi faturalar listelensin ve gezilsin" onChange={(e) => S.setFilter((e.currentTarget as HTMLSelectElement).value as FilterMode)}>
@@ -116,7 +118,8 @@ export function SidePanel() {
       <input
         id="search"
         class="search"
-        placeholder="Ara: no, satıcı, tutar  (Ctrl+F)"
+        placeholder={`${S.SEARCH_HINT}  (Ctrl+F)`}
+        title={`${S.SEARCH_HINT} (Ctrl+F)`}
         value={S.searchText.value}
         onInput={(e) => (S.searchText.value = (e.currentTarget as HTMLInputElement).value)}
         onKeyDown={(e) => {
@@ -163,10 +166,11 @@ export function SidePanel() {
         })}
       </div>
       <div class="files">
-        <span>{S.invoices.value.length} fatura · {S.viewCount.value} görselli</span>
-        {inv && <button class="ghost tiny" title="Bu faturayı dönemden çıkar (yanlış yüklendiyse)" onClick={async () => { if (await askConfirm({ title: 'Faturayı çıkar', message: `${inv.no} (${inv.supplierName}) bu dönemden çıkarılacak; ataması da silinir.`, okLabel: 'Çıkar', danger: true })) S.removeInvoices([inv.no]); }}>çıkar</button>}
+        <span title={`${S.viewCount.value} faturanın görseli (XML'i) var`}>{S.invoices.value.length} fatura{S.viewCount.value < S.invoices.value.length ? ` · ${S.invoices.value.length - S.viewCount.value} görselsiz` : ''}</span>
+        {/* Seçim varken tekli "dönemden sil" gizlenir: hangisinin silineceği karışmasın */}
+        {inv && S.selected.value.size <= 1 && <button class="ghost tiny" title="Bu faturayı dönemden sil (yanlış yüklendiyse). Excel'e girmesin ama dönemde kalsın istiyorsanız listede seçip “Excel'den çıkar”ı kullanın." onClick={async () => { if (await askConfirm({ title: 'Faturayı dönemden sil', message: `${inv.no} (${inv.supplierName}) bu dönemden silinecek; ataması da silinir. Geri almak için XML'ini yeniden yüklemeniz gerekir.`, okLabel: 'Sil', danger: true })) S.removeInvoices([inv.no]); }}>dönemden sil</button>}
         {S.firms.value.length > 1 && <button class="ghost tiny" title="Bu dönemi ya da seçili faturaları başka firmaya taşı" onClick={() => (S.moveOpen.value = true)}>taşı</button>}
-        {S.selected.value.size > 1 && <button class="ghost tiny" title="Seçili faturaları dönemden çıkar" onClick={async () => { const n = S.selected.value.size; if (await askConfirm({ title: 'Seçilileri çıkar', message: `${n} fatura bu dönemden çıkarılacak; atamaları da silinir.`, okLabel: 'Çıkar', danger: true })) S.removeInvoices(Array.from(S.selected.value)); }}>{S.selected.value.size} seçiliyi çıkar</button>}
+        {S.selected.value.size > 1 && <button class="ghost tiny" title="Seçili faturaları dönemden sil" onClick={async () => { const n = S.selected.value.size; if (await askConfirm({ title: 'Seçilileri dönemden sil', message: `${n} fatura bu dönemden silinecek; atamaları da silinir. Geri almak için XML'lerini yeniden yüklemeniz gerekir.`, okLabel: 'Sil', danger: true })) S.removeInvoices(Array.from(S.selected.value)); }}>{S.selected.value.size} seçiliyi dönemden sil</button>}
       </div>
     </aside>
   );

@@ -1,5 +1,7 @@
 import { useEffect, useRef } from 'preact/hooks';
 import * as S from './state';
+import { FIELD_DEFS } from '../core/excel/template';
+import { fmtCell } from '../core/num';
 
 export function PreviewModal() {
   // Çıkarılanlar da gösterilir (soluk, üstü çizili) ki buradan geri alınabilsin; Excel'e yalnızca işaretliler yazılır
@@ -9,6 +11,7 @@ export function PreviewModal() {
   let excelRow = 1;
   const byRow = new Map(invs.map((i, k) => [k, i]));
   const at = S.outputCodeAt.value;
+  const money = S.outputTemplate.value.columns.map((c) => !!FIELD_DEFS[c.id]?.money);
   const box = useRef<HTMLDivElement>(null);
   const counts = { 'no-code': 0, 'not-in-chart': 0, type: 0, 'vat-gap': 0, 'no-view': 0 } as Record<S.IssueKind, number>;
   // Şablonda Hesap Kodu sütunu yoksa (yalnızca veri toplama) kodsuzluk çıktı için sorun değildir
@@ -48,7 +51,7 @@ export function PreviewModal() {
               <tr>
                 <th class="num">#</th>
                 <th class="pv-incl" title="İşareti kaldırılan fatura Excel'e yazılmaz (istisnai faturalar). Ctrl+Z geri alır.">Excel</th>
-                {rows[0]?.map((h, c) => <th class={c === at ? 'code-col' : ''}>{String(h ?? '')}</th>)}
+                {rows[0]?.map((h, c) => <th class={c === at ? 'code-col' : money[c] ? 'r' : ''}>{String(h ?? '')}</th>)}
               </tr>
             </thead>
             <tbody>
@@ -61,7 +64,7 @@ export function PreviewModal() {
                   <tr data-i={i} class={cls} title={out ? 'Excel\'e girmez' : iss.map((k) => S.ISSUE_LABEL[k]).join('\n')} onDblClick={() => { if (inv) { S.goTo(S.invoices.value.indexOf(inv)); S.previewOpen.value = false; } }}>
                     <td class="num">{out ? '—' : excelRow++}</td>
                     <td class="pv-incl"><input type="checkbox" checked={!out} title={out ? 'Excel\'e geri al' : 'Excel\'den çıkar'} onClick={(e) => e.stopPropagation()} onChange={(e) => inv && S.setExcluded([inv.no], !(e.currentTarget as HTMLInputElement).checked)} /></td>
-                    {r.map((v, c) => <td class={c === at ? 'code-col' : ''}>{v == null ? '' : typeof v === 'number' ? v.toLocaleString('tr-TR') : String(v)}</td>)}
+                    {r.map((v, c) => <td class={c === at ? 'code-col' : money[c] ? 'r' : ''}>{fmtCell(v, money[c])}</td>)}
                   </tr>
                 );
               })}

@@ -40,12 +40,14 @@ check('XML ekleme: geri alma yığını korunur', (await undoTitle()).includes('
 check('XML ekleme: seçim korunur (2)', (await a.locator('.list .row.selected').count()) === 2, await a.locator('.list .row.selected').count());
 check('XML ekleme: açık fatura yerinde', (await curNo()) === 'AYT2026000000003', await curNo());
 
-// 2) Fatura çıkarma (seçili olanlardan biri) → seçimden düşer; geri alma doğru faturaya döner
-await row('AYT2026000000001').click(); await a.locator('button[title^="Bu faturayı dönemden çıkar"]').click();
+// 2) Faturayı dönemden silme (seçili olan) → seçimden düşer; geri alma doğru faturaya döner
+// (seçim 1'den büyükken tekli "dönemden sil" gizli: önce AYT4'ün işareti kaldırılır, seçimde yalnızca AYT1 kalır)
+await row('AYT2026000000004').locator('.row-check').click();
+await row('AYT2026000000001').click(); await a.locator('button[title^="Bu faturayı dönemden sil"]').click();
 await a.waitForSelector('.modal.dialog'); await a.locator('.modal.dialog button.danger').click(); await settle();
 check('çıkarma: arama korunur', (await a.locator('#search').inputValue()) === 'telekom', await a.locator('#search').inputValue());
 check('çıkarma: geri alma yığını korunur', (await undoTitle()).includes('600.02'), await undoTitle());
-check('çıkarma: çıkarılan seçimden düşer (1)', (await a.locator('.list .row.selected').count()) === 1, await a.locator('.list .row.selected').count());
+check('çıkarma: silinen seçimden düşer (0)', (await a.locator('.list .row.selected').count()) === 0, await a.locator('.list .row.selected').count());
 await row('AYT2026000000004').click();
 await a.keyboard.press('Control+z'); await a.waitForTimeout(400);
 check('Ctrl+Z: işlemin yapıldığı faturaya döner', (await curNo()) === 'AYT2026000000003', await curNo());

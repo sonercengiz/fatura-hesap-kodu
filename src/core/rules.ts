@@ -7,6 +7,7 @@
  * Eşleştirme yerelde, düz metin karşılaştırmasıyla yapılır (ağ yok, düzenli ifade yok).
  */
 import { TYPE_LABELS } from './types';
+import { fmtTrNumber } from './num';
 
 export type CondKind = 'vkn' | 'name' | 'item' | 'vat' | 'qty' | 'price' | 'lineAmount' | 'amount' | 'type' | 'date';
 
@@ -202,7 +203,8 @@ export function matchPermanent(t: RuleTarget, rules: Rule[]): Rule | null {
   return matchRules(t, rules.filter((r) => r.batchId === null), null);
 }
 
-const fmtNum = (n: number) => n.toLocaleString('tr-TR', { maximumFractionDigits: 2 });
+// Kural kutularıyla aynı biçim (en çok 3 ondalık): 0,125 yazılan eşik 0,13 diye görünmesin
+const fmtNum = (n: number) => fmtTrNumber(n);
 export const fmtDateTr = (iso: string) => (/^\d{4}-\d{2}-\d{2}/.test(iso) ? `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}` : iso);
 
 /** Aralık metni: "1–1000", "≥ 1000", "≤ 10000" */

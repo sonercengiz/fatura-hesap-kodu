@@ -5,7 +5,7 @@ import { BulkBar } from './SidePanel';
 import { fmtAmount } from './InvoiceCard';
 import { SORT_LABELS, type SortMode } from '../core/sort';
 import { DEFAULT_LIST_COLUMNS, normalizeListColumns, type FilterMode, type ListColumnId } from '../core/types';
-import { FIELD_DEFS, KDV_FIELD_IDS, type OutputFieldId } from '../core/excel/template';
+import { FIELD_DEFS, KDV_FIELD_IDS, ROW_ORDER_LABELS, type OutputFieldId } from '../core/excel/template';
 import type { CellValue } from '../core/types';
 
 /** Listede kısa başlıklar; diğer alanlarda Excel'deki başlık */
@@ -27,7 +27,7 @@ function cell(id: OutputFieldId, v: CellValue) {
   return <td class="lv-text" title={t.length > 30 ? t : undefined}>{t}</td>;
 }
 
-/** Yalın liste görünümü: tam genişlikte tablo; kısayollar, manuel giriş, toplu seçim ve filtreler aynen çalışır. */
+/** Yalın liste görünümü: tam genişlikte tablo; kısayollar, elle giriş, toplu seçim ve filtreler aynen çalışır. */
 export function ListView() {
   const idx = S.currentIndex.value;
   const box = useRef<HTMLDivElement>(null);
@@ -67,7 +67,7 @@ export function ListView() {
         <input
           id="search"
           class="search lv-search"
-          placeholder="Ara: no, satıcı, VKN, tutar  (Ctrl+F)"
+          placeholder={`${S.SEARCH_HINT}  (Ctrl+F)`}
           value={S.searchText.value}
           onInput={(e) => (S.searchText.value = (e.currentTarget as HTMLInputElement).value)}
           onKeyDown={(e) => {
@@ -75,7 +75,7 @@ export function ListView() {
             if (e.key === 'Enter') { const first = S.invoices.value.findIndex((i) => S.passesFilter(i)); if (first >= 0) S.goTo(first); (e.currentTarget as HTMLInputElement).blur(); }
           }}
         />
-        <select class="sort-select" value={S.settings.value.sortMode} title="Liste sırası (çıktı her zaman tarih sırasındadır)" onChange={(e) => S.setSortMode((e.currentTarget as HTMLSelectElement).value as SortMode)}>
+        <select class="sort-select" value={S.settings.value.sortMode} title={`Ekrandaki liste sırası. Excel'in satır sırası şablondan gelir: ${ROW_ORDER_LABELS[S.outputTemplate.value.rowOrder]}`} onChange={(e) => S.setSortMode((e.currentTarget as HTMLSelectElement).value as SortMode)}>
           {(Object.keys(SORT_LABELS) as SortMode[]).map((m) => <option value={m}>Sıra: {SORT_LABELS[m]}</option>)}
         </select>
         <select class="filter-select" value={S.filterMode.value} title="Hangi faturalar listelensin ve gezilsin" onChange={(e) => S.setFilter((e.currentTarget as HTMLSelectElement).value as FilterMode)}>

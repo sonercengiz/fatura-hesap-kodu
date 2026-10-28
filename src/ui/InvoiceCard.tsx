@@ -1,11 +1,12 @@
 import type { Invoice } from '../core/types';
+import { fmtMoney } from '../core/num';
 
 export function fmtAmount(n: number | null, cur: string) {
   if (n == null) return '';
-  return `${n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${cur}`;
+  return `${fmtMoney(n)} ${cur}`.trim();
 }
 
-/** XML'i olmayan (eski Excel döneminden gelen) faturalar için büyük puntolu kart. */
+/** XML'i olmayan (EDM listesinden gelen ya da görseli arşivlenen) faturalar için büyük puntolu kart. */
 export function InvoiceCard({ inv }: { inv: Invoice }) {
   return (
     <div class="card">
@@ -18,7 +19,7 @@ export function InvoiceCard({ inv }: { inv: Invoice }) {
         {inv.profile && <span class="chip">{inv.profile}</span>}
       </div>
       <div class="card-amount">{fmtAmount(inv.amount, inv.currency)}</div>
-      <div class="card-hint">Bu faturanın XML'i yok (eski Excel dönemi); yalnızca liste bilgileri gösteriliyor. XML'ini yüklerseniz görsel çizilir.</div>
+      <div class="card-hint">Bu faturanın XML'i yok (EDM listesinden geldi ya da görseli arşivlendi); yalnızca liste bilgileri gösteriliyor. XML'ini yüklerseniz görsel çizilir.</div>
     </div>
   );
 }

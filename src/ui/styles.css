@@ -89,7 +89,7 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 0;
 .row-code { font-size: 12px; font-weight: 600; white-space: nowrap; }
 .dot { width: 10px; height: 10px; border-radius: 50%; background: transparent; border: 1px solid var(--line); flex: none; }
 .warn-dot { display: inline-block; margin-left: 4px; color: var(--warn); font-weight: 700; }
-.files { padding: 6px 12px; border-top: 1px solid var(--line); font-size: 12px; display: flex; gap: 8px; align-items: center; color: var(--muted); } .files span { flex: 1; }
+.files { padding: 6px 12px; border-top: 1px solid var(--line); font-size: 12px; display: flex; gap: 8px; align-items: center; color: var(--muted); } .files span { flex: 1; } .files button { white-space: nowrap; }
 
 .slot-0 { background: var(--s0); color: var(--s0i); } .slot-1 { background: var(--s1); color: var(--s1i); } .slot-2 { background: var(--s2); color: var(--s2i); }
 .slot-3 { background: var(--s3); color: var(--s3i); } .slot-4 { background: var(--s4); color: var(--s4i); } .slot-5 { background: var(--s5); color: var(--s5i); }
@@ -136,6 +136,7 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 0;
 .lg { padding: 2px 8px; border-radius: 999px; background: var(--neutral); }
 .lg-no-code { background: var(--warn-bg); color: var(--warn); } .lg.ok { color: var(--ok); }
 .table-box { overflow: auto; flex: 1; }
+.table-box td.r, .table-box th.r { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 table { border-collapse: collapse; font-size: 12px; white-space: nowrap; }
 th, td { padding: 4px 8px; border-bottom: 1px solid var(--line); text-align: left; }
 th { position: sticky; top: 0; background: var(--panel); z-index: 1; }
@@ -152,7 +153,6 @@ fieldset { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px
 .shortcut-grid input { flex: 1; min-width: 0; }
 .radio { flex-direction: row !important; align-items: center; gap: 8px !important; } .radio span { color: var(--ink) !important; font-size: 14px !important; }
 input.inline { width: 90px; }
-.keys { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
 
 .busy { position: fixed; left: 50%; top: 56px; transform: translateX(-50%); background: var(--accent); color: #fff; padding: 6px 14px; border-radius: 999px; z-index: 30; }
 .toast { position: fixed; left: 50%; bottom: 96px; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 8px 16px; border-radius: 999px; z-index: 30; }
