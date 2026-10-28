@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks';
 import * as S from './state';
-import { FIELD_DEFS, ROW_ORDER_LABELS, DEFAULT_OUTPUT_TEMPLATE, isEdmDefault, buildTemplateRows, type OutputTemplate, type OutputFieldId, type RowOrder } from '../core/excel/template';
+import { FIELD_DEFS, KDV_FIELD_IDS, ROW_ORDER_LABELS, DEFAULT_OUTPUT_TEMPLATE, isEdmDefault, buildTemplateRows, type OutputTemplate, type OutputFieldId, type RowOrder } from '../core/excel/template';
 
 const colName = (i: number) => { let s = ''; let n = i; do { s = String.fromCharCode(65 + (n % 26)) + s; n = Math.floor(n / 26) - 1; } while (n >= 0); return s; };
 
@@ -17,6 +17,8 @@ export function TemplateModal() {
   const remove = (k: number) => setT({ ...t, columns: t.columns.filter((_, i) => i !== k) });
   const move = (from: number, to: number) => { if (from === to) return; const cols = t.columns.slice(); const [c] = cols.splice(from, 1); cols.splice(to, 0, c); setT({ ...t, columns: cols }); };
   const add = () => { if (!addId) return; setT({ ...t, columns: [...t.columns, { id: addId, header: FIELD_DEFS[addId].header }] }); const next = addable.filter((x) => x !== addId)[0]; if (next) setAddId(next); };
+  const missingKdv = KDV_FIELD_IDS.filter((id) => !used.has(id));
+  const addKdv = () => setT({ ...t, columns: [...t.columns, ...missingKdv.map((id) => ({ id, header: FIELD_DEFS[id].header }))] });
   const sample = S.outputOrder.value.slice(0, 3);
   const preview = buildTemplateRows(sample, t, S.outputContext());
   const codeOk = t.columns.some((c) => c.id === 'code');
@@ -57,6 +59,7 @@ export function TemplateModal() {
                 {addable.map((id) => <option value={id}>{FIELD_DEFS[id].label}</option>)}
               </select>
               <button onClick={add} disabled={!addable.length}>+ Sütun ekle</button>
+              <button class="tpl-add-kdv" onClick={addKdv} disabled={!missingKdv.length} title="KDV oranına göre matrah ve KDV tutarı sütunları: %0, %1, %10, %20 ve diğer oranlar (%8, %18 gibi). Faturada o oran yoksa hücre boş kalır.">{missingKdv.length ? `+ KDV dökümü (${missingKdv.length} sütun)` : 'KDV dökümü ekli'}</button>
             </div>
           </div>
           <div class="tpl-side">

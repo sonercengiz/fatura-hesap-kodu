@@ -32,6 +32,8 @@ export interface UblInvoice {
   lines: LineInfo[];
   /** Faturadaki KDV oranları (yüzde), fatura düzeyindeki vergi özetinden */
   vatRates: number[];
+  /** KDV oranına göre matrah ve vergi (çıktı sütunları için) */
+  vatBreakdown: VatPart[];
   /** Gömülü görünüm şablonu (metin); yoksa null */
   xslt: string | null;
   xsltFileName: string | null;
@@ -53,6 +55,17 @@ export interface LineInfo {
   price?: number | null;
   /** Kalem tutarı (KDV hariç, LineExtensionAmount); eski kayıtlarda yok */
   amount?: number | null;
+}
+
+/**
+ * Bir KDV oranının matrahı (TaxableAmount) ve vergisi (TaxAmount); belge para biriminde.
+ * rate null: oranı vergisiyle tutmayan KDV satırları (bazı operatörler oran alanına tutarı yazıyor, matrahı başka
+ * satırla aynı); vergisi sayılır, matrahı 0 (çift sayılmasın).
+ */
+export interface VatPart {
+  rate: number | null;
+  base: number;
+  tax: number;
 }
 
 export interface UblLine {
@@ -212,6 +225,7 @@ export function parseUbl(xmlText: string): UblInvoice {
     itemText: itemTextOf(root),
     lines: linesOf(root),
     vatRates: vatRatesOf(root),
+    vatBreakdown: vatBreakdownOf(root),
     xslt,
     xsltFileName,
     xml: new XMLSerializer().serializeToString(doc),
@@ -229,16 +243,20 @@ export function itemTextOf(root: Element | null, max = 4000): string {
   return Array.from(seen).join(' | ').slice(0, max);
 }
 
-/** Vergi alt toplamları içinden KDV (TaxTypeCode 0015 ya da adı KDV; ikisi de yoksa hepsi) oranları */
+/** KDV alt toplamı mı (TaxTypeCode 0015 ya da adı KDV; ikisi de yoksa KDV sayılır) */
+function isKdvSubtotal(st: Element): boolean {
+  const scheme = cac(cac(st, 'TaxCategory'), 'TaxScheme');
+  const code = cbc(scheme, 'TaxTypeCode');
+  const name = cbc(scheme, 'Name').toLocaleUpperCase('tr');
+  return code ? code === '0015' : name ? name.includes('KDV') : true;
+}
+
+/** Vergi alt toplamları içinden KDV oranları */
 function kdvPercents(taxTotals: Element[]): number[] {
   const out: number[] = [];
   for (const tt of taxTotals) {
     for (const st of children(tt, NS.cac, 'TaxSubtotal')) {
-      const scheme = cac(cac(st, 'TaxCategory'), 'TaxScheme');
-      const code = cbc(scheme, 'TaxTypeCode');
-      const name = cbc(scheme, 'Name').toLocaleUpperCase('tr');
-      const isKdv = code ? code === '0015' : name ? name.includes('KDV') : true;
-      if (!isKdv) continue;
+      if (!isKdvSubtotal(st)) continue;
       const p = toNum(cbc(st, 'Percent'));
       if (p !== null && !out.some((x) => Math.abs(x - p) < 0.005)) out.push(p);
     }
@@ -272,6 +290,35 @@ export function vatRatesOf(root: Element | null): number[] {
   const out: number[] = [];
   for (const l of linesOf(root)) if (l.vat !== null && !out.some((x) => Math.abs(x - l.vat!) < 0.005)) out.push(l.vat);
   return out.sort((a, b) => a - b);
+}
+
+/** KDV alt toplamlarını orana göre toplar (aynı oran birden çok satırda olabilir) */
+function addKdvParts(taxTotals: Element[], into: Map<number | null, VatPart>): void {
+  for (const tt of taxTotals) {
+    for (const st of children(tt, NS.cac, 'TaxSubtotal')) {
+      if (!isKdvSubtotal(st)) continue;
+      const rate = toNum(cbc(st, 'Percent'));
+      if (rate === null) continue;
+      const base = toNum(cbc(st, 'TaxableAmount')) ?? 0;
+      const tax = toNum(cbc(st, 'TaxAmount')) ?? 0;
+      // Oran vergiyi açıklamıyorsa (kuruş yuvarlamasından fazla) oran sütununa yazılmaz
+      const fits = Math.abs((base * rate) / 100 - tax) <= Math.max(0.02, Math.abs(base) * 0.0001);
+      const key = fits ? Math.round(rate * 100) / 100 : null;
+      const p = into.get(key) ?? { rate: key, base: 0, tax: 0 };
+      if (fits) p.base += base;
+      p.tax += tax;
+      into.set(key, p);
+    }
+  }
+}
+
+/** KDV oranına göre matrah ve vergi: fatura düzeyindeki vergi özetinden; yoksa kalemlerden */
+export function vatBreakdownOf(root: Element | null): VatPart[] {
+  const m = new Map<number | null, VatPart>();
+  addKdvParts(children(root, NS.cac, 'TaxTotal'), m);
+  if (m.size === 0) for (const ln of children(root, NS.cac, 'InvoiceLine')) addKdvParts(children(ln, NS.cac, 'TaxTotal'), m);
+  const r2 = (n: number) => Math.round(n * 100) / 100;
+  return [...m.values()].map((p) => ({ rate: p.rate, base: r2(p.base), tax: r2(p.tax) })).sort((a, b) => (a.rate ?? 1e9) - (b.rate ?? 1e9));
 }
 
 /** Fatura kalemleri (yedek görünüm için). */

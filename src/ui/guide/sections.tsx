@@ -205,11 +205,12 @@ export const sections: Section[] = [
         <p><K k="F1" /> dosyayı indirir: <code>AY YIL FİRMA_ADI FATURA.xlsx</code>. Ay, faturaların ayıdır. GMS'te "Excel içe aktar" ile açılır.</p>
         <Shot src="15-sablon.png" alt="Çıktı şablonu" notes={[
           <>Hesap Kodu sütunu; sürükleyerek yerini değiştirin, başlığını yazın.</>,
-          <>Sütun ekleyin: ETTN, matrah, vergi, hesap adı, boş sütun…</>,
+          <>Sütun ekleyin: ETTN, matrah, vergi, hesap adı, boş sütun… <b>+ KDV dökümü</b> oran başına matrah ve KDV sütunlarını tek seferde ekler.</>,
           <>Satır sırası ve sayfa adı.</>,
           <>Canlı önizleme.</>,
           <>Karıştıysa <b>EDM varsayılanına dön</b>.</>,
         ]} />
+        <Tip><b>KDV dökümü</b> sütunları: Matrah %0 · Matrah ve KDV %1, %10, %20 · Matrah ve KDV Diğer. Değerler faturanın XML'indeki KDV özetinden gelir; faturada o oran yoksa hücre boş kalır. "Diğer" eski oranları (%8, %18) ve bazı operatör faturalarında oranı tutarıyla uyuşmayan KDV satırlarının vergisini toplar. ÖİV, ÖTV gibi KDV dışı vergiler bu sütunlara girmez; bu yüzden matrah + KDV her faturada Tutar'ı vermeyebilir.</Tip>
         <Warn>İlk kez GMS'e verirken küçük bir dönemle deneyin. GMS bazı sütunları bekliyorsa <T t="edm listesi" />ni de yükleyin; çıktı EDM'nin dosyasıyla birebir olur.</Warn>
       </>
     ),

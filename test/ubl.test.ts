@@ -75,4 +75,20 @@ describe('UBL-TR XML ayrıştırma', () => {
     expect(sniffEncoding(new TextEncoder().encode('<?xml version="1.0" encoding="ISO-8859-9"?><a/>'))).toBe('iso-8859-9');
     expect(sniffEncoding(new TextEncoder().encode('<Invoice/>'))).toBe('utf-8');
   });
+
+  it('KDV dökümü: oran başına matrah ve vergi; aynı oran toplanır, KDV dışı vergi (ÖTV) alınmaz, özet yoksa kalemlerden', () => {
+    const base = read('ubl-sirket.xml');
+    expect(parseUbl(base).vatBreakdown).toEqual([{ rate: 20, base: 1250, tax: 250 }]);
+    const sub = (b: string, t: string, p: string, code = '0015', name = 'KDV') => `<cac:TaxSubtotal><cbc:TaxableAmount currencyID="TRY">${b}</cbc:TaxableAmount><cbc:TaxAmount currencyID="TRY">${t}</cbc:TaxAmount><cbc:Percent>${p}</cbc:Percent><cac:TaxCategory><cac:TaxScheme><cbc:Name>${name}</cbc:Name><cbc:TaxTypeCode>${code}</cbc:TaxTypeCode></cac:TaxScheme></cac:TaxCategory></cac:TaxSubtotal>`;
+    const top = base.match(/<cac:TaxTotal><cbc:TaxAmount currencyID="TRY">250.00<\/cbc:TaxAmount><cac:TaxSubtotal>.*?<\/cac:TaxTotal>\n/)![0];
+    const multi = `<cac:TaxTotal><cbc:TaxAmount currencyID="TRY">0</cbc:TaxAmount>${sub('100.10', '10.01', '10')}${sub('200.20', '20.02', '10')}${sub('300', '0', '0')}${sub('50', '0.50', '1')}${sub('400', '32', '8')}${sub('1000', '250', '25', '0071', 'ÖTV')}</cac:TaxTotal>\n`;
+    expect(parseUbl(base.replace(top, multi)).vatBreakdown).toEqual([
+      { rate: 0, base: 300, tax: 0 }, { rate: 1, base: 50, tax: 0.5 }, { rate: 8, base: 400, tax: 32 }, { rate: 10, base: 300.3, tax: 30.03 },
+    ]);
+    // Oranı vergisini açıklamayan KDV satırı (operatör faturalarında oran alanına tutar yazılmış): oran sütununa girmez, matrahı sayılmaz
+    const odd = `<cac:TaxTotal><cbc:TaxAmount currencyID="TRY">0</cbc:TaxAmount>${sub('148.85', '0.50', '0.5')}${sub('148.85', '1', '1')}${sub('9.98', '0.05', '0.05')}${sub('148.85', '29.77', '20')}</cac:TaxTotal>\n`;
+    expect(parseUbl(base.replace(top, odd)).vatBreakdown).toEqual([{ rate: 20, base: 148.85, tax: 29.77 }, { rate: null, base: 0, tax: 1.55 }]);
+    // Fatura düzeyinde özet yok: kalemlerin vergileri toplanır
+    expect(parseUbl(base.replace(top, '')).vatBreakdown).toEqual([{ rate: 20, base: 1250, tax: 250 }]);
+  });
 });

@@ -4,7 +4,7 @@ import { DEFAULT_SHORTCUT_KEYS } from '../core/types';
 import type { HistoryEntry } from '../core/suggest/engine';
 import { sheetToInvoices, type EdmSheet } from '../core/legacy';
 import type { Rule } from '../core/rules';
-import { itemTextOf, linesOf, vatRatesOf, type LineInfo } from '../core/xml/parseUbl';
+import { itemTextOf, linesOf, vatBreakdownOf, vatRatesOf, type LineInfo, type VatPart } from '../core/xml/parseUbl';
 import { upgradeRule } from '../core/rules';
 
 export interface FirmHistoryEntry extends HistoryEntry {
@@ -54,6 +54,8 @@ export interface InvoiceRecord {
   lines?: LineInfo[];
   /** Faturadaki KDV oranları (yüzde) */
   vatRates?: number[];
+  /** KDV oranına göre matrah ve vergi; eski kayıtlarda v12 XML'den tamamlar */
+  vatBreakdown?: VatPart[];
   xml: string | null;
   xsltId: string | null;
   /** EDM Excel listesinden gelen ham sütunlar (başlık → değer) */
@@ -249,6 +251,16 @@ class AppDb extends Dexie {
           const doc = new DOMParser().parseFromString(r.xml, 'application/xml');
           r.lines = linesOf(doc.documentElement);
           r.vatRates = vatRatesOf(doc.documentElement);
+        } catch { /* olduğu gibi kalır */ }
+      });
+    });
+    // v12: KDV oranına göre matrah ve vergi (çıktı sütunları)
+    this.version(12).stores({}).upgrade(async (tx) => {
+      if (typeof DOMParser === 'undefined') return;
+      await tx.table('invoices').toCollection().modify((r: InvoiceRecord) => {
+        if (!r.xml || r.vatBreakdown) return;
+        try {
+          r.vatBreakdown = vatBreakdownOf(new DOMParser().parseFromString(r.xml, 'application/xml').documentElement);
         } catch { /* olduğu gibi kalır */ }
       });
     });

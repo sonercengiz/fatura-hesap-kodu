@@ -180,6 +180,7 @@ export function toInvoice(r: InvoiceRecord): Invoice {
     itemText: r.itemText ?? '',
     lines: r.lines ?? [],
     vatRates: r.vatRates ?? [],
+    vatBreakdown: r.vatBreakdown ?? [],
     lineCount: r.lineCount,
     edm: r.edm,
   };

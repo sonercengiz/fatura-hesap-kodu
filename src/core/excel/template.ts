@@ -5,7 +5,8 @@ import { EDM_HEADERS } from './edm';
 export type OutputFieldId =
   | 'no' | 'date' | 'arrival' | 'type' | 'profile' | 'vkn' | 'name' | 'amount' | 'currency'
   | 'status' | 'responseStatus' | 'localStatus' | 'envelope' | 'kepObjection' | 'gibCancel' | 'officialObjection' | 'gibObjection' | 'branch' | 'hash' | 'tag'
-  | 'code' | 'uuid' | 'taxExclusive' | 'tax' | 'lineCount' | 'source' | 'accountName' | 'firm' | 'batch' | 'blank';
+  | 'code' | 'uuid' | 'taxExclusive' | 'tax' | 'lineCount' | 'source' | 'accountName' | 'firm' | 'batch' | 'blank'
+  | 'vat0Base' | 'vat1Base' | 'vat1Tax' | 'vat10Base' | 'vat10Tax' | 'vat20Base' | 'vat20Tax' | 'vatOtherBase' | 'vatOtherTax';
 
 export interface OutputColumn {
   id: OutputFieldId;
@@ -54,6 +55,17 @@ const edmOr = (header: string, fallback: (i: Invoice) => CellValue) => (i: Invoi
   return v === undefined || v === null || v === '' ? fallback(i) : v;
 };
 
+/** Ayrı sütunu olan KDV oranları; diğerleri (eski %8, %18 gibi) "diğer oranlar" sütununda toplanır */
+const KDV_RATES = [0, 1, 10, 20];
+const sameRate = (a: number | null, b: number) => a !== null && Math.abs(a - b) < 0.005;
+/** Faturanın o orandaki matrahı/KDV'si; faturada o oran yoksa boş hücre */
+const vatOf = (rate: number, k: 'base' | 'tax') => (i: Invoice): CellValue => i.vatBreakdown.find((p) => sameRate(p.rate, rate))?.[k] ?? null;
+/** Diğer oranlar + oranı tutmayan KDV satırları (vergisi; matrahı tekrar olduğu için sayılmaz) */
+const vatOther = (k: 'base' | 'tax') => (i: Invoice): CellValue => {
+  const ps = i.vatBreakdown.filter((p) => !KDV_RATES.some((r) => sameRate(p.rate, r)) && (k === 'tax' || p.rate !== null));
+  return ps.length ? Math.round(ps.reduce((s, p) => s + p[k], 0) * 100) / 100 : null;
+};
+
 export const FIELD_DEFS: Record<OutputFieldId, FieldDef> = {
   no: { label: 'Fatura No', header: 'Fatura No', edm: true, value: edmOr('Fatura No', (i) => i.no) },
   date: { label: 'Fatura Tarihi (GG/AA/YYYY)', header: 'Fatura Tarihi', edm: true, value: edmOr('Fatura Tarihi', (i) => i.date) },
@@ -84,8 +96,20 @@ export const FIELD_DEFS: Record<OutputFieldId, FieldDef> = {
   accountName: { label: 'Hesap adı (listeden)', header: 'Hesap Adı', edm: false, value: (i, c) => { const code = c.codes.get(i.no); return code ? c.accountNames?.get(code) ?? '' : ''; } },
   firm: { label: 'Firma adı', header: 'Firma', edm: false, value: (_i, c) => c.firmName ?? '' },
   batch: { label: 'Dönem adı', header: 'Dönem', edm: false, value: (_i, c) => c.batchName ?? '' },
+  vat0Base: { label: 'KDV %0 matrahı (istisna)', header: 'Matrah %0', edm: false, money: true, value: vatOf(0, 'base') },
+  vat1Base: { label: 'KDV %1 matrahı', header: 'Matrah %1', edm: false, money: true, value: vatOf(1, 'base') },
+  vat1Tax: { label: 'KDV %1 tutarı', header: 'KDV %1', edm: false, money: true, value: vatOf(1, 'tax') },
+  vat10Base: { label: 'KDV %10 matrahı', header: 'Matrah %10', edm: false, money: true, value: vatOf(10, 'base') },
+  vat10Tax: { label: 'KDV %10 tutarı', header: 'KDV %10', edm: false, money: true, value: vatOf(10, 'tax') },
+  vat20Base: { label: 'KDV %20 matrahı', header: 'Matrah %20', edm: false, money: true, value: vatOf(20, 'base') },
+  vat20Tax: { label: 'KDV %20 tutarı', header: 'KDV %20', edm: false, money: true, value: vatOf(20, 'tax') },
+  vatOtherBase: { label: 'KDV diğer oranlar matrahı (%8, %18 gibi eski oranlar)', header: 'Matrah Diğer', edm: false, money: true, value: vatOther('base') },
+  vatOtherTax: { label: 'KDV diğer oranlar tutarı (%8, %18 gibi eski oranlar; oranı tutarıyla uyuşmayan KDV satırları da)', header: 'KDV Diğer', edm: false, money: true, value: vatOther('tax') },
   blank: { label: 'Boş sütun', header: '', edm: false, value: () => '' },
 };
+
+/** "KDV dökümü" düğmesinin eklediği sütunlar, oran sırasıyla (matrah, KDV) */
+export const KDV_FIELD_IDS: OutputFieldId[] = ['vat0Base', 'vat1Base', 'vat1Tax', 'vat10Base', 'vat10Tax', 'vat20Base', 'vat20Tax', 'vatOtherBase', 'vatOtherTax'];
 
 /** EDM sütunlarının alan kimlikleri, EDM sırasıyla (EDM_HEADERS ile birebir) */
 export const EDM_FIELD_IDS: OutputFieldId[] = ['no', 'date', 'arrival', 'type', 'profile', 'vkn', 'name', 'amount', 'currency', 'status', 'responseStatus', 'localStatus', 'envelope', 'kepObjection', 'gibCancel', 'officialObjection', 'gibObjection', 'branch', 'hash', 'tag'];

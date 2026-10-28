@@ -1,13 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import * as XLSX from 'xlsx';
-import { edmTemplate, DEFAULT_OUTPUT_TEMPLATE, normalizeTemplate, buildTemplateRows, isEdmDefault, codeColumnIndexOf, type OutputTemplate } from '../src/core/excel/template';
+import { edmTemplate, DEFAULT_OUTPUT_TEMPLATE, normalizeTemplate, buildTemplateRows, isEdmDefault, codeColumnIndexOf, moneyColumns, FIELD_DEFS, KDV_FIELD_IDS, type OutputTemplate } from '../src/core/excel/template';
 import { buildTemplateWorkbook, EDM_HEADERS } from '../src/core/excel/writeOutput';
 import { unzipSync, strFromU8 } from 'fflate';
 import type { Invoice } from '../src/core/types';
 
 const mk = (no: string, over: Partial<Invoice> = {}): Invoice => ({
   no, order: 0, date: '10/09/2026', isoDate: '2026-09-10', uuid: 'u-1', supplierVkn: '1234567801', supplierName: 'ÖRNEK KIRTASİYE LTD. ŞTİ.',
-  amount: 1500, taxExclusive: 1250, taxAmount: 250, currency: 'TRY', invoiceType: 'Satış', profile: 'Temel', hasView: true, itemText: '', lineCount: 2, typeCode: 'SATIS', lines: [], vatRates: [], ...over,
+  amount: 1500, taxExclusive: 1250, taxAmount: 250, currency: 'TRY', invoiceType: 'Satış', profile: 'Temel', hasView: true, itemText: '', lineCount: 2, typeCode: 'SATIS', lines: [], vatRates: [], vatBreakdown: [], ...over,
 });
 const list = [mk('ABC2026000000001'), mk('ABC2026000000002', { amount: 27000 })];
 const ctx = { codes: new Map([['ABC2026000000001', '600.002']]), accountNames: new Map([['600.002', 'Alıcılar']]), sources: new Map([['ABC2026000000001', 'rule' as const]]), firmName: 'ABC', batchName: 'Eylül 2026' };
@@ -68,5 +68,18 @@ describe('çıktı şablonu', () => {
     const wb = XLSX.read(bytes, { type: 'array', cellNF: true });
     const ws = wb.Sheets.Sheet0;
     expect(ws['I2'].z).toContain('#,##0.00'); // Tutar
+  });
+
+  it('KDV dökümü sütunları: oran başına matrah/KDV, oran yoksa boş, eski oranlar "diğer"de toplanır', () => {
+    const t: OutputTemplate = { columns: [{ id: 'no', header: 'No' }, ...KDV_FIELD_IDS.map((id) => ({ id, header: FIELD_DEFS[id].header })), { id: 'code', header: 'Hesap' }], rowOrder: 'date-no', sheetName: 'S' };
+    const inv = mk('X1', { vatBreakdown: [{ rate: 0, base: 300, tax: 0 }, { rate: 8, base: 100, tax: 8 }, { rate: 18, base: 200.1, tax: 36.02 }, { rate: 20, base: 1250, tax: 250 }] });
+    const rows = buildTemplateRows([inv, mk('X2')], t, ctx);
+    expect(rows[0]).toEqual(['No', 'Matrah %0', 'Matrah %1', 'KDV %1', 'Matrah %10', 'KDV %10', 'Matrah %20', 'KDV %20', 'Matrah Diğer', 'KDV Diğer', 'Hesap']);
+    expect(rows[1]).toEqual(['X1', 300, null, null, null, null, 1250, 250, 300.1, 44.02, '']);
+    expect(rows[2].slice(1, 10)).toEqual(Array(9).fill(null)); // XML'siz ya da dökümsüz fatura: boş
+    expect(moneyColumns(t)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    // Oranı tutmayan satır: vergisi "KDV Diğer"e, matrahı hiçbir yere; yalnızca o varsa "Matrah Diğer" boş
+    const odd = buildTemplateRows([mk('X3', { vatBreakdown: [{ rate: 20, base: 148.85, tax: 29.77 }, { rate: null, base: 0, tax: 1.5 }] })], t, ctx)[1];
+    expect(odd.slice(6, 10)).toEqual([148.85, 29.77, null, 1.5]);
   });
 });

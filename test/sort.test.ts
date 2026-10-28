@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { sortInvoices, dateKey } from '../src/core/sort';
 import type { Invoice } from '../src/core/types';
 
-const mk = (order: number, no: string, date: string, vkn: string): Invoice => ({ no, order, date, isoDate: '', uuid: '', supplierVkn: vkn, supplierName: vkn, amount: 1, taxExclusive: null, taxAmount: null, currency: 'TRY', invoiceType: '', profile: '', hasView: true, itemText: '', lineCount: null, typeCode: 'SATIS', lines: [], vatRates: [] });
+const mk = (order: number, no: string, date: string, vkn: string): Invoice => ({ no, order, date, isoDate: '', uuid: '', supplierVkn: vkn, supplierName: vkn, amount: 1, taxExclusive: null, taxAmount: null, currency: 'TRY', invoiceType: '', profile: '', hasView: true, itemText: '', lineCount: null, typeCode: 'SATIS', lines: [], vatRates: [], vatBreakdown: [] });
 const list = [
   mk(0, 'ZZZ2026000000009', '30/09/2026', 'A'),
   mk(1, 'BBB2026000000002', '29/09/2026', 'B'),
