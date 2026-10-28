@@ -4,7 +4,7 @@ import { normalizeTemplate, edmTemplate, FIELD_DEFS, type OutputTemplate } from 
 import { SORT_LABELS } from '../../core/sort';
 import { db, DEFAULT_FIRM_ID, loadSettings, newId, type BatchRecord, type FirmRecord } from '../../storage/db';
 import { ensureXslt, forgetHtml } from '../../render/xslt';
-import { ready, needsCode, outputTemplate, accounts, assignments, backupDismissedAt, batchList, batchRec, bulkNos, bumpHistory, historyDelta, current, currentFirmId, currentIndex, filterMode, firm, firms, firstNavigable, goTo, history, invoiceRecs, invoices, lastClicked, lastExportAt, mode, redoStack, ruleNos, rules, searchText, selected, settings, showToast, undoStack } from './core';
+import { ready, needsCode, markChanged, lastChangeAt, backupRemind, outputTemplate, accounts, assignments, backupDismissedAt, batchList, batchRec, bulkNos, bumpHistory, historyDelta, current, currentFirmId, currentIndex, filterMode, firm, firms, firstNavigable, goTo, history, invoiceRecs, invoices, lastClicked, lastExportAt, mode, redoStack, ruleNos, rules, searchText, selected, settings, showToast, undoStack } from './core';
 
 /** Diğer sekmelere "veri değişti" sinyali; alan sekme görünürse yeniler, değilse görünür olunca yeniler */
 export const channel: BroadcastChannel | null = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('fatura-hesap-kodu') : null;
@@ -15,6 +15,7 @@ export let suppressBroadcast = false;
 
 export function notifyOtherTabs() {
   if (suppressBroadcast) return;
+  markChanged();
   try { channel?.postMessage({ type: 'changed', at: Date.now() }); } catch { /* yok say */ }
 }
 
@@ -23,6 +24,7 @@ export async function refreshFromDb() {
   suppressBroadcast = true;
   try {
     settings.value = { ...(await loadSettings(DEFAULT_SETTINGS)), outputTemplate: settings.value.outputTemplate };
+    try { lastChangeAt.value = Math.max(lastChangeAt.value, Number(localStorage.getItem('lastChangeAt') ?? 0) || 0); } catch { /* yok say */ }
     firms.value = await db.firms.orderBy('name').toArray();
     if (!firms.value.some((f) => f.id === currentFirmId.value)) { await switchFirm(firms.value[0]?.id ?? DEFAULT_FIRM_ID); return; }
     await loadFirmData();
@@ -56,7 +58,15 @@ export async function init() {
   if (!(settings.value.sortMode in SORT_LABELS)) settings.value = { ...settings.value, sortMode: 'date-supplier' };
   settings.value = { ...settings.value, listColumns: normalizeListColumns(settings.value.listColumns, (id) => id in FIELD_DEFS) };
   lastExportAt.value = ((await db.settings.get('lastExportAt'))?.value as number | undefined) ?? null;
-  try { backupDismissedAt.value = Number(localStorage.getItem('backupDismissedAt') ?? 0) || 0; } catch { /* yok say */ }
+  try {
+    backupDismissedAt.value = Number(localStorage.getItem('backupDismissedAt') ?? 0) || 0;
+    const r = localStorage.getItem('backupRemind');
+    if (r === 'week' || r === 'month' || r === 'off') backupRemind.value = r;
+    lastChangeAt.value = Number(localStorage.getItem('lastChangeAt') ?? 0) || 0;
+  } catch { /* yok say */ }
+  // Bu sürümden önceki kayıtlarda değişiklik zamanı yok: dönemlerin en son güncellenmesi alınır
+  const lastBatch = (await db.batches.toArray()).reduce((m, b) => Math.max(m, b.updatedAt ?? 0), 0);
+  if (lastBatch > lastChangeAt.value) lastChangeAt.value = lastBatch;
   await ensureFirms();
   // Şablon artık firmaya özel: şablonu olmayan firmalar (eski kayıtlar) o ana kadarki genel şablonu alır
   const noTpl = firms.value.filter((f) => !f.outputTemplate);
@@ -180,7 +190,7 @@ function goFirstUnassigned() {
 }
 
 /**
- * Açık dönemi veritabanından yeniden okur (XML ekleme, fatura çıkarma, arşivleme, sekme eşitleme sonrası).
+ * Açık dönemi veritabanından yeniden okur (XML ekleme, fatura silme, XML kaldırma, sekme eşitleme sonrası).
  * openBatch'ten farkı: geri alma yığını, süzgeç, arama ve seçim korunur; açık fatura yerinde kalır.
  */
 export async function reloadBatch() {
@@ -269,7 +279,7 @@ export async function storageInfo(): Promise<StorageInfo> {
   };
 }
 
-/** Dönemin görsellerini kaldırır: XML ve şablon bağı silinir; liste, atamalar, EDM sütunları ve çıktı aynen kalır. XML yeniden yüklenirse görsel geri gelir. */
+/** Dönemin XML'lerini kaldırır (yer açar): XML ve şablon bağı silinir; liste, atamalar, EDM sütunları ve çıktı aynen kalır. XML yeniden yüklenirse fatura görüntüsü geri gelir. */
 export async function archiveBatchVisuals(batchId: string): Promise<number> {
   let n = 0;
   await db.invoices.where('batchId').equals(batchId).modify((r) => { if (r.xml) { r.xml = null; r.xsltId = null; n++; } });

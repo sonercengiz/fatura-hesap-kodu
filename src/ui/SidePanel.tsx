@@ -151,7 +151,7 @@ export function SidePanel() {
         })}
       </div>
       <div class="files">
-        <span title={`${S.viewCount.value} faturanın görseli (XML'i) var`}>{S.invoices.value.length} fatura{S.viewCount.value < S.invoices.value.length ? ` · ${S.invoices.value.length - S.viewCount.value} görselsiz` : ''}</span>
+        <span title={`${S.viewCount.value} faturanın XML'i var (fatura görüntüsü çizilebilir)`}>{S.invoices.value.length} fatura{S.viewCount.value < S.invoices.value.length ? ` · ${S.invoices.value.length - S.viewCount.value} XML'siz` : ''}</span>
         <RemoveButton />
         <MoveButton />
       </div>

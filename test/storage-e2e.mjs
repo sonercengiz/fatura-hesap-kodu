@@ -12,7 +12,7 @@ await page.keyboard.press('/'); await page.keyboard.type('770.01'); await page.k
 await page.locator('button[title="Ayarlar"]').click(); await page.locator('.settings-tabs button:has-text("Yedek")').click(); await page.waitForSelector('.store-row');
 console.log('depolama:', (await page.locator('fieldset:has-text("Depolama") .muted.small').first().innerText()).slice(0,140));
 console.log('dönem satırı:', (await page.locator('.store-row').first().innerText()).replace(/\s+/g,' '));
-await page.locator('.store-row button:has-text("Görselleri arşivle")').first().click(); await page.locator('.modal.dialog button.primary').click(); await page.waitForTimeout(400);
+await page.locator('.store-row button:has-text("XML\'leri kaldır")').first().click(); await page.locator('.modal.dialog button.primary').click(); await page.waitForTimeout(400);
 console.log('arşiv sonrası:', (await page.locator('.store-row').first().innerText()).replace(/\s+/g,' '), '| toast:', await page.locator('.toast').innerText());
 await page.keyboard.press('Escape'); await page.waitForTimeout(100);
 console.log('görünüm:', await page.locator('.card').count() ? 'kart' : 'görsel', '|', await page.locator('.files span').innerText(), '| atama korundu:', await page.locator('.progress').innerText());

@@ -16,7 +16,7 @@ await page.keyboard.press('/'); await page.keyboard.type('770.01'); await page.k
 await page.keyboard.press('F5'); await page.waitForSelector('.modal.wide');
 console.log('eski ayar taşındı:', await page.locator('.modal-head .muted').innerText(), '| ilk başlıklar:', (await page.locator('.modal.wide thead th').allInnerTexts()).slice(1,4).join(' | '));
 await page.locator('button:has-text("Şablonu düzenle")').click(); await page.waitForSelector('.tpl-modal');
-console.log('şablon:', await page.locator('.tpl-modal .modal-head .muted').innerText());
+console.log('şablon:', await page.locator('.tpl-modal .modal-head .muted').first().innerText());
 // EDM varsayılanına dön, Geliş Zamanı'nı kaldır, ETTN ve Hesap adı ekle, başlık değiştir, satır sırası yükleme, sayfa adı GMS
 await page.locator('button:has-text("EDM varsayılanına dön")').click();
 await page.locator('.tpl-row:has-text("Geliş Zamanı") button[title="Sütunu kaldır"]').click();

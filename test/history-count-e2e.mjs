@@ -40,11 +40,11 @@ check('taşınan atama görünür', (await row('YLD2026000000001').locator('.row
 h = await hintAt('YLD2026000000003');
 check('başka dönemden taşınan atama → ×2', /760\.01\s*×2/.test(h), h);
 
-// Dönemi sil → sayaç düşer; onay metni ipuçlarını ve arşivi söyler
+// Dönemi sil → sayaç düşer; onay metni ipuçlarını ve yer açmak için XML kaldırmayı söyler
 await a.locator('.toolbar button[title="Ayarlar"]').click(); await a.locator('.settings-tabs button:has-text("Dönem")').click();
 await a.locator('button:has-text("Dönemi sil")').click(); await a.waitForSelector('.modal.dialog');
 const msg = await a.locator('.modal.dialog .dialog-msg').innerText();
-check('silme onayı ipuçlarını ve arşivi söyler', msg.includes('ipuçları') && msg.includes('arşiv'), msg);
+check('silme onayı ipuçlarını ve XML kaldırmayı söyler', msg.includes('ipuçları') && msg.includes("XML'leri kaldırmak"), msg);
 await a.locator('.modal.dialog button.danger').click(); await a.waitForTimeout(800);
 await a.keyboard.press('Escape').catch(() => {}); await a.waitForTimeout(200);
 h = await hintAt('YLD2026000000003');

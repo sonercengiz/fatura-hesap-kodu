@@ -184,7 +184,7 @@ export function InvoiceView(props: { invoiceNo: string; viewMode: ViewMode; marg
         </div>
       )}
       {status === 'loading' && <div class="pdf-status">Fatura çiziliyor…</div>}
-      {status === 'error' && <div class="pdf-status">Fatura görseli çizilemedi.</div>}
+      {status === 'error' && <div class="pdf-status">Fatura görüntüsü çizilemedi.</div>}
       {status === 'ready' && !official && <div class="inv-note">Sade görünüm: bu faturada şablon yok ya da çizilemedi.</div>}
     </div>
   );

@@ -55,7 +55,7 @@ check('Ctrl+Z: 600.02 kaldırıldı', !(await codeOf('AYT2026000000003')).includ
 
 // 3) Görselleri arşivle
 await a.locator('.toolbar button[title="Ayarlar"]').click(); await a.locator('.settings-tabs button:has-text("Yedek")').click();
-await a.locator('button:has-text("Görselleri arşivle")').first().click(); await a.waitForSelector('.modal.dialog');
+await a.locator('button:has-text("XML\'leri kaldır")').first().click(); await a.waitForSelector('.modal.dialog');
 await a.locator('.modal.dialog button.primary').click(); await a.waitForTimeout(600); await a.keyboard.press('Escape'); await a.waitForTimeout(200);
 check('arşivleme: arama korunur', (await a.locator('#search').inputValue()) === 'telekom', await a.locator('#search').inputValue());
 check('arşivleme: geri alma yığını korunur (600.01)', (await undoTitle()).includes('600.01'), await undoTitle());

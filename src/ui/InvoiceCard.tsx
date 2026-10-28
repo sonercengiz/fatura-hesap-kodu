@@ -6,7 +6,7 @@ export function fmtAmount(n: number | null, cur: string) {
   return `${fmtMoney(n)} ${cur}`.trim();
 }
 
-/** XML'i olmayan (EDM listesinden gelen ya da görseli arşivlenen) faturalar için büyük puntolu kart. */
+/** XML'i olmayan (EDM listesinden gelen ya da XML'i kaldırılan) faturalar için büyük puntolu kart. */
 export function InvoiceCard({ inv }: { inv: Invoice }) {
   return (
     <div class="card">
@@ -19,7 +19,7 @@ export function InvoiceCard({ inv }: { inv: Invoice }) {
         {inv.profile && <span class="chip">{inv.profile}</span>}
       </div>
       <div class="card-amount">{fmtAmount(inv.amount, inv.currency)}</div>
-      <div class="card-hint">Bu faturanın XML'i yok (EDM listesinden geldi ya da görseli arşivlendi); yalnızca liste bilgileri gösteriliyor. XML'ini yüklerseniz görsel çizilir.</div>
+      <div class="card-hint">Bu faturanın XML'i yok (EDM listesinden geldi ya da yer açmak için kaldırıldı); yalnızca liste bilgileri gösteriliyor. XML'ini yüklerseniz fatura görüntüsü çizilir.</div>
     </div>
   );
 }

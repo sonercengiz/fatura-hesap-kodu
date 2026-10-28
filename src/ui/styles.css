@@ -418,6 +418,8 @@ tr.iss-chart td.code-col { color: var(--warn); text-decoration: underline wavy v
 .tpl-letter { width: 26px; text-align: center; font-family: ui-monospace, Menlo, monospace; color: var(--muted); font-size: 12px; }
 .tpl-header { flex: 1; min-width: 0; padding: 4px 8px; font-weight: 600; }
 .tpl-field { width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tpl-dirty { color: #b45309; font-weight: 600; font-size: 13px; }
+:root[data-theme="dark"] .tpl-dirty { color: #f0b061; }
 .tpl-firm { font-weight: 600; padding: 1px 8px; border-radius: 999px; background: color-mix(in srgb, var(--accent) 14%, transparent); }
 .tpl-add { display: flex; gap: 8px; margin-top: 8px; } .tpl-add select { flex: 1; min-width: 0; }
 .tpl-side { border-left: 1px solid var(--line); padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow: auto; }

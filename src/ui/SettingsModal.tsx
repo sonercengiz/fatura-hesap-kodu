@@ -124,7 +124,7 @@ export function SettingsModal() {
                   <span>Dönem adı{b.autoName ? ' (yüklenen faturaların ayına göre kendiliğinden verildi)' : ''}</span>
                   <input value={b.name} onKeyDown={(e) => e.stopPropagation()} onChange={(e) => S.renameBatch((e.currentTarget as HTMLInputElement).value)} />
                 </label>
-                <div class="muted small">{S.invoices.value.length} fatura · {S.assignedCount.value} atanmış · {S.viewCount.value} görselli · oluşturulma {new Date(b.createdAt).toLocaleDateString('tr-TR')}</div>
+                <div class="muted small">{S.invoices.value.length} fatura · {S.assignedCount.value} atanmış · {S.viewCount.value} XML'li · oluşturulma {new Date(b.createdAt).toLocaleDateString('tr-TR')}</div>
                 {S.lastImport.value?.batchId === b.id && (() => {
                   const li = S.lastImport.value!;
                   return <div class="muted small last-import">Son yükleme {new Date(li.at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}: {li.report.added} eklendi{li.report.skipped ? ` · ${li.report.skipped} zaten vardı` : ''}{li.report.failed.length ? ` · ${li.report.failed.length} okunamadı` : ''} <button class="ghost tiny" onClick={() => openOther(() => (S.importReport.value = li.report))}>Ayrıntı</button></div>;
@@ -132,7 +132,7 @@ export function SettingsModal() {
                 <div class="settings-links">
                   <button onClick={() => openOther(() => (S.moveOpen.value = true))}>Başka firmaya ya da döneme taşı…</button>
                   <button class="danger" onClick={async () => {
-                    if (await askConfirm({ title: 'Dönemi sil', message: `"${b.name}" dönemi, ${S.invoices.value.length} faturası ve atamalarıyla silinecek; "Bu satıcıya önce" ipuçları da bu atamaları unutur. Yalnızca yer açmak istiyorsanız Yedek › Depolama'dan görselleri arşivlemek yeter. Bu işlem geri alınamaz.`, okLabel: 'Sil', danger: true })) { S.deleteBatch(b.id); close(); }
+                    if (await askConfirm({ title: 'Dönemi sil', message: `"${b.name}" dönemi, ${S.invoices.value.length} faturası ve atamalarıyla silinecek; "Bu satıcıya önce" ipuçları da bu atamaları unutur. Yalnızca yer açmak istiyorsanız Yedek › Depolama'dan XML'leri kaldırmak yeter. Bu işlem geri alınamaz.`, okLabel: 'Sil', danger: true })) { S.deleteBatch(b.id); close(); }
                   }}>Dönemi sil</button>
                 </div>
               </>
@@ -156,7 +156,7 @@ export function SettingsModal() {
                   {([['hybrid', 'Görsel: fatura görüntüsü + sağda liste'], ['list', 'Liste: yalnızca tablo (sütunlar tablo üstünden seçilir)']] as [Layout, string][]).map(([v, label]) => (
                     <label class="radio"><input type="radio" name="layout" checked={s.layout === v} onChange={() => S.setLayout(v)} /><span>{label}</span></label>
                   ))}
-                  <div class="muted small">Üst çubuktaki ☰ Liste / ▣ Görsel düğmesiyle de değişir. Liste görünümünde satıra çift tıklamak o faturayı görsel görünümde açar.</div>
+                  <div class="muted small">Üst çubuktaki ☰ Liste / ▣ Görsel düğmesiyle de değişir. Liste görünümünde satıra çift tıklamak o faturayı Görsel görünümde açar.</div>
                 </fieldset>
                 <fieldset>
                   <legend>Fatura görüntüsü: yakınlaştırma</legend>
@@ -194,7 +194,7 @@ export function SettingsModal() {
             {tab === 'backup' && (
               <>
                 <div class="muted">Tüm firmalar, dönemler, fatura listeleri, atamalar, hesap kodu listeleri, kurallar, çıktı şablonu ve öneri geçmişi tek bir .json dosyasına yazılır; başka bilgisayarda içe aktarılınca mevcut veriyle <b>birleştirilir</b>, hiçbir şey silinmez. Çıktı şablonu da gelir; oradaki şablon özelleştirilmişse o korunur.</div>
-                <div class="muted small">Fatura XML'leri (görseller) dosyaya dahil edilmez; gerekirse XML'ler yeniden yüklenir, atamalar korunur. Veriler yalnızca bu tarayıcıda durur; düzenli yedek alın.</div>
+                <div class="muted small">Fatura XML'leri dosyaya dahil edilmez (boyut); fatura görüntüsü için XML'ler yeniden yüklenir, atamalar korunur. Veriler yalnızca bu tarayıcıda durur; düzenli yedek alın.</div>
                 <div class="settings-links">
                   <button class="primary" onClick={() => S.exportWorkspace()}>Dışa aktar (.json)</button>
                   <button onClick={() => imp.current?.click()}>İçe aktar…</button>
@@ -204,19 +204,25 @@ export function SettingsModal() {
                     (e.currentTarget as HTMLInputElement).value = '';
                   }} />
                 </div>
-                <div class="muted small">{S.lastExportAt.value ? `Son yedek: ${new Date(S.lastExportAt.value).toLocaleString('tr-TR')}` : 'Henüz yedek alınmadı.'}</div>
+                <div class="muted small">{S.lastExportAt.value ? `Son yedek: ${new Date(S.lastExportAt.value).toLocaleString('tr-TR')}${S.lastChangeAt.value > S.lastExportAt.value ? ' · o günden beri değişiklik var' : ' · o günden beri değişiklik yok'}` : 'Henüz yedek alınmadı.'}</div>
+                <fieldset class="backup-remind">
+                  <legend>Yedek hatırlatması (bu bilgisayar)</legend>
+                  {(['week', 'month', 'off'] as S.BackupRemind[]).map((v) => (
+                    <label class="radio"><input type="radio" name="backupRemind" checked={S.backupRemind.value === v} onChange={() => S.setBackupRemind(v)} /><span>{v === 'off' ? S.BACKUP_REMIND_LABELS[v] : `${S.BACKUP_REMIND_LABELS[v]}: son yedekten sonra değişiklik varsa üstte şerit çıkar`}</span></label>
+                  ))}
+                </fieldset>
                 <fieldset>
                   <legend>Depolama</legend>
                   {store ? (
                     <>
-                      <div class="muted small">Tarayıcı deposu: <b>{mb(store.usage)}</b> kullanılıyor{store.quota ? ` / ${mb(store.quota)} sınır` : ''} · fatura görselleri (XML) {mb(store.batches.reduce((n, x) => n + x.bytes, 0))} + şablonlar {mb(store.xsltBytes)}.</div>
-                      <div class="muted small">Dolmaya yaklaşırsa eski dönemlerin görsellerini arşivleyin: XML ve şablon silinir; liste, atamalar, EDM sütunları ve Excel çıktısı aynen kalır. XML'i yeniden yüklerseniz görsel geri gelir.</div>
+                      <div class="muted small">Tarayıcı deposu: <b>{mb(store.usage)}</b> kullanılıyor{store.quota ? ` / ${mb(store.quota)} sınır` : ''} · fatura XML'leri {mb(store.batches.reduce((n, x) => n + x.bytes, 0))} + şablonlar {mb(store.xsltBytes)}.</div>
+                      <div class="muted small">Dolmaya yaklaşırsa eski dönemlerin XML'lerini kaldırın: XML ve şablon silinir; liste, atamalar, EDM sütunları ve Excel çıktısı aynen kalır, yalnızca fatura görüntüsü çizilemez. XML'i yeniden yüklerseniz görüntü geri gelir.</div>
                       <div class="acc-list store-list">
                         {store.batches.map((x) => (
                           <div class="acc-row store-row">
                             <span class="store-name" title={`${x.firmName} › ${x.name}`}>{x.firmName} › <b>{x.name}</b></span>
-                            <span class="muted small">{x.withXml}/{x.total} görselli · {mb(x.bytes)}</span>
-                            <button class="tiny" disabled={x.withXml === 0} onClick={async () => { if (await askConfirm({ title: 'Görselleri arşivle', message: `"${x.name}" dönemindeki ${x.withXml} faturanın görseli (XML) silinecek; liste, atamalar ve çıktı kalır. XML'ler yeniden yüklenirse görseller geri gelir.`, okLabel: 'Arşivle' })) { const n = await S.archiveBatchVisuals(x.id); S.showToast(`${n} faturanın görseli arşivlendi`); setStore(await S.storageInfo()); } }}>Görselleri arşivle</button>
+                            <span class="muted small">{x.withXml}/{x.total} XML'li · {mb(x.bytes)}</span>
+                            <button class="tiny" disabled={x.withXml === 0} onClick={async () => { if (await askConfirm({ title: 'XML\'leri kaldır', message: `"${x.name}" dönemindeki ${x.withXml} faturanın XML'i silinip yer açılacak; liste, atamalar ve Excel çıktısı kalır, yalnızca fatura görüntüsü çizilemez. XML'ler yeniden yüklenirse görüntüler geri gelir.`, okLabel: 'Kaldır' })) { const n = await S.archiveBatchVisuals(x.id); S.showToast(`${n} faturanın XML'i kaldırıldı`); setStore(await S.storageInfo()); } }}>XML'leri kaldır</button>
                           </div>
                         ))}
                         {store.batches.length === 0 && <div class="chart-empty">Dönem yok.</div>}

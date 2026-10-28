@@ -38,7 +38,8 @@ await p.locator('button[title="Ayarlar"]').click(); await p.locator('.settings-t
 const names = async () => (await p.locator('.tpl-row .tpl-header').evaluateAll((els) => els.map((e) => e.value || e.placeholder))).slice(0, 4).join(' | ');
 log('şablon önce:', await names());
 await p.locator('.tpl-row').nth(2).dragTo(p.locator('.tpl-row').nth(0)); await p.waitForTimeout(200); log('3. sütun 1. sıraya sürüklendi:', await names());
-await p.keyboard.press('Escape'); await p.waitForTimeout(100); await p.keyboard.press('Escape');
+await p.keyboard.press('Escape'); await p.waitForTimeout(150); if (await p.locator('.modal.dialog button.danger').count()) await p.locator('.modal.dialog button.danger').click(); // kaydedilmemiş şablon: Kaydetmeden kapat
+await p.waitForTimeout(100); await p.keyboard.press('Escape');
 // ---- A14: koyu tema ilk karede; açılışta "Açılıyor…" sonra dönem
 await p.locator('.theme-btn').click(); await p.waitForTimeout(200);
 const p2 = await p.context().newPage(); let firstTheme = null;

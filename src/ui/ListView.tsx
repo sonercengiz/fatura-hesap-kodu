@@ -127,7 +127,7 @@ export function ListView() {
         )}
         <RemoveButton />
         <MoveButton />
-        <span class="muted small">{S.invoices.value.filter(S.passesFilter).length} / {S.invoices.value.length} fatura · çift tık: görseli aç</span>
+        <span class="muted small">{S.invoices.value.filter(S.passesFilter).length} / {S.invoices.value.length} fatura · çift tık: Görsel görünümde aç</span>
       </div>
       <div class="lv-bulk"><BulkBar /></div>
       <div class="table-box lv-table" ref={box}>

@@ -126,7 +126,7 @@ export function App() {
       }
       if (S.quickRule.value) { if (e.key === 'Escape') S.quickRule.value = null; return; }
       if (S.moveOpen.value || S.templateOpen.value || S.accountsOpen.value) {
-        if (e.key === 'Escape') { S.moveOpen.value = false; S.templateOpen.value = false; S.accountsOpen.value = false; }
+        if (e.key === 'Escape') { S.moveOpen.value = false; S.accountsOpen.value = false; if (S.templateOpen.value) (S.modalClosers.template ?? (() => (S.templateOpen.value = false)))(); }
         return;
       }
       if (S.previewOpen.value || S.settingsOpen.value || S.guideOpen.value || S.rulesOpen.value) {
@@ -261,11 +261,11 @@ export function App() {
       {S.backupDue.value && S.batchRec.value && (
         <div class="backup-hint">
           <span>
-            {S.lastExportAt.value === null ? 'Henüz hiç yedek alınmadı.' : `Son yedek ${Math.floor((Date.now() - S.lastExportAt.value) / 86_400_000)} gün önce.`}{' '}
+            {S.lastExportAt.value === null ? 'Henüz hiç yedek alınmadı.' : `Son yedek ${Math.floor((Date.now() - S.lastExportAt.value) / 86_400_000)} gün önce; o günden beri değişiklik var.`}{' '}
             Veriler yalnızca bu tarayıcıda; tek dosyayla yedekleyin.
           </span>
           <button class="tiny primary" onClick={() => S.exportWorkspace()}>Şimdi dışa aktar</button>
-          <button class="tiny ghost" onClick={() => S.dismissBackup()}>Bugün değil</button>
+          <button class="tiny ghost" title="Sıklık: Ayarlar › Yedek" onClick={() => S.dismissBackup()}>{S.backupRemind.value === 'month' ? '1 ay sonra hatırlat' : '1 hafta sonra hatırlat'}</button>
         </div>
       )}
       {!S.ready.value ? (

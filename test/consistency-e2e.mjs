@@ -105,10 +105,10 @@ await a.keyboard.press('Escape'); await a.waitForTimeout(200);
 
 // 9) XML'siz fatura açıklaması "eski Excel dönemi" demez (arşivlenmiş dönem)
 await a.locator('.toolbar button[title="Ayarlar"]').click(); await a.locator('.settings-tabs button:has-text("Yedek")').click(); await a.waitForTimeout(800);
-await a.locator('.modal button:has-text("Görselleri arşivle")').first().click(); await a.waitForSelector('.modal.dialog'); await a.keyboard.press('Enter'); await a.waitForTimeout(800);
+await a.locator('.modal button:has-text("XML\'leri kaldır")').first().click(); await a.waitForSelector('.modal.dialog'); await a.keyboard.press('Enter'); await a.waitForTimeout(800);
 await a.keyboard.press('Escape'); await a.waitForTimeout(300);
 const card = await a.locator('.card-hint').innerText().catch(() => '(kart yok)');
-check('XML\'siz kart: "eski Excel dönemi" yok, arşivi söyler', !/eski Excel/.test(card) && /arşiv/.test(card), card);
+check('XML\'siz kart: "eski Excel dönemi" yok, kaldırılmayı söyler', !/eski Excel/.test(card) && /kaldırıldı/.test(card), card);
 
 // 10) Taşı: Vazgeç ve Taşı altta yan yana, Enter taşır
 await a.locator('.firm-select').selectOption('__new'); await a.waitForSelector('.modal.dialog input'); await a.locator('.modal.dialog input').fill('Beta Ltd'); await a.keyboard.press('Enter'); await a.waitForTimeout(500);

@@ -17,7 +17,8 @@ const settle = async () => { await a.waitForFunction(() => !document.querySelect
 const openTpl = async () => { await a.locator('.toolbar .excel-tpl').click(); await a.waitForSelector('.tpl-modal'); };
 const firstHeader = () => a.locator('.tpl-header').first().inputValue();
 const saveTpl = async () => { await a.locator('.tpl-modal button.primary:has-text("Kaydet")').click(); await a.waitForSelector('.tpl-modal', { state: 'detached' }); };
-const closeTpl = async () => { await a.keyboard.press('Escape'); await a.waitForSelector('.tpl-modal', { state: 'detached' }); };
+// Kaydedilmemiş değişiklik varsa Esc sorar (E38): "Kaydetmeden kapat"
+const closeTpl = async () => { await a.keyboard.press('Escape'); await a.waitForTimeout(150); if (await a.locator('.modal.dialog button.danger').count()) await a.locator('.modal.dialog button.danger').click(); await a.waitForSelector('.tpl-modal', { state: 'detached' }); };
 const heads = async () => (await a.locator('.lv-table thead th').allInnerTexts()).slice(2).map((t) => t.trim());
 const colRow = (name) => a.locator('.cols-row').filter({ has: a.locator('.cols-name', { hasText: new RegExp(`^${name}$`) }) });
 

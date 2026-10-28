@@ -190,7 +190,7 @@ export async function importXml(rawList: File[], dropFailed: ImportReport['faile
     notifyOtherTabs();
   } catch (e) {
     if (isQuotaError(e)) {
-      showToast('Tarayıcının depolama alanı doldu; yükleme kaydedilemedi. Ayarlar › Yedek › Depolama bölümünden eski dönemlerin görsellerini arşivleyin ya da dönem silin.', 9000);
+      showToast('Tarayıcının depolama alanı doldu; yükleme kaydedilemedi. Ayarlar › Yedek › Depolama bölümünden eski dönemlerin XML\'lerini kaldırın ya da dönem silin.', 9000);
       settingsTab.value = 'backup';
       settingsOpen.value = true;
     } else {

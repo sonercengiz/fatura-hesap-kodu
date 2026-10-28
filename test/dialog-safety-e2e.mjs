@@ -1,5 +1,5 @@
 // Eleştiri turu B18: yıkıcı onayda (Çıkar/Sil) odak Vazgeç'te, Enter silmez; Tab ile Sil'e geçip Enter siler.
-// Yıkıcı olmayan onayda (Görselleri arşivle) Enter = Evet aynen.
+// Yıkıcı olmayan onayda (XML'leri kaldır) Enter = Evet aynen.
 import { chromium } from 'playwright';
 import { readdirSync } from 'node:fs';
 const S = process.env.SCRATCH || '/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/db47f010-e6ef-41e1-8024-b002bf7dd1fd/scratchpad';
@@ -37,11 +37,11 @@ check('Esc: vazgeçildi', (await count()) === n0 - 1 && (await a.locator('.modal
 
 // Yıkıcı olmayan onay: Enter = Evet
 await a.locator('.toolbar button[title="Ayarlar"]').click(); await a.locator('.settings-tabs button:has-text("Yedek")').click();
-await a.locator('button:has-text("Görselleri arşivle")').first().click(); await a.waitForSelector('.modal.dialog');
+await a.locator('button:has-text("XML\'leri kaldır")').first().click(); await a.waitForSelector('.modal.dialog');
 check('arşiv onayında Enter ipucu var', (await a.locator('.modal.dialog button.primary kbd').count()) === 1, await a.locator('.modal.dialog button.primary').innerText());
 await a.keyboard.press('Enter'); await a.waitForTimeout(600);
 const t = await a.locator('.toast').innerText().catch(() => '');
-check('arşiv: Enter onaylar', t.includes('arşivlendi'), t);
+check('XML kaldırma: Enter onaylar', t.includes('kaldırıldı'), t);
 
 console.log('HATALAR:', errors.length ? errors : 'yok');
 console.log(fails ? `${fails} DENETİM BAŞARISIZ` : 'HEPSİ GEÇTİ');

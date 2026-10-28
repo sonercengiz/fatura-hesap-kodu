@@ -22,7 +22,7 @@ export const TERMS: Record<string, string> = {
   'şablon': 'Çıktı şablonu: Excel dosyasında hangi sütunların, hangi sırayla ve hangi başlıkla yazılacağı. Varsayılan EDM düzeni + C sütununda Hesap Kodu.',
   'önizleme': 'Önizleme (F5): Excel\'e yazılacak tablonun birebir ön görünümü. Kod almamış ve dikkat gerektiren satırlar sarı.',
   'yedek': 'Yedek: tüm verinizin tek .json dosyası. Veriler yalnızca bu tarayıcıda durur; başka bilgisayara geçmek ya da kaybetmemek için düzenli alın.',
-  'arşivle': 'Görselleri arşivle: eski bir dönemin XML\'lerini silip yer açar. Liste, atamalar ve Excel çıktısı kalır; XML\'i yeniden yüklerseniz görsel geri gelir.',
+  'XML\'leri kaldır': 'XML\'leri kaldır: eski bir dönemin XML\'lerini silip yer açar. Liste, atamalar ve Excel çıktısı kalır, yalnızca fatura görüntüsü çizilemez; XML\'i yeniden yüklerseniz görüntü geri gelir.',
   'vkn': 'VKN / TCKN: satıcının vergi numarası (10 hane) ya da şahıssa TC kimlik numarası (11 hane). Satıcıyı en kesin tanıtan bilgi.',
   'ettn': 'ETTN: faturanın evrensel tekil numarası. Fatura numarasından farklıdır; nadiren gerekir.',
   'zip': 'ZIP: EDM\'den toplu indirdiğiniz sıkıştırılmış dosya. Açmadan doğrudan yükleyebilirsiniz.',

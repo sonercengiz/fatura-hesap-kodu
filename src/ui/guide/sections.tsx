@@ -59,7 +59,7 @@ export const sections: Section[] = [
         <Shot src="04-yukleme-sonucu.png" alt="Yükleme sonucu" w="mid" notes={[
           <>Fatura olmayan dosyalar (irsaliye, yanıt, zarf) ve bozuk dosyalar burada nedenleriyle listelenir. Bu normaldir; faturalar yüklenmiştir.</>,
         ]} />
-        <Tip>EDM listesini (Gelen Faturalar Excel'i) de yüklerseniz çıktı dosyanız EDM'nin verdiğiyle birebir aynı olur; listede olup XML'i olmayan faturalar da görselsiz olarak eklenir.</Tip>
+        <Tip>EDM listesini (Gelen Faturalar Excel'i) de yüklerseniz çıktı dosyanız EDM'nin verdiğiyle birebir aynı olur; listede olup XML'i olmayan faturalar da XML'siz (görüntüsüz) olarak eklenir.</Tip>
         <Warn>Yanlış firmaya yüklediyseniz silmeyin: sağ alttaki <b>taşı</b> düğmesi dönemi ya da seçili faturaları atamalarıyla birlikte doğru firmaya götürür (bkz. Yedek ve taşıma).</Warn>
       </>
     ),
@@ -212,6 +212,7 @@ export const sections: Section[] = [
           <>Canlı önizleme.</>,
           <>Karıştıysa <b>EDM varsayılanına dön</b>.</>,
         ]} />
+        <Warn>Şablon penceresi uygulamada <b>Kaydet</b> isteyen tek penceredir: değişiklik Kaydet'e basınca geçerli olur, o zamana kadar başlıkta "● kaydedilmedi" yazar. Kaydetmeden kapatırsanız sorar.</Warn>
         <Tip>Her firmanın kendi Excel şablonu vardır: firmalar farklı GMS düzenleriyle çalışıyorsa her birini ayrı ayarlayın. Yeni firma, açık firmanın şablonuyla başlar; şablon penceresindeki <b>Başka firmadan al</b> bir firmanın şablonunu kopyalar.</Tip>
         <Tip><b>KDV dökümü</b> sütunları: Matrah %0 · Matrah ve KDV %1, %10, %20 · Oranı Uyuşmayan KDV. Değerler faturanın XML'indeki KDV özetinden gelir; faturada o oran yoksa hücre boş kalır. Temmuz 2023 öncesi oranlar (%8, %18) için sütunları <b>+ Sütun ekle</b>'den ekleyin; açık dönemde sütunu olmayan bir oran varsa pencere söyler ve tek tıkla ekler, önizleme de uyarır. <b>Oranı Uyuşmayan KDV</b>: bazı operatör faturalarında (ör. GSM) KDV satırının oran alanına tutar yazılmış; bu satırların vergisi burada toplanır, matrahları başka satırın tekrarı olduğu için sayılmaz. ÖİV, ÖTV gibi KDV dışı vergiler bu sütunlara girmez; bu yüzden matrah + KDV her faturada Tutar'ı vermeyebilir.</Tip>
         <Warn>İlk kez GMS'e verirken küçük bir dönemle deneyin. GMS bazı sütunları bekliyorsa <T t="edm listesi" />ni de yükleyin; çıktı EDM'nin dosyasıyla birebir olur.</Warn>
@@ -239,11 +240,11 @@ export const sections: Section[] = [
     id: 'yedek', group: 'Çıktı', short: 'Yedek ve taşıma', title: 'Yedek, depolama ve taşıma',
     body: (
       <>
-        <p>Veriler yalnızca bu bilgisayardaki tarayıcıda durur. Haftada bir <T t="yedek" /> alın; sarı şerit hatırlatır.</p>
+        <p>Veriler yalnızca bu bilgisayardaki tarayıcıda durur. Haftada bir <T t="yedek" /> alın; son yedekten sonra değişiklik varsa sarı şerit hatırlatır (sıklığı Ayarlar › Yedek'ten: haftada bir, ayda bir ya da kapalı).</p>
         <Shot src="18-yedek.png" alt="Ayarlar › Yedek" notes={[
           <><b>Dışa aktar</b>: her şey tek .json dosyasında (XML'ler hariç).</>,
           <><b>İçe aktar</b>: başka bilgisayarda mevcut veriyle birleştirir, silmez.</>,
-          <>Depolama: ne kadar yer kullanıldığı; eski dönemlerin görsellerini <T t="arşivle">arşivleyip</T> yer açın.</>,
+          <>Depolama: ne kadar yer kullanıldığı; eski dönemlerin <T t="XML'leri kaldır">XML'lerini kaldırıp</T> yer açın.</>,
         ]} />
         <Shot src="19-tasi.png" alt="Başka firmaya ya da döneme taşı" w="mid" notes={[<><T t="taşı">Taşı</T>: yanlış firmaya yüklenen dönemi ya da seçili faturaları atamalarıyla doğru firmaya götürür. Seçili faturalar aynı firmanın başka dönemine de taşınır: hedef firmada "bu firma"yı seçin. Geri taşımak aynı penceredendir.</>]} />
       </>
@@ -291,7 +292,7 @@ export const keys: [string, string][] = [
   ['Backspace', 'Kodu kaldır (elle girişte boş Enter da kaldırır)'],
   ['Ctrl+Z  Ctrl+Y', 'Geri al / yinele'],
   ['Shift+tık  Ctrl+tık', 'Listede aralık / tekil seçim'],
-  ['Çift tık', 'Liste görünümünde faturayı görselde aç'],
+  ['Çift tık', 'Liste görünümünde faturayı Görsel görünümde aç'],
   ['Esc', 'Pencereyi kapat, seçimi bırak'],
   ['Ctrl+F', 'Ara'],
   ['F5', 'Önizleme'],
@@ -306,12 +307,12 @@ export const troubles: [string, string][] = [
   ['Düğmeler üst çubuğa sığmıyor ya da bazı düğmeler yok', 'Dar pencerede Rehber, tema, geri al gibi düğmeler sağ üstteki ⋯ menüsüne taşınır. Pencereyi büyütün ya da Ayarlar › Ekran\'dan arayüz ölçeğini küçültün.'],
   ['Liste çok az fatura gösteriyor, her şey büyük', 'Ayarlar › Ekran\'da "Sıkışık" yerleşimi ve daha küçük bir ölçek seçin; görüntü ile liste arasındaki çizgiyi sürükleyerek paneli daraltın. Kalemler bölümü başlığından kapatılabilir.'],
   ['Yazılar çok küçük', 'Ayarlar › Ekran\'dan %100 ya da %110 ölçek seçin. Tarayıcının Ctrl + / Ctrl − yakınlaştırması da olur; uygulama ona göre yeniden yerleşir.'],
-  ['Fatura görüntüsü yerine kart görünüyor', 'O faturanın XML\'i yok (EDM listesinden ya da arşivden geldi). XML\'ini yükleyin, görüntü gelir; atama korunur.'],
+  ['Fatura görüntüsü yerine kart görünüyor', 'O faturanın XML\'i yok (EDM listesinden geldi ya da yer açmak için kaldırıldı). XML\'ini yükleyin, görüntü gelir; atama korunur.'],
   ['Q tuşu "yuva boş" diyor', 'Alt çubukta o yuvaya tıklayıp bir kod yazın. Yuvalar kendiliğinden dolmaz.'],
   ['Kod verdim ama listede göremiyorum', 'Süzgeç "Atanmamış" olabilir; "Tümü" yapın. Toplu/kural atananlar gezerken atlanır; Ctrl+ok ile görülür.'],
   ['Yanlış firmaya yükledim', 'Sağ alttaki "taşı" ile dönemi ya da seçili faturaları doğru firmaya taşıyın; atamalar da birlikte taşınır.'],
   ['GMS dosyayı almadı', 'Üst çubuktaki Şablon (ya da Ayarlar › Çıktı) ile sütun ve başlıkları GMS\'in beklediği gibi yapın. Emin olmak için EDM listesini de yükleyin; çıktı EDM dosyasıyla birebir olur.'],
-  ['"Depolama alanı doldu" uyarısı', 'Ayarlar › Yedek › Depolama\'dan eski dönemlerin görsellerini arşivleyin ya da gereksiz dönemi silin.'],
-  ['Başka bilgisayarda devam etmek istiyorum', 'Ayarlar › Yedek › Dışa aktar; diğer bilgisayarda İçe aktar. XML\'leri orada yeniden yüklerseniz görseller de gelir.'],
+  ['"Depolama alanı doldu" uyarısı', 'Ayarlar › Yedek › Depolama\'dan eski dönemlerin XML\'lerini kaldırın ya da gereksiz dönemi silin.'],
+  ['Başka bilgisayarda devam etmek istiyorum', 'Ayarlar › Yedek › Dışa aktar; diğer bilgisayarda İçe aktar. XML\'leri orada yeniden yüklerseniz fatura görüntüleri de gelir.'],
   ['İki sekmede açtım', 'Sorun değil; değişiklikler diğer sekmeye kendiliğinden yansır.'],
 ];

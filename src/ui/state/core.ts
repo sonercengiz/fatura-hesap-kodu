@@ -84,6 +84,8 @@ export const printOpen = signal(false);
 
 /** Çıktı Excel şablonu penceresi */
 export const templateOpen = signal(false);
+/** Kendi kapanma kuralı olan pencereler (örn. şablon: kaydedilmemişse sorar); genel Esc buradan kapatır */
+export const modalClosers: { template?: () => void } = {};
 
 /** Yükleme sonucu penceresi (okunamayan dosya varsa kendiliğinden açılır) */
 export const importReport = signal<ImportReport | null>(null);
@@ -149,15 +151,40 @@ export const redoStack = signal<UndoEntry[]>([]);
 export const lastExportAt = signal<number | null>(null);
 
 export const backupDismissedAt = signal<number>(0);
+/** Bu tarayıcıdaki son veri değişikliği (ms; sekmeler arasında localStorage ile ortak): son yedekten sonra değişiklik yoksa hatırlatılmaz */
+export const lastChangeAt = signal<number>(0);
 
 export const DAY = 86_400_000;
 
-/** Atama varsa ve 7 günden eski (ya da hiç) yedek yoksa hatırlat; "bugün değil" ile 1 gün ertelenir */
+/** Yedek hatırlatma sıklığı: bilgisayara özgü (localStorage), yedeğe girmez */
+export type BackupRemind = 'week' | 'month' | 'off';
+export const BACKUP_REMIND_DAYS: Record<BackupRemind, number> = { week: 7, month: 30, off: 0 };
+export const BACKUP_REMIND_LABELS: Record<BackupRemind, string> = { week: 'Haftada bir', month: 'Ayda bir', off: 'Hatırlatma (kendim alırım)' };
+export const backupRemind = signal<BackupRemind>('week');
+
+/**
+ * Yedek hatırlatması: veri varsa, son yedekten sonra değişiklik olduysa ve seçilen süre (hafta/ay) geçtiyse.
+ * "Sonra hatırlat" aynı süre kadar erteler; "kapalı" hiç göstermez.
+ */
 export const backupDue = computed(() => {
   if (assignments.value.size === 0 && batchList.value.length === 0) return false;
-  if (Date.now() - backupDismissedAt.value < DAY) return false;
-  return lastExportAt.value === null || Date.now() - lastExportAt.value > 7 * DAY;
+  const days = BACKUP_REMIND_DAYS[backupRemind.value];
+  if (!days) return false;
+  if (Date.now() - backupDismissedAt.value < days * DAY) return false;
+  if (lastExportAt.value === null) return true;
+  if (lastChangeAt.value <= lastExportAt.value) return false;
+  return Date.now() - lastExportAt.value > days * DAY;
 });
+
+export function markChanged() {
+  lastChangeAt.value = Date.now();
+  try { localStorage.setItem('lastChangeAt', String(lastChangeAt.value)); } catch { /* yok say */ }
+}
+
+export function setBackupRemind(v: BackupRemind) {
+  backupRemind.value = v;
+  try { localStorage.setItem('backupRemind', v); } catch { /* yok say */ }
+}
 
 export function dismissBackup() {
   backupDismissedAt.value = Date.now();
@@ -300,10 +327,10 @@ export const ISSUE_LABEL: Record<IssueKind, string> = {
   'not-in-chart': 'Kod hesap kodu listesinde yok',
   type: 'Tevkifat / İade faturası, kontrol edin',
   'vat-gap': 'KDV oranının Excel şablonunda sütunu yok',
-  'no-view': 'XML yok (EDM listesinden geldi ya da görseli arşivlendi); görsel çizilemez',
+  'no-view': 'XML yok (EDM listesinden geldi ya da yer açmak için kaldırıldı); fatura görüntüsü çizilemez',
 };
 
-/** Toolbar ve listede gösterilecek uyarılar: atanmamış kod ve görsel eksikliği hariç. */
+/** Toolbar ve listede gösterilecek uyarılar: atanmamış kod ve XML eksikliği hariç. */
 export function attentionIssues(inv: Invoice): IssueKind[] {
   return issuesFor(inv).filter((k) => k !== 'no-code' && k !== 'no-view');
 }
@@ -356,8 +383,8 @@ export async function getInvoiceView(no: string): Promise<InvoiceView | null> {
   } else if (rec.xml) {
     html = '<!--fallback-->' + fallbackHtml(inv, rec.xml, 'Bu faturada görünüm şablonu (XSLT) yok; XML içeriği sade biçimde gösteriliyor.');
   } else {
-    // XML'siz (EDM listesinden ya da arşivden): ekranda kart gösterilir, yazdırmada sade özet
-    return { html: '<!--fallback-->' + fallbackHtml(inv, null, 'Bu faturanın XML\'i yok (EDM listesinden geldi ya da görseli arşivlendi); yalnızca liste bilgileri.'), official: false };
+    // XML'siz (EDM listesinden ya da XML'i kaldırılmış): ekranda kart gösterilir, yazdırmada sade özet
+    return { html: '<!--fallback-->' + fallbackHtml(inv, null, 'Bu faturanın XML\'i yok (EDM listesinden geldi ya da yer açmak için kaldırıldı); yalnızca liste bilgileri.'), official: false };
   }
   rememberHtml(key, html);
   return { html, official };

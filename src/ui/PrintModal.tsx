@@ -78,7 +78,7 @@ export function PrintModal() {
       <div class="modal print-modal" onClick={(e) => e.stopPropagation()} onKeyDownCapture={(e) => { if (e.key === 'Escape') { const t = e.target as HTMLInputElement; e.stopPropagation(); e.preventDefault(); if (t?.tagName === 'INPUT' && t.type !== 'checkbox' && t.type !== 'radio' && t.value) { setPsearch(''); setManual(null); return; } S.closePrint(); } }}>
         <div class="modal-head">
           <b>Yazdırma planı</b>
-          <span class="muted">{toPrint.length}{toPrint.length !== items.length ? ` / ${items.length}` : ''} fatura{noView ? ` · ${noView} görselsiz (özet basılır)` : ''}</span>
+          <span class="muted">{toPrint.length}{toPrint.length !== items.length ? ` / ${items.length}` : ''} fatura{noView ? ` · ${noView} XML'siz (özet basılır)` : ''}</span>
           <div class="spacer" />
           <button class="primary" disabled={toPrint.length === 0} onClick={() => S.startPrint(toPrint, { pageBreak, strip, summary, chunk: useChunks ? chunkSize : 0 })}>Yazdır ({toPrint.length}{useChunks ? ` · ${Math.ceil(toPrint.length / chunkSize)} parça` : ''}) <kbd>Enter</kbd></button>
           <button class="ghost" onClick={() => S.closePrint()}>Kapat <kbd>Esc</kbd></button>

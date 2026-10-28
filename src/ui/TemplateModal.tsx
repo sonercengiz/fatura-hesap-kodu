@@ -1,5 +1,6 @@
 import { useState } from 'preact/hooks';
 import * as S from './state';
+import { askConfirm } from './dialog';
 import { fmtCell } from '../core/num';
 import { FIELD_DEFS, KDV_FIELD_IDS, vatFieldsFor, vatUncovered, ROW_ORDER_LABELS, DEFAULT_OUTPUT_TEMPLATE, isEdmDefault, buildTemplateRows, type OutputTemplate, type OutputFieldId, type RowOrder } from '../core/excel/template';
 
@@ -10,8 +11,14 @@ export function TemplateModal() {
   const [t, setT] = useState<OutputTemplate>(() => JSON.parse(JSON.stringify(S.outputTemplate.value)));
   const [addId, setAddId] = useState<OutputFieldId>('uuid');
   const [dragIdx, setDragIdx] = useState<number | null>(null);
-  const close = () => (S.templateOpen.value = false);
-  const save = async () => { await S.setOutputTemplate(t); close(); S.showToast(`Çıktı şablonu kaydedildi (${S.firm.value.name})`); };
+  // Uygulamada anında kaydetmeyen tek pencere: değişiklik Kaydet'e basınca geçerli olur, kaydedilmemişse kapatırken sorulur
+  const dirty = JSON.stringify(t) !== JSON.stringify(S.outputTemplate.value);
+  const close = async () => {
+    if (dirty && !(await askConfirm({ title: 'Şablon kaydedilmedi', message: 'Bu pencerede yaptığınız değişiklikler Kaydet\'e basılmadan geçerli olmaz. Kaydetmeden kapatılırsa kaybolur.', okLabel: 'Kaydetmeden kapat', danger: true }))) return;
+    S.templateOpen.value = false;
+  };
+  S.modalClosers.template = close;
+  const save = async () => { await S.setOutputTemplate(t); S.templateOpen.value = false; S.showToast(`Çıktı şablonu kaydedildi (${S.firm.value.name})`); };
   const others = S.firms.value.filter((f) => f.id !== S.firm.value.id && f.outputTemplate);
   const copyFrom = (id: string) => { const f = others.find((x) => x.id === id); if (f?.outputTemplate) setT(JSON.parse(JSON.stringify(f.outputTemplate))); };
   const used = new Set(t.columns.map((c) => c.id));
@@ -37,6 +44,9 @@ export function TemplateModal() {
           <b>Çıktı Excel şablonu</b>
           <span class="tpl-firm" title="Her firmanın kendi şablonu var; burada yaptığınız değişiklik yalnızca bu firmanın Excel'ini etkiler">{S.firm.value.name}</span>
           <span class="muted">{t.columns.length} sütun · {isEdmDefault(t) ? 'EDM düzeni' : 'özelleştirilmiş'}</span>
+          {dirty
+            ? <span class="tpl-dirty" title="Değişiklikler Kaydet'e basınca geçerli olur">● kaydedilmedi</span>
+            : <span class="muted small" title="Uygulamanın diğer pencereleri anında kaydeder; bu pencere Kaydet ile çalışır">değişiklikler Kaydet ile geçerli olur</span>}
           <div class="spacer" />
           {others.length > 0 && (
             <select class="tpl-copy" value="" title="Başka bir firmanın şablonunu buraya kopyala (Kaydet'e basana kadar bir şey değişmez)" onChange={(e) => { copyFrom((e.currentTarget as HTMLSelectElement).value); (e.currentTarget as HTMLSelectElement).value = ''; }} onKeyDown={(e) => e.stopPropagation()}>
