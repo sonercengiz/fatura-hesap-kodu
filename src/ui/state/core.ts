@@ -474,19 +474,38 @@ export async function applyChanges(changes: Change[]): Promise<Change[]> {
   });
   if (puts.length) await db.assignments.bulkPut(puts);
   if (dels.length) await db.assignments.bulkDelete(dels);
-  for (const [k, d] of delta) {
-    if (d === 0) continue;
-    const [vkn, code] = k.split('|');
-    const fid = currentFirmId.value;
-    const cur = await db.firmHistory.get([fid, vkn, code]);
-    const count = (cur?.count ?? 0) + d;
-    if (count <= 0) await db.firmHistory.delete([fid, vkn, code]);
-    else await db.firmHistory.put({ firmId: fid, vkn, code, count, lastUsed: d > 0 ? now : cur?.lastUsed ?? now });
-  }
-  history.value = await db.firmHistory.where('firmId').equals(currentFirmId.value).toArray();
+  await bumpHistory(currentFirmId.value, delta, now);
   await db.batches.update(b.id, { updatedAt: now });
   notifyOtherTabs();
   return inverse.reverse();
+}
+
+/**
+ * Satıcı geçmişi sayaçlarını değiştirir ("vkn|kod" → +/-). Sayaç = firmada o satıcıya o kodla yapılmış atama sayısı
+ * (satıcı ipucu bundan); atama oluşan ya da silinen her yol buradan geçmeli.
+ */
+export async function bumpHistory(firmId: string, delta: Map<string, number>, now = Date.now()) {
+  for (const [k, d] of delta) {
+    if (d === 0) continue;
+    const [vkn, code] = k.split('|');
+    const cur = await db.firmHistory.get([firmId, vkn, code]);
+    const count = (cur?.count ?? 0) + d;
+    if (count <= 0) await db.firmHistory.delete([firmId, vkn, code]);
+    else await db.firmHistory.put({ firmId, vkn, code, count, lastUsed: d > 0 ? now : cur?.lastUsed ?? now });
+  }
+  if (firmId === currentFirmId.value) history.value = await db.firmHistory.where('firmId').equals(firmId).toArray();
+}
+
+/** Atama kayıtlarından satıcı geçmişi farkı: sign=+1 eklenen, -1 silinen atamalar */
+export function historyDelta(asg: { no: string; code: string }[], vknByNo: Map<string, string>, sign: 1 | -1): Map<string, number> {
+  const delta = new Map<string, number>();
+  for (const a of asg) {
+    const vkn = vknByNo.get(a.no);
+    if (vkn === undefined || !a.code) continue;
+    const k = `${vkn}|${a.code}`;
+    delta.set(k, (delta.get(k) ?? 0) + sign);
+  }
+  return delta;
 }
 
 export function pushUndo(label: string, inverse: Change[], redo: Change[]) {

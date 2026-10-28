@@ -5,7 +5,7 @@ import { readEdmSheet, edmRowsByNo } from '../../core/excel/readEdm';
 import { db, type BatchRecord, type InvoiceRecord, type AssignmentRecord } from '../../storage/db';
 import { forgetHtml } from '../../render/xslt';
 import { readZip, ZipError } from '../../core/zip';
-import { batchRec, busy, importReport, invoiceRecs, lastImportReport, settingsOpen, settingsTab, showToast } from './core';
+import { batchRec, bumpHistory, busy, historyDelta, importReport, invoiceRecs, lastImportReport, settingsOpen, settingsTab, showToast } from './core';
 import { createBatch, isQuotaError, notifyOtherTabs, refreshBatchList, reloadBatch } from './firms';
 import { applyRules } from './rules';
 
@@ -149,7 +149,9 @@ export async function importXml(rawList: File[]): Promise<ImportReport> {
           if (!cur || a.at > cur.at) latestByNo.set(a.no, a);
         }
         const own = new Set((await db.assignments.where('batchId').equals(b.id).primaryKeys()).map((k) => k[1]));
-        await db.assignments.bulkPut(Array.from(latestByNo.values()).filter((a) => !own.has(a.no)).map((a) => ({ ...a, batchId: b.id })));
+        const carried = Array.from(latestByNo.values()).filter((a) => !own.has(a.no)).map((a) => ({ ...a, batchId: b.id }));
+        await db.assignments.bulkPut(carried);
+        await bumpHistory(b.firmId, historyDelta(carried, new Map(recs.map((r) => [r.no, r.supplierVkn])), 1));
       }
       const patch: Partial<BatchRecord> = { updatedAt: now };
       if (b.autoName) {

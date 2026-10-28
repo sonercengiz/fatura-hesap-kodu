@@ -4,7 +4,7 @@ import { normalizeTemplate, edmTemplate, type OutputTemplate } from '../../core/
 import { SORT_LABELS } from '../../core/sort';
 import { db, DEFAULT_FIRM_ID, loadSettings, newId, type BatchRecord, type FirmRecord } from '../../storage/db';
 import { ensureXslt, forgetHtml } from '../../render/xslt';
-import { ready, accounts, assignments, backupDismissedAt, batchList, batchRec, bulkNos, current, currentFirmId, currentIndex, filterMode, firm, firms, firstNavigable, goTo, history, invoiceRecs, invoices, lastClicked, lastExportAt, mode, recentCodes, redoStack, ruleNos, rules, searchText, selected, settings, showToast, undoStack } from './core';
+import { ready, accounts, assignments, backupDismissedAt, batchList, batchRec, bulkNos, bumpHistory, historyDelta, current, currentFirmId, currentIndex, filterMode, firm, firms, firstNavigable, goTo, history, invoiceRecs, invoices, lastClicked, lastExportAt, mode, recentCodes, redoStack, ruleNos, rules, searchText, selected, settings, showToast, undoStack } from './core';
 
 /** Diğer sekmelere "veri değişti" sinyali; alan sekme görünürse yeniler, değilse görünür olunca yeniler */
 export const channel: BroadcastChannel | null = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('fatura-hesap-kodu') : null;
@@ -286,11 +286,13 @@ export function isQuotaError(e: unknown): boolean {
 export async function removeInvoices(nos: string[]) {
   const b = batchRec.value;
   if (!b || nos.length === 0) return;
+  const gone = (await db.assignments.bulkGet(nos.map((no) => [b.id, no] as [string, string]))).filter((a) => a !== undefined);
   await db.transaction('rw', db.invoices, db.assignments, db.batches, async () => {
     await db.invoices.bulkDelete(nos.map((no) => [b.id, no] as [string, string]));
     await db.assignments.bulkDelete(nos.map((no) => [b.id, no] as [string, string]));
     await db.batches.update(b.id, { updatedAt: Date.now() });
   });
+  await bumpHistory(b.firmId, historyDelta(gone, new Map(invoiceRecs.value.map((r) => [r.no, r.supplierVkn])), -1));
   for (const no of nos) forgetHtml(`${b.id}|${no}`);
   await reloadBatch();
   await cleanupXslts();
@@ -308,12 +310,16 @@ export async function cleanupXslts() {
 }
 
 export async function deleteBatch(id: string) {
+  const rec = await db.batches.get(id);
+  const gone = await db.assignments.where('batchId').equals(id).toArray();
+  const vknByNo = new Map((await db.invoices.where('batchId').equals(id).toArray()).map((r) => [r.no, r.supplierVkn]));
   await db.transaction('rw', db.batches, db.assignments, db.invoices, db.rules, async () => {
     await db.batches.delete(id);
     await db.assignments.where('batchId').equals(id).delete();
     await db.invoices.where('batchId').equals(id).delete();
     await db.rules.where('batchId').equals(id).delete();
   });
+  if (rec) await bumpHistory(rec.firmId, historyDelta(gone, vknByNo, -1));
   rules.value = rules.value.filter((r) => r.batchId !== id);
   forgetHtml(`${id}|`);
   if (batchRec.value?.id === id) {

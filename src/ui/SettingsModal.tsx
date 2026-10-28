@@ -127,7 +127,7 @@ export function SettingsModal() {
                 <div class="settings-links">
                   {S.firms.value.length > 1 && <button onClick={() => openOther(() => (S.moveOpen.value = true))}>Başka firmaya taşı…</button>}
                   <button class="danger" onClick={async () => {
-                    if (await askConfirm({ title: 'Dönemi sil', message: `"${b.name}" dönemi, ${S.invoices.value.length} faturası ve atamalarıyla silinecek. Bu işlem geri alınamaz.`, okLabel: 'Sil', danger: true })) { S.deleteBatch(b.id); close(); }
+                    if (await askConfirm({ title: 'Dönemi sil', message: `"${b.name}" dönemi, ${S.invoices.value.length} faturası ve atamalarıyla silinecek; "Bu satıcıya önce" ipuçları da bu atamaları unutur. Yalnızca yer açmak istiyorsanız Yedek › Depolama'dan görselleri arşivlemek yeter. Bu işlem geri alınamaz.`, okLabel: 'Sil', danger: true })) { S.deleteBatch(b.id); close(); }
                   }}>Dönemi sil</button>
                 </div>
               </>
