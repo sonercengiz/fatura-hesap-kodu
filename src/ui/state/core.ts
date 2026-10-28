@@ -134,7 +134,10 @@ export const chartResults = computed<Account[]>(() => searchAccounts(accounts.va
 export interface Change { no: string; code: string | null; source: AssignmentSource }
 
 /** `at`: işlem yapılırken açık olan fatura (geri alınca oraya dönülür; fatura çıkarılsa da sıra kaymaz) */
-export interface UndoEntry { label: string; inverse: Change[]; redo: Change[]; at: string | null }
+/** Kural değişikliğinde değişen kuralların öncesi/sonrası (geri alınca kural da döner; listede olmayan id = yoktu) */
+export interface RuleSnap { ids: string[]; before: Rule[]; after: Rule[] }
+
+export interface UndoEntry { label: string; inverse: Change[]; redo: Change[]; at: string | null; rules?: RuleSnap }
 
 export const undoStack = signal<UndoEntry[]>([]);
 
@@ -508,9 +511,9 @@ export function historyDelta(asg: { no: string; code: string }[], vknByNo: Map<s
   return delta;
 }
 
-export function pushUndo(label: string, inverse: Change[], redo: Change[]) {
-  if (inverse.length === 0) return;
-  undoStack.value = [...undoStack.value.slice(-49), { label, inverse, redo, at: current.value?.no ?? null }];
+export function pushUndo(label: string, inverse: Change[], redo: Change[], rules?: RuleSnap) {
+  if (inverse.length === 0 && !rules) return;
+  undoStack.value = [...undoStack.value.slice(-49), { label, inverse, redo, at: current.value?.no ?? null, rules }];
   redoStack.value = [];
 }
 
@@ -546,12 +549,21 @@ function staleCount(expect: Change[]): number {
   return expect.filter((ch) => recByNo.value.has(ch.no) && (assignments.value.get(ch.no) ?? null) !== ch.code).length;
 }
 
+/** Geri al / yinele: kuralları kayıttaki hallerine getirir */
+async function writeRules(ids: string[], snap: Rule[]) {
+  const byId = new Map(snap.map((r) => [r.id, r]));
+  for (const id of ids) { const r = byId.get(id); if (r) await db.rules.put(r); else await db.rules.delete(id); }
+  rules.value = (await db.rules.where('firmId').equals(currentFirmId.value).toArray()).sort((a, b) => b.updatedAt - a.updatedAt);
+  notifyOtherTabs();
+}
+
 export async function undo() {
   const e = undoStack.value[undoStack.value.length - 1];
   if (!e) { showToast('Geri alınacak işlem yok'); return; }
   undoStack.value = undoStack.value.slice(0, -1);
   const stale = staleCount(e.redo);
   if (stale) { showToast(`Geri alınamadı: ${e.label} — ${stale} faturanın kodu sonradan başka yerde (başka sekme ya da yedek) değişti.`, 5000); return; }
+  if (e.rules) await writeRules(e.rules.ids, e.rules.before);
   await applyChanges(e.inverse);
   redoStack.value = [...redoStack.value, e];
   const idx = e.at ? invoices.value.findIndex((i) => i.no === e.at) : -1;
@@ -565,6 +577,7 @@ export async function redo() {
   redoStack.value = redoStack.value.slice(0, -1);
   const stale = staleCount(e.inverse);
   if (stale) { showToast(`Yinelenemedi: ${e.label} — ${stale} faturanın kodu sonradan başka yerde değişti.`, 5000); return; }
+  if (e.rules) await writeRules(e.rules.ids, e.rules.after);
   await applyChanges(e.redo);
   undoStack.value = [...undoStack.value, e];
   showToast(`Yinelendi: ${e.label}`);

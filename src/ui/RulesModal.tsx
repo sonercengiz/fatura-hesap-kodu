@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import * as S from './state';
+import { askConfirm } from './dialog';
 import { COND_LABELS, COND_SHORT, PRIORITY_TEXT, VAT_PRESETS, beats, condLabel, isRange, ruleLabel, ruleMatches, toRate, type Cond, type CondKind, type Rule } from '../core/rules';
 import { TYPE_LABELS, type Invoice } from '../core/types';
 import { fmtAmount } from './InvoiceCard';
@@ -117,6 +118,15 @@ export function RulesModal() {
     setErr(e);
     if (!e) { reset(); firstInput.current?.focus(); }
   };
+  const removeRule = async (r: Rule) => {
+    const fx = S.ruleRemovalEffect(r.id);
+    if (fx.removed + fx.reassigned > 0) {
+      const what = [fx.removed ? `${fx.removed} faturanın kodu kaldırılır (yeniden atanmamış olur)` : '', fx.reassigned ? `${fx.reassigned} fatura uyan diğer kuralın kodunu alır` : ''].filter(Boolean).join('; ');
+      if (!(await askConfirm({ title: 'Kuralı sil', message: `Bu dönemde bu kuralla kod almış ${fx.removed + fx.reassigned} fatura var: ${what}. Elle verdiğiniz kodlar ve geçmiş dönemler değişmez. Ctrl+Z kuralı da kodları da geri getirir.`, okLabel: 'Sil', danger: true }))) return;
+    }
+    if (editing === r.id) reset();
+    await S.deleteRule(r.id);
+  };
   const startEdit = (r: Rule) => { setEditing(r.id); setConds(r.conds.map((c) => ({ ...c }))); setCode(r.code); setScope(r.batchId ? 'batch' : 'firm'); setErr(null); };
 
   const pending = S.rulePending.value.length;
@@ -185,7 +195,7 @@ export function RulesModal() {
               const n = S.batchRec.value ? hits(r).length : null;
               return (
               <div class={`acc-row rule-row ${r.enabled ? '' : 'off'} ${r.batchId ? 'scoped' : ''} ${editing === r.id ? 'editing' : ''}`}>
-                <input type="checkbox" checked={r.enabled} title={r.enabled ? 'Kuralı kapat' : 'Kuralı aç'} onChange={(e) => S.updateRule(r.id, { enabled: (e.currentTarget as HTMLInputElement).checked })} />
+                <input type="checkbox" checked={r.enabled} title={r.enabled ? 'Kuralı kapat (bu dönemde verdiği kodlar kalkar, açınca geri gelir)' : 'Kuralı aç (bu dönemde uyan, kodu olmayan faturalara kodunu verir)'} onChange={(e) => S.updateRule(r.id, { enabled: (e.currentTarget as HTMLInputElement).checked })} />
                 <span class="rule-conds" title={ruleLabel(r)}>
                   {r.batchId ? <span class="bulk-tag scope-tag" title={`Yalnızca ${batch?.name ?? 'bu dönem'} döneminde geçerli`}>bu dönem</span> : null}
                   {r.conds.map((c) => <span class={`cond-chip k-${c.kind}`}>{condLabel(c)}</span>)}
@@ -194,7 +204,7 @@ export function RulesModal() {
                 <span class="muted small rule-hits" title="Bu dönemde uyan fatura">{n === null ? '' : `${n} fatura`}</span>
                 <input class="acc-name rule-code-edit" value={r.code} title="Hesap kodu" onKeyDown={(e) => e.stopPropagation()} onChange={(e) => { const v = (e.currentTarget as HTMLInputElement).value.trim(); if (v) S.updateRule(r.id, { code: v }).then((er) => { if (er) S.showToast(er, 4000); }); }} />
                 <button class="ghost tiny rule-edit" title="Koşulları düzenle" onClick={() => startEdit(r)}>✎</button>
-                <button class="ghost tiny" title="Kuralı sil (yapılmış atamalar kalır)" onClick={() => { if (editing === r.id) reset(); S.deleteRule(r.id); }}>✕</button>
+                <button class="ghost tiny" title="Kuralı sil (bu dönemde bu kuralla verilmiş kodlar da kalkar; elle verdikleriniz kalır)" onClick={() => removeRule(r)}>✕</button>
               </div>
               );
             })}

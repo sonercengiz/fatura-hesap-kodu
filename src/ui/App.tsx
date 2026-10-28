@@ -60,7 +60,7 @@ export function App() {
       const inInput = !!t && ((t.tagName === 'INPUT' && !/^(checkbox|radio|button)$/.test((t as HTMLInputElement).type)) || t.tagName === 'TEXTAREA' || t.isContentEditable);
 
       // Açık pencere varken genel kısayollar (F1/F5/Ctrl+P/Ctrl+F/Ctrl+./Ctrl+Z) çalışmaz: arkada pencere açılmasın, odak çalınmasın, görünmeyen geri alma olmasın.
-      // İstisnalar: önizlemede F1 (başlıkta yazıyor) ve F5 (önizlemeyi kapatır); hesap listesinde Ctrl+. (kapatır).
+      // İstisnalar: önizlemede F1 (başlıkta yazıyor) ve F5 (önizlemeyi kapatır); hesap listesinde Ctrl+. (kapatır); Kurallar'da Ctrl+Z/Y.
       const modalOpen = S.settingsOpen.value || S.guideOpen.value || S.rulesOpen.value || S.printOpen.value || !!S.quickRule.value || S.moveOpen.value || S.templateOpen.value || S.accountsOpen.value || !!S.importReport.value || !!dialog.value;
       const onlyPreview = S.previewOpen.value && !modalOpen && !S.chartOpen.value;
       if (e.key === 'F1' || e.key === 'F5') {
@@ -93,7 +93,9 @@ export function App() {
       }
       if ((e.ctrlKey || e.metaKey) && !inInput && (e.key.toLowerCase() === 'z' || e.key.toLowerCase() === 'y')) {
         e.preventDefault();
-        if (!S.batchRec.value || modalOpen || onlyPreview || S.chartOpen.value) return;
+        // Kurallar penceresinde de çalışır: kural değişikliği orada görünür (kural + kodları birlikte döner)
+        const rulesOnly = S.rulesOpen.value && !dialog.value;
+        if (!S.batchRec.value || (modalOpen && !rulesOnly) || onlyPreview || S.chartOpen.value) return;
         if (e.key.toLowerCase() === 'y' || e.shiftKey) S.redo(); else S.undo();
         return;
       }
