@@ -1,7 +1,7 @@
 // Uyarı sistemi (tur 4 H3): önizlemede satır zemini beyaz; uyarı yalnızca ilgili hücrenin tonu (seviye rengi) + satırın en yüksek
 // seviyesinde sol şerit. Kodsuz satırda kod hücresi high; operatör faturasında Tutar hücresi medium (ödenecek ≠ toplam, ÖİV Excel'e
 // girmiyor), türetilmiş matrah low. Lejant çipine tıklayınca o tür susturulur (ton kalkar, sayı kalır; yenileyince kalıcı).
-// Listede Dikkat metni seviye renginde; yuva rengi hiçbir zaman ezilmez.
+// Listede Durum sütunu (Excel'e girmez): ✓ ya da seviye renginde !, ipucunda uyarı metinleri; yuva rengi hiçbir zaman ezilmez.
 import { chromium } from 'playwright';
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { operatorXml } from './e2e-helpers.mjs';
@@ -75,15 +75,19 @@ r = await rowLook('GNS2026000000001');
 check('yeniden tıklayınca ton geri gelir', r && /iss-high/.test(r.cells['Hesap Kodu'].cls), r?.cells['Hesap Kodu'].cls);
 await a.keyboard.press('Escape'); await a.waitForTimeout(200);
 
-// Liste: Dikkat metni seviye renginde
+// Liste: Durum sütunu
 await a.locator('.toolbar button:has-text("Liste")').click(); await a.waitForSelector('.listview'); await a.waitForTimeout(300);
 const lv = await a.evaluate(() => {
   const tr = [...document.querySelectorAll('.lv-table tbody tr')].find((x) => x.textContent.includes('OPR2026000000001'));
-  const spans = [...tr.querySelectorAll('td.lv-issues .iss-txt')].map((s) => ({ cls: s.className, color: getComputedStyle(s).color, t: s.textContent }));
+  const st = tr.querySelector('td.lv-status .st-warn');
+  const ok = [...document.querySelectorAll('.lv-table tbody tr')].find((x) => x.textContent.includes('AYT2026000000001'))?.querySelector('td.lv-status .st-ok');
+  const spans = st ? [{ cls: st.className, color: getComputedStyle(st).color, t: st.textContent, title: st.title }] : [];
+  const first = [...document.querySelectorAll('.lv-table thead th')].map((h) => h.textContent.trim());
   const probe = (v) => { const d = document.createElement('div'); d.style.color = `var(${v})`; document.body.appendChild(d); const c = getComputedStyle(d).color; d.remove(); return c; };
-  return { spans, m: probe('--iss-m'), l: probe('--iss-l') };
+  return { spans, ok: !!ok, head: first.slice(0, 4), m: probe('--iss-m'), l: probe('--iss-l') };
 });
-check('liste Dikkat: medium uyarı mor, low uyarı mavi-gri', lv.spans.some((s) => /lvl-medium/.test(s.cls) && s.color === lv.m) && lv.spans.some((s) => /lvl-low/.test(s.cls) && s.color === lv.l), JSON.stringify(lv));
+check('liste Durum: operatörde "!" en yüksek seviye (medium, mor), ipucunda üç uyarı', lv.spans.length === 1 && /lvl-medium/.test(lv.spans[0].cls) && lv.spans[0].color === lv.m && lv.spans[0].t === '!' && /Tutar bilgisi/.test(lv.spans[0].title) && /vergiden hesaplandı/.test(lv.spans[0].title), JSON.stringify(lv.spans));
+check('liste Durum: sorunsuz satırda ✓; sütun listenin başında (# sonrası), Excel harfi yok', lv.ok && lv.head[2] === 'Durum', JSON.stringify(lv.head));
 
 check('sayfa hatası yok', errors.length === 0, errors.join(' | '));
 await browser.close();

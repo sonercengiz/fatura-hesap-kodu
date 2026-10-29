@@ -65,6 +65,8 @@ const seen = [await curNo()];
 for (let i = 1; i < flagged; i++) { await a.keyboard.press('Tab'); await a.waitForTimeout(150); seen.push(await curNo()); }
 check('Tab turun faturalarında gezer (her biri farklı, sayaç ilerler)', new Set(seen).size === flagged && new RegExp(`${flagged}/${flagged}`).test(await bar()), `${seen.map((s) => s.slice(0, 16)).join(' | ')} · ${await bar()}`);
 check('ilk tur faturası pencerenin ilk satırı', seen[0].includes(firstNo), `${seen[0]} / ${firstNo}`);
+await a.keyboard.press('Tab'); await a.waitForTimeout(300);
+check('sonda Tab başa dönmez, söyler', new RegExp(`${flagged}/${flagged}`).test(await bar()) && /Turun son faturası/.test(await a.locator('.toast').innerText().catch(() => '')) && (await a.locator('.tour-bar button', { hasText: 'Sonraki' }).isDisabled()), `${await bar()} | ${await a.locator('.toast').innerText().catch(() => '')}`);
 await a.keyboard.press('Shift+Tab'); await a.waitForTimeout(150);
 check('Shift+Tab geri gider', (await curNo()) === seen[flagged - 2] && new RegExp(`${flagged - 1}/${flagged}`).test(await bar()), await bar());
 await a.locator('.tour-bar button', { hasText: 'Sonraki' }).click(); await a.waitForTimeout(150);

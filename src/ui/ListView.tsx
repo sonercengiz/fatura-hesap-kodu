@@ -41,7 +41,8 @@ export function ListView() {
   // Bilerek "boş da olsa yaz" denen (keep) sütun gizlenmez
   const hidden = e.columns.map((c, k) => (c.id === 'blank' || (!showEmpty && empty.has(k) && !c.keep) ? k : -1)).filter((k) => k >= 0);
   const emptyCount = skippedCount(e, empty);
-  const cols: { id: ListColumnId; k: number }[] = [...e.columns.map((c, k) => ({ id: c.id as ListColumnId, k })).filter((c) => !hidden.includes(c.k)), { id: 'issues', k: -1 }];
+  // Durum: yalnızca uygulamada (Excel'e girmez), listenin başında; ✓ sorun yok, ! uyarı var (üzerine gelince hangisi)
+  const cols: { id: ListColumnId; k: number }[] = [{ id: 'issues', k: -1 }, ...e.columns.map((c, k) => ({ id: c.id as ListColumnId, k })).filter((c) => !hidden.includes(c.k))];
 
   useEffect(() => {
     box.current?.querySelector<HTMLElement>('tr.current')?.scrollIntoView({ block: 'nearest' });
@@ -100,7 +101,7 @@ export function ListView() {
             <tr>
               <th class="lv-check"><input type="checkbox" title="Görünenleri seç / bırak" checked={S.selected.value.size > 0 && S.invoices.value.filter(S.passesFilter).every((i) => S.selected.value.has(i.no))} onChange={(e) => ((e.currentTarget as HTMLInputElement).checked ? S.selectVisible() : S.clearSelection())} /></th>
               <th class="num">#</th>
-              {cols.map((c) => (c.id === 'issues' ? <th class="lv-issues" title="Yalnızca listede: uyarılar (Excel'e girmez)">Dikkat</th> : <HeaderCell t={t} col={e.columns[c.k]} letter={S.excelLetters.value[c.k]} cls={`lv-${c.id}`} />))}
+              {cols.map((c) => (c.id === 'issues' ? <th class="lv-status" title="Durum (yalnızca uygulamada; Excel'e girmez): ✓ sorun yok, ! uyarı var — üzerine gelince hangisi olduğu yazar">Durum</th> : <HeaderCell t={t} col={e.columns[c.k]} letter={S.excelLetters.value[c.k]} cls={`lv-${c.id}`} />))}
             </tr>
           </thead>
           <tbody>
@@ -132,7 +133,7 @@ export function ListView() {
                         <span class="row-code">{i.excluded && <span class="excl-tag" title="Excel'e girmez">Hariç</span>}{c ?? <span class="muted">—</span>}</span>
                       </td>
                     );
-                    if (id === 'issues') return <td class="lv-issues">{iss.length > 0 && <span class="lv-iss" title={iss.map((x) => S.issueText(i, x)).join('\n')}>{iss.map((x, j) => <span class={`iss-txt lvl-${S.levelOf(x)}`}>{j ? ' · ' : '! '}{S.ISSUE_META[x].label}</span>)}</span>}</td>;
+                    if (id === 'issues') return <td class="lv-status">{iss.length > 0 ? <span class={`st-warn lvl-${S.topLevel(iss)}`} title={iss.map((x) => S.issueText(i, x)).join('\n')}>!</span> : <span class="st-ok" title="Sorun yok">✓</span>}</td>;
                     if (id === 'source') return <td class="muted">{src}</td>;
                     return cell(e.columns[ck], fieldOf(e.columns[ck]).value(i, ctx));
                   })}

@@ -60,23 +60,24 @@ export function exportStamp(at: number): string {
 /** Uyarılı faturalar turu: açıkken Tab / Shift+Tab yalnızca bu faturalarda gezer */
 export const tour = signal<{ exportId: string; label: string; nos: string[]; i: number } | null>(null);
 
-/** Turda `dir` yönündeki ilk (dönemde hâlâ olan) faturaya gider; uçlarda başa/sona döner */
+/** Turda `dir` yönündeki ilk (dönemde hâlâ olan) faturaya gider; uçta durur (başa dönmez), söyler */
 export function tourStep(dir: 1 | -1) {
   const t = tour.value;
   if (!t || !t.nos.length) return;
   const list = invoices.value;
-  for (let s = 1; s <= t.nos.length; s++) {
-    const i = (t.i + dir * s + t.nos.length * s) % t.nos.length;
+  for (let i = t.i + dir; i >= 0 && i < t.nos.length; i += dir) {
     const idx = list.findIndex((x) => x.no === t.nos[i]);
     if (idx >= 0) { tour.value = { ...t, i }; goTo(idx); return; }
   }
-  showToast('Turdaki faturaların hiçbiri artık bu dönemde yok.');
+  showToast(dir > 0 ? 'Turun son faturası; Bitir ile turu kapatın.' : 'Turun ilk faturası.');
 }
+/** Tur uçta mı (düğme devre dışı kalsın) */
+export const tourAtEnd = (dir: 1 | -1) => { const t = tour.value; if (!t) return true; const nos = new Set(invoices.value.map((x) => x.no)); for (let i = t.i + dir; i >= 0 && i < t.nos.length; i += dir) if (nos.has(t.nos[i])) return false; return true; };
 
 export function startTour(r: ExportRecord) {
   const nos = r.flagged.map((f) => f.no);
   if (!nos.length) return;
-  tour.value = { exportId: r.id, label: exportLabel(r), nos, i: nos.length - 1 };
+  tour.value = { exportId: r.id, label: exportLabel(r), nos, i: -1 };
   exportsOpen.value = false;
   tourStep(1);
 }

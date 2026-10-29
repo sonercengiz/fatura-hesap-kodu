@@ -655,8 +655,6 @@ button.link { border: none; background: none; color: var(--accent); padding: 0 2
 th.off, th.off.vg { color: var(--muted); background: var(--panel); font-weight: 500; }
 th.off.vg { box-shadow: none; } th.off .hdr-text { color: var(--muted); }
 .tpl-row.off { opacity: .6; } .tpl-letter.skipped { color: var(--muted); }
-/* Şablon önizlemesi: yalnızca sütun çizgileri (başlık altı çizgisi kalır) */
-.tpl-preview td { border-bottom: none; }
 /* Önizlemede kod hücresi listedeki gibi kısayol yuvasının rengini alır; yuvada olmayan kod nötr */
 .table-box tr td.pv-code:not(.empty) { background: var(--assigned); color: var(--ink); }
 .table-box tr td.pv-code.slot-0 { background: var(--s0); color: var(--s0i); } .table-box tr td.pv-code.slot-1 { background: var(--s1); color: var(--s1i); }
@@ -679,7 +677,11 @@ button.lg:hover:not(:disabled) { box-shadow: inset 0 0 0 1px currentColor; }
 /* Liste Dikkat sütunu, panel ve satır noktası aynı seviye renkleri */
 .iss-txt.lvl-high, .warn-dot.lvl-high { color: var(--iss-h); } .iss-txt.lvl-medium, .warn-dot.lvl-medium { color: var(--iss-m); } .iss-txt.lvl-low, .warn-dot.lvl-low { color: var(--iss-l); }
 .issue.lvl-high { color: var(--iss-h); background: var(--iss-h-bg); } .issue.lvl-medium { color: var(--iss-m); background: var(--iss-m-bg); } .issue.lvl-low { color: var(--iss-l); background: var(--iss-l-bg); }
-.lv-table td.lv-issues .lv-iss { font-size: 12px; white-space: nowrap; }
+/* Durum sütunu: dar, ortalı; ✓ soluk, ! seviye renginde kalın */
+.lv-table .lv-status { width: 44px; text-align: center; }
+.lv-table td.lv-status .st-ok { color: var(--ok); opacity: .55; }
+.lv-table td.lv-status .st-warn { font-weight: 800; font-size: 15px; cursor: help; }
+.st-warn.lvl-high { color: var(--iss-h); } .st-warn.lvl-medium { color: var(--iss-m); } .st-warn.lvl-low { color: var(--iss-l); }
 
 /* Verilen çıktılar penceresi: solda kayıtlar, sağda seçilen çıktının uyarılı faturaları */
 .modal.exports-modal { width: min(1180px, 96vw); height: 80vh; }

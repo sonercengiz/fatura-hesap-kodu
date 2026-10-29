@@ -96,8 +96,8 @@ export function TourBar() {
     <div class="tour-bar">
       <b>{t.label}</b>
       <span>· Uyarılı {t.nos.length} fatura · {t.i + 1}/{t.nos.length}</span>
-      <button class="tiny ghost" onClick={() => S.tourStep(-1)} title="Önceki uyarılı fatura (Shift+Tab)">◀ Önceki</button>
-      <button class="tiny ghost" onClick={() => S.tourStep(1)} title="Sonraki uyarılı fatura (Tab)">Sonraki ▶</button>
+      <button class="tiny ghost" disabled={S.tourAtEnd(-1)} onClick={() => S.tourStep(-1)} title="Önceki uyarılı fatura (Shift+Tab)">◀ Önceki</button>
+      <button class="tiny ghost" disabled={S.tourAtEnd(1)} onClick={() => S.tourStep(1)} title="Sonraki uyarılı fatura (Tab)">Sonraki ▶</button>
       <button class="tiny" onClick={S.endTour} title="Turu bitir (Esc); Tab yine atanmamış faturalara gider">Bitir</button>
       <span class="muted small">Tab / Shift+Tab bu faturalarda gezer · Esc bitirir</span>
     </div>

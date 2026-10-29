@@ -1,5 +1,5 @@
 // Excel tipi tablo standardı (tur 4 H1): liste, çıktı önizlemesi ve şablon önizlemesinde başlık ortalı, sayı sağda, metin solda,
-// ince sütun çizgisi; şablon önizlemesinde satır çizgisi yok. Sürükleyip araya bırakma (önüne / arkasına) üç tabloda ve Gelişmiş
+// ince sütun çizgisi; üçünde de satır çizgisi var. Sürükleyip araya bırakma (önüne / arkasına) üç tabloda ve Gelişmiş
 // satırlarda aynı sonucu verir; KDV parçasını sürüklemek bütün öğeyi taşır. Yazılmayan sütun gri başlık (th.off), "boş, yazılmaz"
 // metni hiçbir yerde yok. Önizlemede kod hücresi kısayol yuvasının rengini alır.
 import { chromium } from 'playwright';
@@ -110,7 +110,7 @@ await a.locator('.toolbar button:has-text("Görsel")').click(); await a.waitForT
 // --- Şablon önizlemesi (Basit)
 await a.locator('.toolbar .excel-tpl').click(); await a.waitForSelector('.tpl-modal'); await a.waitForTimeout(300);
 const tp = await standard('şablon önizlemesi', TPL);
-check('şablon önizlemesi: satır çizgisi yok', tp?.tdBottom === '0px', tp?.tdBottom);
+check('şablon önizlemesi: satır çizgisi var (kullanıcı 29.10: çizgisiz beğenilmedi)', tp?.tdBottom === '1px', tp?.tdBottom);
 await dragging('şablon önizlemesi', TPL);
 const tplOff = await a.evaluate((scope) => { const t = [...document.querySelectorAll(`${scope} th.off`)].find((e) => e.textContent.includes('Geliş Zamanı')); return t ? { letter: t.querySelector('.col-letter').textContent.trim(), bg: getComputedStyle(t).backgroundColor } : null; }, TPL);
 check('şablon önizlemesi: boş EDM sütunu (Geliş Zamanı) gri, harfsiz', tplOff && tplOff.letter === '', JSON.stringify(tplOff));
