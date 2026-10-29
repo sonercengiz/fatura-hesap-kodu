@@ -2,7 +2,8 @@
 // KDV başlıkları oran grubuna göre renkli (matrah + KDV aynı renk). Yalnızca başlık boyanır; hücre renkleri değişmez.
 import { chromium } from 'playwright';
 import { readdirSync } from 'node:fs';
-const S = process.env.SCRATCH || '/tmp';
+import { SCRATCH } from './paths.mjs';
+const S = SCRATCH;
 const DEMO = process.env.DEMO_DIR || `${S}/demo`;
 const files = readdirSync(`${DEMO}/xml`).filter((f) => f.endsWith('.xml') && !/irsaliye|bozuk/.test(f)).sort().map((f) => `${DEMO}/xml/${f}`);
 const browser = await chromium.launch({ channel: process.env.PW_CHANNEL ?? 'chrome', headless: true });

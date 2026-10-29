@@ -3,10 +3,10 @@ import { chromium } from 'playwright';
 import { enableAutoAdvance } from './e2e-helpers.mjs';
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import * as XLSX from 'xlsx';
-const S = process.env.SCRATCH || '/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/d64e6ff3-d5c6-481a-957e-cc3c595811d5/scratchpad';
-const XML_DIR = process.env.XML_DIR || `${S}/xmlin`; // gerçek e-Fatura XML'leri (depoya girmez)
+import { SCRATCH, XML_DIR } from './paths.mjs';
+const S = SCRATCH;
 const files = readdirSync(XML_DIR).filter((f) => f.endsWith('.xml')).sort().map((f) => `${XML_DIR}/${f}`);
-const browser = await chromium.launch({ channel: 'chrome', headless: true });
+const browser = await chromium.launch({ channel: process.env.PW_CHANNEL ?? 'chrome', headless: true });
 const errors = [];
 const log = (...a) => console.log(...a);
 const t = () => performance.now();

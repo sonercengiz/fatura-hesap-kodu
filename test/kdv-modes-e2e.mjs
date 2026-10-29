@@ -4,7 +4,8 @@
 import { chromium } from 'playwright';
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import * as XLSX from 'xlsx';
-const S = process.env.SCRATCH || '/tmp';
+import { SCRATCH } from './paths.mjs';
+const S = SCRATCH;
 const DEMO = process.env.DEMO_DIR || `${S}/demo`;
 const files = readdirSync(`${DEMO}/xml`).filter((f) => f.endsWith('.xml') && !/irsaliye|bozuk/.test(f)).sort().map((f) => `${DEMO}/xml/${f}`);
 // %18'li (eski oran) ve oranı uyuşmayan (oran alanı vergiyle uymuyor) birer fatura

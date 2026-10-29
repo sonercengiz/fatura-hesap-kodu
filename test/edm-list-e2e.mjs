@@ -2,15 +2,16 @@ import { chromium } from 'playwright';
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import * as XLSX from 'xlsx';
 import { unzipSync, strFromU8 } from 'fflate';
-const S=process.env.SCRATCH || '/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/d64e6ff3-d5c6-481a-957e-cc3c595811d5/scratchpad';
-const files=readdirSync(S+'/xmlin').filter(f=>f.endsWith('.xml')).sort().map(f=>S+'/xmlin/'+f);
+import { SCRATCH, XML_DIR } from './paths.mjs';
+const S=SCRATCH;
+const files=readdirSync(XML_DIR).filter(f=>f.endsWith('.xml')).sort().map(f=>XML_DIR+'/'+f);
 const meta=(f)=>{const x=readFileSync(f,'utf8');return {no:x.match(/<cbc:ID>([^<]+)/)[1], date:x.match(/<cbc:IssueDate>(\d{4})-(\d{2})-(\d{2})/).slice(1).reverse().join('/'), vkn:(x.match(/schemeID="VKN">(\d+)/)||[])[1]||'', name:(x.match(/<cac:PartyName><cbc:Name>([^<]+)/)||[])[1]||'', amt:Number(x.match(/<cbc:PayableAmount[^>]*>([^<]*)/)[1])};};
 // EDM listesi: ilk 5 XML + listede olup XML'i olmayan 2 fatura (7. ve 8. XML'in no'ları ama XML yüklenmeyecek; 8. sonra yüklenecek)
 const H=['Fatura No','Fatura Tarihi','Geliş Zamanı','Fatura Tipi','Fatura Türü','Gönderen VKN/TCKN','Gönderen Unvan/Ad Soyad','Tutar','Döviz Cinsi','Durum','Yanıt Durumu','Yerele Aktarım Durumu','Zarf No','KEP İtiraz Durumu','Gib Portal Fatura Iptal Durumu','Resmi Yazı İtiraz Durumu','Gib Portal Fatura İtiraz Durumu','Şube','Hash','Etiket'];
 const rows=[H];
 for (const f of [...files.slice(0,5), files[6], files[7]]) { const m=meta(f); rows.push([m.no,m.date,m.date+' 12:00:00','Satış','Temel',m.vkn,m.name,m.amt,'TRY','Fatura hazır','Bu fatura için gönderene cevap verilmedi','Yerele Aktarılacak','zarf-'+m.no.slice(-4),'','','','','','hash-'+m.no.slice(-4),'']); }
 const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'Sheet0'); XLSX.writeFile(wb, `${S}/edm-liste.xlsx`);
-const browser=await chromium.launch({channel:'chrome',headless:true});
+const browser=await chromium.launch({channel: process.env.PW_CHANNEL ?? 'chrome',headless:true});
 const ctx=await browser.newContext({viewport:{width:1500,height:900},acceptDownloads:true}); const page=await ctx.newPage();
 const errors=[]; page.on('pageerror',e=>errors.push(e.message));
 await page.addInitScript(()=>{try{localStorage.setItem('guideSeen','1')}catch{}});

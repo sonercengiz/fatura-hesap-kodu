@@ -1,10 +1,11 @@
 // Eleştiri turu A8–A12, A14: yazdırma planında Enter/Esc, Kurallar'da Esc, şablon sürükleme, boş dönemde yuva, Türkçe tutar araması, tema flaşı, açılış
 import { chromium } from 'playwright';
 import { readdirSync } from 'node:fs';
-const S = process.env.SCRATCH || '/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/867f9974-1a43-4076-a88f-b37ee3fd36c1/scratchpad';
+import { SCRATCH } from './paths.mjs';
+const S = SCRATCH;
 const DEMO = process.env.DEMO_DIR || `${S}/demo`;
 const files = readdirSync(`${DEMO}/xml`).filter((f) => f.endsWith('.xml') && !/irsaliye/.test(f)).sort().map((f) => `${DEMO}/xml/${f}`);
-const browser = await chromium.launch({ channel: 'chrome', headless: true });
+const browser = await chromium.launch({ channel: process.env.PW_CHANNEL ?? 'chrome', headless: true });
 const errors = []; const log = (...a) => console.log(...a);
 const p = await (await browser.newContext({ viewport: { width: 1440, height: 900 } })).newPage();
 p.on('pageerror', (e) => errors.push('pageerror: ' + e.message)); p.on('console', (m) => { if (m.type() === 'error' && !/srcdoc|sandboxed|ERR_/.test(m.text())) errors.push('console: ' + m.text()); });

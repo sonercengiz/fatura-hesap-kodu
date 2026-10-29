@@ -5,7 +5,8 @@
 import { chromium } from 'playwright';
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { operatorXml } from './e2e-helpers.mjs';
-const S = process.env.SCRATCH || '/tmp';
+import { SCRATCH } from './paths.mjs';
+const S = SCRATCH;
 const DEMO = process.env.DEMO_DIR || `${S}/demo`;
 const op = `${S}/OPR2026000000001.xml`;
 writeFileSync(op, operatorXml(readFileSync(new URL('./fixtures/ubl-sirket.xml', import.meta.url), 'utf8')));

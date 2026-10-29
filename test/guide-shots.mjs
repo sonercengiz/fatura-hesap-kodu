@@ -1,15 +1,16 @@
 // Rehber görsellerini HAYALİ demo veriyle üretir. Önce: node test/demo/make-demo.mjs <demo klasörü>; uygulama 5179'da açık olmalı.
 import { chromium } from 'playwright';
 import { readdirSync, rmSync, mkdirSync, writeFileSync, unlinkSync } from 'node:fs';
+import { DEMO_DIR, GUIDE_DIR, fileUrl } from './paths.mjs';
 
 const URL = 'http://localhost:5179/';
-const DEMO = process.env.DEMO_DIR || '/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/d64e6ff3-d5c6-481a-957e-cc3c595811d5/scratchpad/demo';
-const OUT = process.env.OUT_DIR || '/Users/sonercengiz/Documents/scc/fatura-hesap-kodu/public/guide';
+const DEMO = DEMO_DIR;
+const OUT = GUIDE_DIR;
 rmSync(OUT, { recursive: true, force: true }); mkdirSync(OUT, { recursive: true });
 const XMLS = readdirSync(`${DEMO}/xml`).filter((f) => f.endsWith('.xml') && !f.startsWith('IRS')).sort().map((f) => `${DEMO}/xml/${f}`);
 const W = 1440, H = 840;
 
-const browser = await chromium.launch({ channel: 'chrome', headless: true });
+const browser = await chromium.launch({ channel: process.env.PW_CHANNEL ?? 'chrome', headless: true });
 const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1.5 });
 const page = await ctx.newPage();
 await page.addInitScript(() => { try { localStorage.setItem('guideSeen', '1'); } catch {} });
@@ -57,7 +58,7 @@ async function compose(outName, left, right, labels = ['Önce', 'Sonra']) {
   <div style="text-align:center;font-size:34px;line-height:1;color:#2f6fed">↓</div>
   <figure style="margin:0"><div style="margin:0 0 6px;color:#6b7280">${labels[1]}</div><img src="${right}" style="width:100%;display:block;border:1px solid #e3e6ea;border-radius:8px"></figure></div></body>`;
   const f = `${OUT}/__c.html`; writeFileSync(f, html);
-  const p2 = await ctx.newPage(); await p2.setViewportSize({ width: W, height: 1400 }); await p2.goto('file://' + f); await p2.waitForTimeout(300);
+  const p2 = await ctx.newPage(); await p2.setViewportSize({ width: W, height: 1400 }); await p2.goto(fileUrl(f)); await p2.waitForTimeout(300);
   const b = await p2.locator('body > div').boundingBox(); await p2.screenshot({ path: `${OUT}/${outName}`, clip: { x: 0, y: 0, width: W, height: Math.ceil(b.height + 24) } });
   await p2.close(); unlinkSync(f);
 }
@@ -67,7 +68,7 @@ async function composeSide(outName, left, right, labels = ['Önce', 'Sonra'], le
   <div style="font-size:34px;line-height:1;color:#2f6fed;align-self:center">→</div>
   <figure style="margin:0;flex:1;min-width:0"><div style="margin:0 0 6px;color:#6b7280">${labels[1]}</div><img src="${right}" style="width:100%;display:block;border:1px solid #e3e6ea;border-radius:8px"></figure></div></body>`;
   const f = `${OUT}/__c.html`; writeFileSync(f, html);
-  const p2 = await ctx.newPage(); await p2.setViewportSize({ width: W, height: 1400 }); await p2.goto('file://' + f); await p2.waitForTimeout(300);
+  const p2 = await ctx.newPage(); await p2.setViewportSize({ width: W, height: 1400 }); await p2.goto(fileUrl(f)); await p2.waitForTimeout(300);
   const b = await p2.locator('body > div').boundingBox(); await p2.screenshot({ path: `${OUT}/${outName}`, clip: { x: 0, y: 0, width: W, height: Math.ceil(b.height + 24) } });
   await p2.close(); unlinkSync(f);
 }

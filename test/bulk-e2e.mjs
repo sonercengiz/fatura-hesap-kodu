@@ -1,9 +1,9 @@
 import { chromium } from 'playwright';
 import { readdirSync } from 'node:fs';
-const XML_DIR = process.env.XML_DIR || `/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/d64e6ff3-d5c6-481a-957e-cc3c595811d5/scratchpad/xmlin`; // gerçek e-Fatura XML'leri (depoya girmez)
+import { GUIDE_DIR, XML_DIR } from './paths.mjs';
 const XMLS = readdirSync(XML_DIR).filter((f) => f.endsWith('.xml')).sort().map((f) => `${XML_DIR}/${f}`);
-const OUT = '/Users/sonercengiz/Documents/scc/fatura-hesap-kodu/public/guide';
-const browser = await chromium.launch({ channel: 'chrome', headless: true });
+const OUT = GUIDE_DIR;
+const browser = await chromium.launch({ channel: process.env.PW_CHANNEL ?? 'chrome', headless: true });
 const page = await (await browser.newContext({ viewport: { width: 1440, height: 820 }, deviceScaleFactor: 1.5 })).newPage();
 const errors = []; page.on('pageerror', (e) => errors.push(e.message)); page.on('console', (m) => { if (m.type() === 'error' && !/srcdoc|sandboxed/.test(m.text())) errors.push(m.text()); });
 await page.addInitScript(() => { try { localStorage.setItem('guideSeen', '1'); } catch {} });

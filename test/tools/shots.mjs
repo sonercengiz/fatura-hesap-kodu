@@ -2,13 +2,14 @@
 // Önce: git stash push -- src ile eski kodda; sonra yeni kodda. Birleştirme: compose-ab.mjs. Uygulama 5179'da açık olmalı.
 import { chromium } from 'playwright';
 import { readdirSync, mkdirSync } from 'node:fs';
+import { DEMO_DIR } from '../paths.mjs';
 const OUT = process.argv[2];
 const ONLY = process.argv[3] ? new Set(process.argv[3].split(',')) : null;
 mkdirSync(OUT, { recursive: true });
-const DEMO = process.env.DEMO_DIR;
+const DEMO = DEMO_DIR;
 const XMLS = readdirSync(`${DEMO}/xml`).filter((f) => f.endsWith('.xml') && !/^IRS|bozuk/.test(f)).sort().map((f) => `${DEMO}/xml/${f}`).concat(process.env.OP_XML ? [process.env.OP_XML] : []);
 const W = 1440, H = 840;
-const browser = await chromium.launch({ channel: 'chrome', headless: true });
+const browser = await chromium.launch({ channel: process.env.PW_CHANNEL ?? 'chrome', headless: true });
 const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 2, acceptDownloads: true });
 await ctx.addInitScript(() => { try { localStorage.setItem('guideSeen', '1'); localStorage.setItem('backupRemind', 'off'); } catch {} });
 const page = await ctx.newPage();

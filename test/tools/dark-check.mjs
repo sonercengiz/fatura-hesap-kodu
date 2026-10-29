@@ -1,10 +1,11 @@
 // Yeni/az bakılmış pencerelerin koyu tema denetimi
 import { chromium } from 'playwright';
 import { readdirSync, mkdirSync } from 'node:fs';
+import { DEMO_DIR } from '../paths.mjs';
 const OUT = process.argv[2]; mkdirSync(OUT, { recursive: true });
-const DEMO = process.env.DEMO_DIR;
+const DEMO = DEMO_DIR;
 const XMLS = readdirSync(`${DEMO}/xml`).filter((f) => f.endsWith('.xml') && !/^IRS|bozuk/.test(f)).sort().map((f) => `${DEMO}/xml/${f}`);
-const browser = await chromium.launch({ channel: 'chrome', headless: true });
+const browser = await chromium.launch({ channel: process.env.PW_CHANNEL ?? 'chrome', headless: true });
 const ctx = await browser.newContext({ viewport: { width: 1440, height: 840 }, deviceScaleFactor: 1.5 });
 await ctx.addInitScript(() => { try { localStorage.setItem('guideSeen', '1'); localStorage.setItem('theme', 'dark'); } catch {} });
 const page = await ctx.newPage();

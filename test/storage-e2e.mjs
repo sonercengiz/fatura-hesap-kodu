@@ -1,8 +1,9 @@
 import { chromium } from 'playwright';
 import { readdirSync } from 'node:fs';
-const S=process.env.SCRATCH || '/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/d64e6ff3-d5c6-481a-957e-cc3c595811d5/scratchpad';
-const files=readdirSync(S+'/xmlin').filter(f=>f.endsWith('.xml')).sort().map(f=>S+'/xmlin/'+f).slice(0,8);
-const browser=await chromium.launch({channel:'chrome',headless:true});
+import { SCRATCH, XML_DIR } from './paths.mjs';
+const S=SCRATCH;
+const files=readdirSync(XML_DIR).filter(f=>f.endsWith('.xml')).sort().map(f=>XML_DIR+'/'+f).slice(0,8);
+const browser=await chromium.launch({channel: process.env.PW_CHANNEL ?? 'chrome',headless:true});
 const page=await (await browser.newContext({viewport:{width:1400,height:900},acceptDownloads:true})).newPage();
 const errors=[]; page.on('pageerror',e=>errors.push(e.message));
 await page.addInitScript(()=>{try{localStorage.setItem('guideSeen','1')}catch{}});

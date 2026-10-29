@@ -1,11 +1,12 @@
 import { chromium } from 'playwright';
 import { readdirSync, writeFileSync, copyFileSync, readFileSync } from 'node:fs';
-const S=process.env.SCRATCH || '/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/d64e6ff3-d5c6-481a-957e-cc3c595811d5/scratchpad';
-const P='/Users/sonercengiz/Documents/scc/fatura-hesap-kodu/test/fixtures';
-const files=readdirSync(S+'/xmlin').filter(f=>f.endsWith('.xml')).sort().map(f=>S+'/xmlin/'+f).slice(0,5);
+import { FIXTURES, SCRATCH, XML_DIR } from './paths.mjs';
+const S=SCRATCH;
+const P=FIXTURES;
+const files=readdirSync(XML_DIR).filter(f=>f.endsWith('.xml')).sort().map(f=>XML_DIR+'/'+f).slice(0,5);
 writeFileSync(`${S}/yarim.xml`, files.length ? readFileSync(files[0],'utf8').slice(0, 3000) : '<Invoice>');
 writeFileSync(`${S}/not.txt`, 'x'); copyFileSync(files[1], `${S}/kopya.xml`);
-const browser=await chromium.launch({channel:'chrome',headless:true});
+const browser=await chromium.launch({channel: process.env.PW_CHANNEL ?? 'chrome',headless:true});
 const page=await (await browser.newContext({viewport:{width:1400,height:900}})).newPage();
 await page.addInitScript(()=>{try{localStorage.setItem('guideSeen','1')}catch{}});
 await page.goto('http://localhost:5179/'); await page.waitForSelector('.welcome');

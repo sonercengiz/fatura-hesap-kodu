@@ -1,10 +1,10 @@
 // Ekrana uyum: kendiliğinden ölçek + sıkışık yerleşim, ⋯ taşma menüsü, Ayarlar › Ekran, panel sürükleme, tercihlerin bu bilgisayarda kalması
 import { chromium } from 'playwright';
 import { readdirSync } from 'node:fs';
-const S = process.env.SCRATCH || '/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/867f9974-1a43-4076-a88f-b37ee3fd36c1/scratchpad';
-const XML_DIR = process.env.XML_DIR || `${S}/xmlin`;
+import { SCRATCH, XML_DIR } from './paths.mjs';
+const S = SCRATCH;
 const files = readdirSync(XML_DIR).filter((f) => f.endsWith('.xml')).sort().map((f) => `${XML_DIR}/${f}`);
-const browser = await chromium.launch({ channel: 'chrome', headless: true });
+const browser = await chromium.launch({ channel: process.env.PW_CHANNEL ?? 'chrome', headless: true });
 const errors = [];
 const log = (...a) => console.log(...a);
 const ctx = await browser.newContext({ viewport: { width: 1024, height: 768 } });

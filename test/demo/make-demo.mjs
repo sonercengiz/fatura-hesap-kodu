@@ -3,8 +3,9 @@
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { zipSync } from 'fflate';
 import * as XLSX from 'xlsx';
+import { DEMO_DIR } from '../paths.mjs';
 
-const OUT = process.argv[2] || '/tmp/fhk-demo';
+const OUT = process.argv[2] || DEMO_DIR;
 rmSync(OUT, { recursive: true, force: true }); mkdirSync(`${OUT}/xml`, { recursive: true });
 
 const CUSTOMER = { vkn: '9990000009', name: 'DENEME YAYINCILIK LTD. ŞTİ.', addr: 'Kızılay Mah. Atatürk Blv. No:12', city: 'Çankaya / Ankara' };

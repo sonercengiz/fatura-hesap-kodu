@@ -1,9 +1,10 @@
 import { chromium } from 'playwright';
 import { readdirSync, readFileSync } from 'node:fs';
 import * as XLSX from 'xlsx';
-const S=process.env.SCRATCH || '/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/d64e6ff3-d5c6-481a-957e-cc3c595811d5/scratchpad';
-const files=readdirSync(S+'/xmlin').filter(f=>f.endsWith('.xml')).sort().map(f=>S+'/xmlin/'+f).slice(0,10);
-const browser=await chromium.launch({channel:'chrome',headless:true});
+import { SCRATCH, XML_DIR } from './paths.mjs';
+const S=SCRATCH;
+const files=readdirSync(XML_DIR).filter(f=>f.endsWith('.xml')).sort().map(f=>XML_DIR+'/'+f).slice(0,10);
+const browser=await chromium.launch({channel: process.env.PW_CHANNEL ?? 'chrome',headless:true});
 const ctx=await browser.newContext({viewport:{width:1500,height:900},acceptDownloads:true}); const page=await ctx.newPage();
 const errors=[]; page.on('pageerror',e=>errors.push(e.message));
 // Eski ayar: codeColumnIndex=1, codeHeader=HK → şablona taşınmalı

@@ -5,7 +5,8 @@
 // CI'da da koşar (.github/workflows/pages.yml): BASE=<adres>, PW_CHANNEL='' (Playwright'ın kendi Chromium'u).
 import { chromium } from 'playwright';
 import { readdirSync } from 'node:fs';
-const S = process.env.SCRATCH || '/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/db47f010-e6ef-41e1-8024-b002bf7dd1fd/scratchpad';
+import { SCRATCH } from './paths.mjs';
+const S = SCRATCH;
 const DEMO = process.env.DEMO_DIR || `${S}/demo`;
 const BASE = process.env.BASE || 'http://localhost:5179/';
 const channel = process.env.PW_CHANNEL ?? 'chrome';

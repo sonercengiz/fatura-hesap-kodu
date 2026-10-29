@@ -1,10 +1,10 @@
 // Fatura çerçevesine tıklandıktan sonra kısayollar çalışmalı (tuşlar çerçeveden ana pencereye aktarılır); kopyalama bozulmamalı
 import { chromium } from 'playwright';
 import { readdirSync } from 'node:fs';
-const S = process.env.SCRATCH || '/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/867f9974-1a43-4076-a88f-b37ee3fd36c1/scratchpad';
-const XML_DIR = process.env.XML_DIR || `${S}/xmlin`;
+import { SCRATCH, XML_DIR } from './paths.mjs';
+const S = SCRATCH;
 const files = readdirSync(XML_DIR).filter((f) => f.endsWith('.xml')).sort().map((f) => `${XML_DIR}/${f}`);
-const browser = await chromium.launch({ channel: 'chrome', headless: true });
+const browser = await chromium.launch({ channel: process.env.PW_CHANNEL ?? 'chrome', headless: true });
 const errors = [];
 const page = await (await browser.newContext({ viewport: { width: 1366, height: 768 } })).newPage();
 page.on('pageerror', (e) => errors.push('pageerror: ' + e.message)); page.on('console', (m) => { if (m.type() === 'error' && !/srcdoc|sandboxed|ERR_/.test(m.text())) errors.push('console: ' + m.text()); });

@@ -29,11 +29,7 @@ jobs:
       # Chrome yerleşik XSLT'yi kaldırıyor: fatura görseli yerleşik / yok / bozuk motorda aynı çizilmeli (polyfill yolu)
       - name: Tarayıcı testi — XSLT motorları
         run: |
-          mkdir -p "$RUNNER_TEMP/pw" && cd "$RUNNER_TEMP/pw" && npm init -y > /dev/null && npm i playwright@1.58.0 --silent
-          npx playwright install --with-deps chromium
-          cd "$GITHUB_WORKSPACE"
-          ln -sfn "$RUNNER_TEMP/pw/node_modules/playwright" node_modules/playwright
-          ln -sfn "$RUNNER_TEMP/pw/node_modules/playwright-core" node_modules/playwright-core
+          pnpm exec playwright install --with-deps chromium
           node test/demo/make-demo.mjs "$RUNNER_TEMP/demo"
           pnpm preview --port 5179 --strictPort &
           for i in $(seq 30); do curl -sf http://localhost:5179/ > /dev/null && break; sleep 1; done

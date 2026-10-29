@@ -3,7 +3,8 @@
 // "Görsel" yalnızca ana ekranın adı: XML'e bağlı yerler "XML" der.
 import { chromium } from 'playwright';
 import { readdirSync } from 'node:fs';
-const S = process.env.SCRATCH || '/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/93c845f0-946b-47e1-a170-db4727073082/scratchpad';
+import { SCRATCH } from './paths.mjs';
+const S = SCRATCH;
 const DEMO = process.env.DEMO_DIR || `${S}/demo`;
 const files = readdirSync(`${DEMO}/xml`).filter((f) => f.endsWith('.xml') && !/irsaliye|bozuk/.test(f)).sort().map((f) => `${DEMO}/xml/${f}`);
 const browser = await chromium.launch({ channel: process.env.PW_CHANNEL ?? 'chrome', headless: true });

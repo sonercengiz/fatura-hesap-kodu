@@ -2,10 +2,11 @@
 import { chromium } from 'playwright';
 import { enableAutoAdvance } from './e2e-helpers.mjs';
 import { readdirSync, readFileSync } from 'node:fs';
-const S = process.env.SCRATCH || '/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/d64e6ff3-d5c6-481a-957e-cc3c595811d5/scratchpad';
-const files = readdirSync(S + '/xmlin').filter((f) => f.endsWith('.xml')).sort().map((f) => `${S}/xmlin/${f}`);
+import { SCRATCH, XML_DIR } from './paths.mjs';
+const S = SCRATCH;
+const files = readdirSync(XML_DIR).filter((f) => f.endsWith('.xml')).sort().map((f) => `${XML_DIR}/${f}`);
 const turkcell = files.filter((f) => /8770013406/.test(f));
-const browser = await chromium.launch({ channel: 'chrome', headless: true });
+const browser = await chromium.launch({ channel: process.env.PW_CHANNEL ?? 'chrome', headless: true });
 const errors = [];
 const page = await (await browser.newContext({ viewport: { width: 1440, height: 820 }, acceptDownloads: true })).newPage();
 page.on('pageerror', (e) => errors.push(e.message)); page.on('console', (m) => { if (m.type() === 'error' && !/srcdoc|sandboxed|ERR_/.test(m.text())) errors.push(m.text()); });

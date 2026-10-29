@@ -1,0 +1,7 @@
+# Windows ve macOS arasında satır sonu farkı olmasın: depoda ve çalışma ağacında LF
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.xlsx binary
+*.zip binary

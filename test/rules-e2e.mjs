@@ -1,12 +1,12 @@
 // Kurallar: panelden kural yap → anında uygulanır; yeni XML yüklenince otomatik; unvan ve kalem kuralı; filtre; geri al; yedek ve kural dosyası ile taşıma
 import { chromium } from 'playwright';
 import { readdirSync, readFileSync } from 'node:fs';
-const S = process.env.SCRATCH || '/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/d64e6ff3-d5c6-481a-957e-cc3c595811d5/scratchpad';
-const XML_DIR = process.env.XML_DIR || `${S}/xmlin`;
+import { SCRATCH, XML_DIR } from './paths.mjs';
+const S = SCRATCH;
 const files = readdirSync(XML_DIR).filter((f) => f.endsWith('.xml')).sort().map((f) => `${XML_DIR}/${f}`);
 const turkcell = files.filter((f) => /8770013406/.test(f)); // 12 fatura
 const others = files.filter((f) => !/8770013406/.test(f));
-const browser = await chromium.launch({ channel: 'chrome', headless: true });
+const browser = await chromium.launch({ channel: process.env.PW_CHANNEL ?? 'chrome', headless: true });
 const errors = [];
 const mk = async () => { const ctx = await browser.newContext({ viewport: { width: 1440, height: 820 }, acceptDownloads: true }); const page = await ctx.newPage();
   page.on('pageerror', (e) => errors.push('pageerror: ' + e.message)); page.on('console', (m) => { if (m.type() === 'error' && !/srcdoc|sandboxed|ERR_/.test(m.text())) errors.push('console: ' + m.text()); });

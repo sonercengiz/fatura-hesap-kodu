@@ -1,8 +1,9 @@
 import { chromium } from 'playwright';
 import { readdirSync } from 'node:fs';
-const S=process.env.SCRATCH || '/private/tmp/claude-501/-Users-sonercengiz-Documents-scc/d64e6ff3-d5c6-481a-957e-cc3c595811d5/scratchpad';
-const files=readdirSync(S+'/xmlin').filter(f=>f.endsWith('.xml')).sort().map(f=>S+'/xmlin/'+f);
-const browser=await chromium.launch({channel:'chrome',headless:true});
+import { SCRATCH, XML_DIR } from './paths.mjs';
+const S=SCRATCH;
+const files=readdirSync(XML_DIR).filter(f=>f.endsWith('.xml')).sort().map(f=>XML_DIR+'/'+f);
+const browser=await chromium.launch({channel: process.env.PW_CHANNEL ?? 'chrome',headless:true});
 const page=await (await browser.newContext({viewport:{width:1500,height:900}})).newPage();
 const errors=[]; page.on('pageerror',e=>errors.push(e.message));
 await page.addInitScript(()=>{try{localStorage.setItem('guideSeen','1')}catch{}; window.__calls=[]; window.print=()=>{ window.__calls.push({strips:[...document.querySelectorAll('.print-strip')].map(e=>e.innerText.split('\n')[0].trim()), summary:document.querySelectorAll('.print-summary').length, bar:document.querySelector('.print-parts-bar')?.innerText||''}); setTimeout(()=>window.dispatchEvent(new Event('afterprint')), 300); };});
