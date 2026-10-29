@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'preact/hooks';
 import * as S from './state';
 import { fieldOf, colName } from '../core/excel/template';
-import { HeaderCell, AddColumnSelect, SkipEmptyToggle } from './TemplateParts';
+import { HeaderCell, AddColumnSelect, SkipEmptyToggle, skippedCount } from './TemplateParts';
 import { fmtCell } from '../core/num';
 
 export function PreviewModal() {
@@ -40,7 +40,7 @@ export function PreviewModal() {
         <div class="modal-head">
           <b>Çıktı önizlemesi</b>
           <span class="muted">{rows.length - 1 - excl} satır{excl > 0 ? ` (+${excl} çıkarıldı)` : ''} ·  <span title={skipped > 0 ? `${skipped} boş sütun Excel'e yazılmıyor (Boş sütunları atla)` : undefined}>{rows[0]?.length ?? 0} sütun</span> · {at >= 0 ? `Hesap Kodu ${colName(at)} sütununda` : 'Hesap Kodu sütunu yok'}</span>
-          <SkipEmptyToggle t={t} empty={S.emptyCols.value.size} />
+          <SkipEmptyToggle t={t} empty={skippedCount(e, S.emptyCols.value)} />
           <AddColumnSelect t={t} />
           <button class="ghost tiny" onClick={() => { S.previewOpen.value = false; S.templateOpen.value = true; }} title="Şablon penceresi: genel / firma / dönem şablonu, satır sırası, sayfa adı, tarih biçimi">Şablon penceresi…</button>
           <div class="spacer" />

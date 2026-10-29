@@ -6,7 +6,7 @@ import { SORT_LABELS, type SortMode } from '../core/sort';
 import type { FilterMode, ListColumnId } from '../core/types';
 import { fieldOf, ROW_ORDER_LABELS, type ExpandedColumn } from '../core/excel/template';
 import type { CellValue } from '../core/types';
-import { HeaderCell, AddColumnSelect, SkipEmptyToggle, scopeNote } from './TemplateParts';
+import { HeaderCell, AddColumnSelect, SkipEmptyToggle, scopeNote, skippedCount } from './TemplateParts';
 
 const readShowEmpty = () => { try { return localStorage.getItem('listShowEmpty') === '1'; } catch { return false; } };
 const MONO = new Set<ListColumnId>(['no', 'date', 'vkn', 'uuid']);
@@ -38,8 +38,9 @@ export function ListView() {
   // dönemde bütün satırlarda boş olan sütunlar yalnızca ekranda gizlenir (Excel'e yine yazılır); no ve hesap kodu hep görünür.
   // "Boş" = Excel'e girecek faturaların hepsinde boş (Excel'deki atlama ile aynı ölçü)
   const empty = S.emptyCols.value;
-  const hidden = e.columns.map((c, k) => (c.id === 'blank' || (!showEmpty && empty.has(k)) ? k : -1)).filter((k) => k >= 0);
-  const emptyCount = empty.size;
+  // Bilerek "boş da olsa yaz" denen (keep) sütun gizlenmez
+  const hidden = e.columns.map((c, k) => (c.id === 'blank' || (!showEmpty && empty.has(k) && !c.keep) ? k : -1)).filter((k) => k >= 0);
+  const emptyCount = skippedCount(e, empty);
   const cols: { id: ListColumnId; k: number }[] = [...e.columns.map((c, k) => ({ id: c.id as ListColumnId, k })).filter((c) => !hidden.includes(c.k)), { id: 'issues', k: -1 }];
 
   useEffect(() => {

@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import * as S from './state';
 import { askConfirm } from './dialog';
 import { fmtCell } from '../core/num';
-import { HeaderCell, AddColumnSelect, SkipEmptyToggle, scopeNote, SKIPPED_HINT, expandedOf, useColumnDrag } from './TemplateParts';
+import { HeaderCell, AddColumnSelect, SkipEmptyToggle, scopeNote, SKIPPED_HINT, expandedOf, useColumnDrag, addField, skippedCount } from './TemplateParts';
 import {
   FIELD_DEFS, FIELD_GROUPS, KDV_FIELD_IDS, VAT_FIELD_IDS, VAT_MODE_LABELS, INTERNAL_FIELDS, DATE_CELLS_LABELS, ROW_ORDER_LABELS, DEFAULT_OUTPUT_TEMPLATE, vatFieldsFor, vatUncovered, isEdmDefault,
-  buildTemplateRows, expandTemplate, fieldOf, addColumn, removeColumn, renameColumn, moveColumn, toggleField, withColumns,
+  buildTemplateRows, expandTemplate, fieldOf, addColumn, removeColumn, renameColumn, moveColumn, toggleField, withColumns, fieldFill,
   type OutputTemplate, type OutputColumn, type OutputFieldId, type RowOrder, type DateCells, type VatMode,
 } from '../core/excel/template';
 import type { Invoice } from '../core/types';
@@ -130,7 +130,7 @@ export function TemplateModal() {
         )}
         <div class="tpl-foot muted small">
           <span>{t ? `${expandedOf(t).e.columns.length} sütun · ${isEdmDefault(t) ? 'EDM düzeni' : 'özelleştirilmiş'}` : ''}</span>
-          {t && <SkipEmptyToggle t={t} empty={emptyOf(t).size} onChange={(n) => change(n)} />}
+          {t && <SkipEmptyToggle t={t} empty={(() => { const x = expandedOf(t); return skippedCount(x.e, x.empty); })()} onChange={(n) => change(n)} />}
           <span class="spacer" />
           {t && scope !== 'general' && <button class="ghost tiny" onClick={dropSpecific}>Özel şablonu sil</button>}
         </div>
@@ -141,8 +141,6 @@ export function TemplateModal() {
 
 type Change = (next: OutputTemplate, key?: string) => void;
 
-/** Açık dönemde boş sütun sayısı (açılmış şablonda) */
-const emptyOf = (t: OutputTemplate) => expandedOf(t).empty;
 /** Şablondaki bir sütunun (KDV dökümünde bütün parçalarının) Excel harfleri: "J–S"; hiçbiri yazılmıyorsa (bu dönemde boş) null */
 function lettersAt(x: ReturnType<typeof expandedOf>, k: number): string | null {
   const real = x.e.columns.map((c, j) => (c.src === k ? x.letters[j] : null)).filter((l): l is string => !!l);
@@ -151,6 +149,41 @@ function lettersAt(x: ReturnType<typeof expandedOf>, k: number): string | null {
 }
 /** Bir alanın Excel'deki harfleri (aynı alan birden çok sütunda olabilir) */
 const fieldLetters = (t: OutputTemplate, id: OutputFieldId, x: ReturnType<typeof expandedOf>) => t.columns.map((c, k) => (c.id === id ? lettersAt(x, k) : '')).filter(Boolean).join(', ');
+
+type Fill = Map<OutputFieldId, number>;
+/** Açık dönemde her alanın kaç faturada dolu olduğu (Basit görünümün sayıları ve gri kutuları) */
+function useFill(): Fill {
+  const inv = S.outputIncluded.value;
+  const codes = S.assignments.value;
+  return useMemo(() => {
+    const ctx = S.outputContext();
+    const ids = new Set<OutputFieldId>([...FIELD_GROUPS.flatMap((g) => g.ids), 'vat']);
+    return new Map([...ids].map((id) => [id, fieldFill(id, inv, ctx)]));
+  }, [inv, codes]);
+}
+
+/**
+ * Basit görünümde bir alan: görünen tik = bu dönemde Excel'e yazılıyor (harfiyle). Bu dönemde boş alan işaretsiz ve gri (şablon üyeliği
+ * korunur); işaretlemek boş da olsa yazar. Dolu ama işaretsiz alanda kaç faturada bilgi olduğu yazar.
+ */
+function FieldCheck({ t, id, x, fill, change, children }: { t: OutputTemplate; id: OutputFieldId; x: ReturnType<typeof expandedOf>; fill: Fill; change: Change; children: preact.ComponentChildren }) {
+  const member = t.columns.some((c) => c.id === id);
+  const letters = member ? fieldLetters(t, id, x) : '';
+  const n = fill.get(id) ?? 0;
+  const empty = S.outputIncluded.value.length > 0 && n === 0 && id !== 'code' && id !== 'blank';
+  const checked = member && letters !== '';
+  const off = !checked && empty;
+  const title = off ? `${FIELD_DEFS[id].label}\nBu dönemde hiçbir faturada bu bilgi yok; işaretlerseniz boş da olsa yazılır`
+    : !checked && n > 0 ? `${FIELD_DEFS[id].label}\n${n} faturada bu bilgi var; sütun işaretli değil, Excel'e girmiyor`
+    : FIELD_DEFS[id].label;
+  return (
+    <label class={`tpl-check ${checked ? 'on' : ''} ${off ? 'off' : ''}`} title={title}>
+      <input type="checkbox" checked={checked} onChange={(e) => { const v = (e.currentTarget as HTMLInputElement).checked; change(toggleField(t, id, v, v && empty && !t.keepEmpty)); }} />
+      {children}
+      {checked ? <span class="tpl-check-letter">{letters}</span> : !empty && n > 0 ? <span class="tpl-check-n">{n}</span> : null}
+    </label>
+  );
+}
 
 /** Açık dönemde şablonun KDV sütunlarına (Özel) yazılamayan oranlar: söylenir, tek tıkla eklenir */
 function VatGap({ t, change }: { t: OutputTemplate; change: Change }) {
@@ -241,7 +274,7 @@ function vatSeenText(invoices: Invoice[]): string {
 }
 
 /** Basit görünümde KDV dökümü: tek seçim (Yok / Toplam / Güncel oranlar + Diğer / Her oran ayrı / Özel); Özel'de alanlar tek tek */
-function VatPicker({ t, change, x }: { t: OutputTemplate; change: Change; x: ReturnType<typeof expandedOf> }) {
+function VatPicker({ t, change, x, fill }: { t: OutputTemplate; change: Change; x: ReturnType<typeof expandedOf>; fill: Fill }) {
   const choice = vatChoiceOf(t);
   const vatAt = t.columns.findIndex((c) => c.id === 'vat');
   const custom = FIELD_GROUPS.find((g) => g.title === 'KDV dökümü')?.ids ?? [];
@@ -250,7 +283,8 @@ function VatPicker({ t, change, x }: { t: OutputTemplate; change: Change; x: Ret
       <label class={`tpl-check tpl-radio ${choice === c ? 'on' : ''}`}>
         <input type="radio" name="vat-choice" checked={choice === c} onChange={() => change(setVatChoice(t, c, S.outputIncluded.value))} />
         <span>{name}</span>
-        {choice === c && vatAt >= 0 && <span class="tpl-check-at">{lettersAt(x, vatAt) ?? ''}</span>}
+        {choice === c && vatAt >= 0 && <span class="tpl-check-letter">{lettersAt(x, vatAt) ?? ''}</span>}
+        {c === 'none' && choice === 'none' && (fill.get('vat') ?? 0) > 0 && <span class="tpl-check-n" title={`${fill.get('vat')} faturada KDV var; KDV dökümü seçili değil, Excel'e girmiyor`}>{fill.get('vat')}</span>}
       </label>
       {hint && <div class="tpl-radio-hint muted small">{hint}</div>}
     </>
@@ -263,17 +297,12 @@ function VatPicker({ t, change, x }: { t: OutputTemplate; change: Change; x: Ret
       {opt('custom', 'Özel', 'Sütunları tek tek seçin (örn. yalnız %10\'lar)')}
       {choice === 'custom' && (
         <div class="tpl-vat-custom">
-          {custom.map((id) => {
-            const on = t.columns.some((c) => c.id === id);
-            return (
-              <label class={`tpl-check ${on ? 'on' : ''}`} title={FIELD_DEFS[id].label}>
-                <input type="checkbox" checked={on} onChange={(e) => change(toggleField(t, id, (e.currentTarget as HTMLInputElement).checked))} />
-                {/* Kısa ad = Excel başlığı; ayrıntı ipucunda */}
-                <span>{FIELD_DEFS[id].header}{/^vat(8|18)/.test(id) ? <span class="muted"> (eski oran)</span> : null}</span>
-                {on && <span class="tpl-check-at">{fieldLetters(t, id, x)}</span>}
-              </label>
-            );
-          })}
+          {custom.map((id) => (
+            <FieldCheck t={t} id={id} x={x} fill={fill} change={change}>
+              {/* Kısa ad = Excel başlığı; ayrıntı ipucunda */}
+              <span>{FIELD_DEFS[id].header}{/^vat(8|18)/.test(id) ? <span class="muted"> (eski oran)</span> : null}</span>
+            </FieldCheck>
+          ))}
         </div>
       )}
       <div class="muted small tpl-vat-seen">{vatSeenText(S.outputIncluded.value)}</div>
@@ -284,22 +313,14 @@ function VatPicker({ t, change, x }: { t: OutputTemplate; change: Change; x: Ret
 /** Basit: alan grupları onay kutusu; işaretlenen sona eklenir, işareti kalkan bütün sütunlarıyla çıkar */
 function SimpleBody({ t, change }: { t: OutputTemplate; change: Change }) {
   const x = expandedOf(t);
+  const fill = useFill();
   return (
     <div class="tpl-simple">
       <div class="tpl-groups">
-        {FIELD_GROUPS.map((g) => g.title === 'KDV dökümü' ? <VatPicker t={t} change={change} x={x} /> : (
+        {FIELD_GROUPS.map((g) => g.title === 'KDV dökümü' ? <VatPicker t={t} change={change} x={x} fill={fill} /> : (
           <fieldset class="tpl-group">
             <legend>{g.title}</legend>
-            {g.ids.map((id) => {
-              const on = t.columns.some((c) => c.id === id);
-              return (
-                <label class={`tpl-check ${on ? 'on' : ''}`} title={FIELD_DEFS[id].label}>
-                  <input type="checkbox" checked={on} onChange={(e) => change(toggleField(t, id, (e.currentTarget as HTMLInputElement).checked))} />
-                  <span>{shortLabel(id)}</span>
-                  {on && <span class="tpl-check-at">{fieldLetters(t, id, x)}</span>}
-                </label>
-              );
-            })}
+            {g.ids.map((id) => <FieldCheck t={t} id={id} x={x} fill={fill} change={change}><span>{shortLabel(id)}</span></FieldCheck>)}
             {g.title === 'Diğer' && <button class="tiny" onClick={() => change(addColumn(t, 'blank'))} title="Başlığı boş, değeri boş sütun (içe aktarma şablonunda atlanacak sütun için)">+ Boş sütun</button>}
           </fieldset>
         ))}
@@ -324,7 +345,7 @@ function AdvancedBody({ t, change }: { t: OutputTemplate; change: Change }) {
     ...(S.templateScope.value !== 'general' ? [{ id: 'general', name: 'Genel şablon', t: S.templateAt('general') }] : []),
     ...S.firms.value.filter((f) => f.id !== S.firm.value.id && f.outputTemplate).map((f) => ({ id: f.id, name: `${f.name} firması`, t: f.outputTemplate ?? null })),
   ];
-  const add = () => { change(addColumn(t, addId)); const next = addable.find((x) => x !== addId && x !== 'blank' && !used.has(x)); if (next && addId !== 'blank') setAddId(next); };
+  const add = () => { change(addField(t, addId)); const next = addable.find((x) => x !== addId && x !== 'blank' && !used.has(x)); if (next && addId !== 'blank') setAddId(next); };
   const stop = (e: KeyboardEvent) => { if (!((e.ctrlKey || e.metaKey) && /^[zy]$/i.test(e.key))) e.stopPropagation(); };
   return (
     <div class="tpl-body">

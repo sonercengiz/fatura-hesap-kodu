@@ -21,6 +21,8 @@ export interface OutputColumn {
   vatMode?: VatMode;
   /** Yalnızca KDV dökümü öğesinde: kullanıcının değiştirdiği alt başlıklar (parça → başlık; örn. b20 → "%20 Kdv Matrahı") */
   vatHeaders?: Record<string, string>;
+  /** Bu sütun dönemde boş da olsa Excel'e yazılır ("Boş sütunları atla" açıkken kullanıcı bilerek işaretledi) */
+  keep?: true;
 }
 
 /** Excel'e yazılan somut sütun: KDV dökümü öğesi oranlara açılmış; `src` şablondaki sütun, `part` öğe içindeki parça */
@@ -219,7 +221,7 @@ export function expandTemplate(t: OutputTemplate, invoices: Invoice[]): Expanded
   t.columns.forEach((c, k) => {
     if (c.id !== 'vat') { cols.push({ ...c, src: k }); return; }
     const push = (id: OutputFieldId, part: string, rate?: number) => {
-      cols.push({ id, header: c.vatHeaders?.[part] ?? defaultHeaderOf({ id, rate }), src: k, part, ...(rate !== undefined ? { rate } : {}) });
+      cols.push({ id, header: c.vatHeaders?.[part] ?? defaultHeaderOf({ id, rate }), src: k, part, ...(rate !== undefined ? { rate } : {}), ...(c.keep ? { keep: true as const } : {}) });
     };
     const rate = (r: number) => {
       const fixed = RATE_FIELDS.find(([x]) => sameRate(r, x))?.[1];
@@ -367,9 +369,10 @@ export function normalizeTemplate(t: Partial<OutputTemplate> | undefined | null)
     // Kaldırılan alanın varsayılan başlığı yenisininkiyle değişir; kullanıcının yazdığı başlık korunur
     const header = old !== id && c.header === 'KDV Diğer' && id ? FIELD_DEFS[id].header : String(c.header ?? '');
     if (!id || !(id in FIELD_DEFS) || INTERNAL_FIELDS.has(id)) return null;
-    if (id !== 'vat') return { id, header };
+    const keep = c.keep === true ? { keep: true as const } : {};
+    if (id !== 'vat') return { id, header, ...keep };
     const vatHeaders = c.vatHeaders && typeof c.vatHeaders === 'object' ? Object.fromEntries(Object.entries(c.vatHeaders).filter(([, v]) => typeof v === 'string')) : {};
-    return { id, header, vatMode: VAT_MODES.includes(c.vatMode as VatMode) ? (c.vatMode as VatMode) : 'current', ...(Object.keys(vatHeaders).length ? { vatHeaders } : {}) };
+    return { id, header, vatMode: VAT_MODES.includes(c.vatMode as VatMode) ? (c.vatMode as VatMode) : 'current', ...(Object.keys(vatHeaders).length ? { vatHeaders } : {}), ...keep };
   }).filter((c): c is OutputColumn => c !== null);
   // Hesap Kodu zorunlu değil: uygulama yalnızca veri toplamak için de kullanılabilir
   if (cols.length === 0) return DEFAULT_OUTPUT_TEMPLATE;
@@ -453,9 +456,18 @@ export function dropIndex(from: number, k: number, side: 'before' | 'after'): nu
   const to = side === 'before' ? k : k + 1;
   return from < to ? to - 1 : to;
 }
-/** Alanı şablona ekler (sona) ya da bütün sütunlarını çıkarır */
-export const toggleField = (t: OutputTemplate, id: OutputFieldId, on: boolean): OutputTemplate =>
-  on ? (t.columns.some((c) => c.id === id) ? t : addColumn(t, id)) : withColumns(t, t.columns.filter((c) => c.id !== id));
+/**
+ * Alanı şablona ekler (sona) ya da bütün sütunlarını çıkarır. `keep`: boş da olsa yazılsın (zaten şablondaysa bütün sütunlarına işlenir)
+ */
+export function toggleField(t: OutputTemplate, id: OutputFieldId, on: boolean, keep = false): OutputTemplate {
+  if (!on) return withColumns(t, t.columns.filter((c) => c.id !== id));
+  if (!t.columns.some((c) => c.id === id)) return keep ? withColumns(t, [...t.columns, { ...addColumn(t, id).columns[t.columns.length], keep: true }]) : addColumn(t, id);
+  return keep ? withColumns(t, t.columns.map((c) => (c.id === id ? { ...c, keep: true as const } : c))) : t;
+}
+/** Bütün "boş da olsa yaz" işaretlerini kaldırır ("Boş sütunları atla" yeniden işaretlenince) */
+export const clearKeep = (t: OutputTemplate): OutputTemplate => withColumns(t, t.columns.map(({ keep: _k, ...c }) => c));
+/** Şablonda boş da olsa yazılan sütun sayısı */
+export const keepCount = (t: OutputTemplate) => t.columns.filter((c) => c.keep).length;
 
 /** Basit görünümde alan grupları (sıra ekrandaki sıra) */
 export const FIELD_GROUPS: { title: string; ids: OutputFieldId[] }[] = [
@@ -470,6 +482,22 @@ export const FIELD_GROUPS: { title: string; ids: OutputFieldId[] }[] = [
   { title: 'Diğer', ids: ['firm', 'batch'] },
 ];
 
+const isBlank = (v: CellValue) => v === null || v === undefined || v === '';
+
+/** Her (açılmış) sütun için değeri olan fatura sayısı */
+export function columnStats(t: OutputTemplate, invoices: Invoice[], ctx: RowContext): number[] {
+  return t.columns.map((c) => { const f = fieldOf(c); let n = 0; for (const i of invoices) if (!isBlank(f.value(i, ctx))) n++; return n; });
+}
+
+/** Bir alanın kaç faturada dolu olduğu (şablonda olmasa da; şablon penceresinde "12 faturada bu bilgi var") */
+export function fieldFill(id: OutputFieldId, invoices: Invoice[], ctx: RowContext): number {
+  if (id === 'vat') return invoices.filter((i) => i.vatBreakdown.length > 0).length;
+  const f = FIELD_DEFS[id];
+  let n = 0;
+  for (const i of invoices) if (!isBlank(f.value(i, ctx))) n++;
+  return n;
+}
+
 /**
  * Faturaların hepsinde boş olan sütunlar (şablondaki sıra). Bilerek eklenen "Boş sütun" ve Hesap Kodu hiç sayılmaz: onlar boş da olsa
  * yazılır (kod henüz atanmamış olabilir). Fatura yoksa hiçbir sütun boş sayılmaz.
@@ -477,21 +505,20 @@ export const FIELD_GROUPS: { title: string; ids: OutputFieldId[] }[] = [
 export function emptyColumns(t: OutputTemplate, invoices: Invoice[], ctx: RowContext): Set<number> {
   const out = new Set<number>();
   if (!invoices.length) return out;
-  t.columns.forEach((c, k) => {
-    if (c.id === 'blank' || c.id === 'code') return;
-    if (invoices.every((i) => { const v = fieldOf(c).value(i, ctx); return v === null || v === undefined || v === ''; })) out.add(k);
-  });
+  columnStats(t, invoices, ctx).forEach((n, k) => { const id = t.columns[k].id; if (n === 0 && id !== 'blank' && id !== 'code') out.add(k); });
   return out;
 }
 
-/** Excel'e yazılacak şablon: "Boş sütunları atla" açıksa (varsayılan) boş sütunlar çıkar */
+/** Sütun Excel'e yazılır mı: dolu, ya da boş da olsa yaz (sütunda keep, şablonda keepEmpty) */
+const written = (t: OutputTemplate, empty: Set<number>, k: number) => !empty.has(k) || !!t.columns[k].keep || !!t.keepEmpty;
+
+/** Excel'e yazılacak şablon: "Boş sütunları atla" açıksa (varsayılan) boş sütunlar çıkar (keep'liler kalır) */
 export function skipEmpty(t: OutputTemplate, empty: Set<number>): OutputTemplate {
-  return t.keepEmpty || !empty.size ? t : withColumns(t, t.columns.filter((_, k) => !empty.has(k)));
+  return t.keepEmpty || !empty.size ? t : withColumns(t, t.columns.filter((_, k) => written(t, empty, k)));
 }
 
 /** Şablondaki her sütunun Excel'deki harfi; atlanan sütun null */
 export function excelLettersOf(t: OutputTemplate, empty: Set<number>): (string | null)[] {
   let n = 0;
-  return t.columns.map((_, k) => (!t.keepEmpty && empty.has(k) ? null : colName(n++)));
+  return t.columns.map((_, k) => (written(t, empty, k) ? colName(n++) : null));
 }
-

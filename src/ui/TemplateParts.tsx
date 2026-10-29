@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks';
 import * as S from './state';
-import { FIELD_DEFS, INTERNAL_FIELDS, colName, vatGroupOf, fieldOf, defaultHeaderOf, expandTemplate, emptyColumns, excelLettersOf, addColumn, removeColumn, renameColumn, moveColumn, withColumns, dropIndex, type OutputTemplate, type OutputFieldId, type ExpandedColumn } from '../core/excel/template';
+import { FIELD_DEFS, INTERNAL_FIELDS, colName, vatGroupOf, fieldOf, defaultHeaderOf, expandTemplate, emptyColumns, excelLettersOf, addColumn, removeColumn, renameColumn, moveColumn, withColumns, dropIndex, fieldFill, clearKeep, keepCount, type OutputTemplate, type OutputFieldId, type ExpandedColumn } from '../core/excel/template';
 
 /**
  * Şablonu her yerden (önizleme, liste) aynı şekilde değiştirir: geçerli şablonun kapsamına anında yazar, bildirimde "Geri al".
@@ -125,6 +125,16 @@ export function HeaderCell({ t, col, cls = '', label, letter, onChange = commitT
   );
 }
 
+/** Atlanan (bu dönemde boş, keep'siz) sütun sayısı: "Boş sütunları atla (n)" ve listedeki "Boş sütunlar (n)" */
+export const skippedCount = (e: { columns: { keep?: true }[] }, empty: Set<number>) => [...empty].filter((k) => !e.columns[k].keep).length;
+
+/** Alanı şablona ekler: "Boş sütunları atla" açıkken bu dönemde boş alan "boş da olsa yaz" (keep) ile eklenir, yoksa eklenir eklenmez görünmez olurdu */
+export function addField(t: OutputTemplate, id: OutputFieldId): OutputTemplate {
+  const inv = S.outputIncluded.value;
+  const empty = !t.keepEmpty && inv.length > 0 && id !== 'blank' && id !== 'code' && fieldFill(id, inv, S.outputContext()) === 0;
+  return empty ? withColumns(t, [...t.columns, { ...addColumn(t, id).columns[t.columns.length], keep: true }]) : addColumn(t, id);
+}
+
 /** Şablonun açık dönemdeki açılımı ve Excel harfleri (şablon penceresinin yerel kopyası için) */
 export function expandedOf(t: OutputTemplate) {
   const e = expandTemplate(t, S.outputIncluded.value);
@@ -147,8 +157,8 @@ export function AddColumnSelect({ t, onChange = commitTemplate }: { t: OutputTem
       onChange={(e) => {
         const v = (e.currentTarget as HTMLSelectElement).value;
         (e.currentTarget as HTMLSelectElement).value = '';
-        if (v === 'vat') onChange(addColumn(t, 'vat'), 'KDV dökümü eklendi (Güncel oranlar + Diğer)');
-        else if (v) onChange(addColumn(t, v as OutputFieldId), `"${FIELD_DEFS[v as OutputFieldId].header || 'Boş sütun'}" eklendi`);
+        if (v === 'vat') onChange(addField(t, 'vat'), 'KDV dökümü eklendi (Güncel oranlar + Diğer)');
+        else if (v) onChange(addField(t, v as OutputFieldId), `"${FIELD_DEFS[v as OutputFieldId].header || 'Boş sütun'}" eklendi`);
       }}
     >
       <option value="">+ Sütun…</option>
@@ -158,18 +168,27 @@ export function AddColumnSelect({ t, onChange = commitTemplate }: { t: OutputTem
   );
 }
 
-/** "Boş sütunları atla" (şablonun parçası, varsayılan açık): dönemde bütün faturalarda boş olan sütunlar Excel'e yazılmaz */
+/**
+ * "Boş sütunları atla" (şablonun parçası, varsayılan açık): dönemde bütün faturalarda boş olan sütunlar Excel'e yazılmaz. Bilerek
+ * "boş da olsa yaz" denen (keep) sütun varsa kutu işaretli ama gri görünür; yeniden işaretlemek bu işaretleri siler.
+ */
 export function SkipEmptyToggle({ t, empty, onChange = commitTemplate }: { t: OutputTemplate; empty: number; onChange?: (next: OutputTemplate, label: string) => void }) {
   const on = !t.keepEmpty;
+  const kept = keepCount(t);
+  const partial = on && kept > 0;
+  const title = partial
+    ? `Boş sütunlar atlanıyor; ${kept} sütunu bilerek eklediniz, boş da olsa yazılır. Kutuyu kaldırırsanız bütün boş sütunlar yazılır; yeniden işaretlerseniz bu seçimler de kalkar.`
+    : `Bu dönemde bütün faturalarda boş olan sütunlar Excel'e yazılmaz${empty ? ` (şu an ${empty} sütun)` : ''}. Kutuyu kaldırırsanız ekranda gördüğünüz gibi hepsi yazılır. Bilerek eklenen Boş sütun ve Hesap Kodu her zaman yazılır.`;
   return (
-    <label class="skip-empty" title={`Bu dönemde bütün faturalarda boş olan sütunlar Excel'e yazılmaz${empty ? ` (şu an ${empty} sütun)` : ''}. Kutuyu kaldırırsanız ekranda gördüğünüz gibi hepsi yazılır. Bilerek eklenen Boş sütun ve Hesap Kodu her zaman yazılır.`}>
+    <label class={`skip-empty ${partial ? 'partial' : ''}`} title={title}>
       <input
         type="checkbox"
         checked={on}
         onChange={(e) => {
           const v = (e.currentTarget as HTMLInputElement).checked;
           const { keepEmpty: _k, ...rest } = t;
-          onChange(v ? rest : { ...rest, keepEmpty: true }, v ? 'Boş sütunlar Excel\'e yazılmayacak' : 'Boş sütunlar da Excel\'e yazılacak');
+          // Yeniden işaretlenince "boş da olsa yaz" seçimleri silinir: görünen tik yine "bu dönemde yazılıyor" demektir
+          onChange(v ? clearKeep(rest) : { ...rest, keepEmpty: true }, v ? 'Boş sütunlar Excel\'e yazılmayacak' : 'Boş sütunlar da Excel\'e yazılacak');
         }}
         onKeyDown={(e) => { if (e.key === ' ') e.stopPropagation(); /* Boşluk kutuyu değiştirir; F1/F5 gibi kısayollar çalışır */ }}
       />

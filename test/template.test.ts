@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as XLSX from 'xlsx';
-import { edmTemplate, DEFAULT_OUTPUT_TEMPLATE, normalizeTemplate, buildTemplateRows, isEdmDefault, codeColumnIndexOf, moneyColumns, FIELD_DEFS, KDV_FIELD_IDS, vatUncovered, vatFieldsFor, excelDateSerial, dateColumns, addColumn, removeColumn, renameColumn, moveColumn, toggleField, FIELD_GROUPS, INTERNAL_FIELDS, emptyColumns, skipEmpty, excelLettersOf, dropIndex, type OutputTemplate, type OutputFieldId } from '../src/core/excel/template';
+import { edmTemplate, DEFAULT_OUTPUT_TEMPLATE, normalizeTemplate, buildTemplateRows, isEdmDefault, codeColumnIndexOf, moneyColumns, FIELD_DEFS, KDV_FIELD_IDS, vatUncovered, vatFieldsFor, excelDateSerial, dateColumns, addColumn, removeColumn, renameColumn, moveColumn, toggleField, FIELD_GROUPS, INTERNAL_FIELDS, emptyColumns, skipEmpty, excelLettersOf, dropIndex, clearKeep, keepCount, columnStats, fieldFill, type OutputTemplate, type OutputFieldId } from '../src/core/excel/template';
 import { buildTemplateWorkbook, EDM_HEADERS } from '../src/core/excel/writeOutput';
 import { unzipSync, strFromU8 } from 'fflate';
 import type { Invoice } from '../src/core/types';
@@ -187,5 +187,39 @@ describe('sürükle-bırak hedefi (araya ekleme)', () => {
     expect(dropIndex(2, 2, 'after')).toBe(2);
     expect(dropIndex(2, 1, 'after')).toBe(2);
     expect(dropIndex(2, 3, 'before')).toBe(2);
+  });
+});
+
+describe('boş da olsa yaz (keep)', () => {
+  const t: OutputTemplate = { columns: [{ id: 'no', header: 'No' }, { id: 'arrival', header: 'Geliş' }, { id: 'status', header: 'Durum' }, { id: 'amount', header: 'Tutar' }], rowOrder: 'date-no', sheetName: 'S' };
+  const empty = new Set([1, 2]);
+  it('keep\'li boş sütun yazılır, harfi var; öbür boşlar atlanır', () => {
+    const k = toggleField(t, 'arrival', true, true);
+    expect(k.columns[1].keep).toBe(true);
+    expect(excelLettersOf(k, empty)).toEqual(['A', 'B', null, 'C']);
+    expect(skipEmpty(k, empty).columns.map((c) => c.id)).toEqual(['no', 'arrival', 'amount']);
+    expect(excelLettersOf(t, empty)).toEqual(['A', null, null, 'B']);
+  });
+  it('normalize keep\'i korur; clearKeep siler; keep\'siz eski şablon aynı Excel\'i üretir', () => {
+    const k = toggleField(t, 'arrival', true, true);
+    expect(normalizeTemplate(k).columns[1]).toEqual({ id: 'arrival', header: 'Geliş', keep: true });
+    expect(normalizeTemplate({ ...k, columns: [...k.columns, { id: 'vat', header: 'KDV', vatMode: 'total', keep: true }] }).columns[4].keep).toBe(true);
+    expect(clearKeep(k)).toEqual(t);
+    expect(keepCount(k)).toBe(1);
+    expect(skipEmpty(t, empty)).toEqual(skipEmpty(normalizeTemplate(t), empty));
+  });
+  it('şablonda olmayan alanı keep ile ekler, işareti kaldırınca keep ile birlikte çıkar', () => {
+    const k = toggleField(t, 'branch', true, true);
+    expect(k.columns[4]).toEqual({ id: 'branch', header: 'Şube', keep: true });
+    expect(toggleField(k, 'branch', false)).toEqual(t);
+  });
+  it('columnStats / fieldFill: değeri olan fatura sayısı', () => {
+    const inv = (no: string, amount: number | null) => ({ no, order: 0, date: '01/09/2026', isoDate: '2026-09-01', uuid: '', supplierVkn: '1', supplierName: 'S', amount, taxInclusive: amount, taxExclusive: 0, taxAmount: 0, currency: 'TRY', invoiceType: 'Satış', profile: 'Temel', hasView: true, itemText: '', lineCount: 1, typeCode: 'SATIS', lines: [], vatRates: [], vatBreakdown: [], excluded: false });
+    const invs = [inv('A', 10), inv('B', null)];
+    const ctx = { codes: new Map([['A', '770']]) };
+    expect(columnStats(t, invs, ctx)).toEqual([2, 0, 0, 1]);
+    expect(fieldFill('code', invs, ctx)).toBe(1);
+    expect(fieldFill('uuid', invs, ctx)).toBe(0);
+    expect(fieldFill('vat', invs, ctx)).toBe(0);
   });
 });

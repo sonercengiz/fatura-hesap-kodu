@@ -626,7 +626,13 @@ th.vg.drop-before { box-shadow: inset 2px 0 0 var(--accent), inset 0 3px 0 var(-
 .tpl-check { display: flex; align-items: center; gap: 6px; font-size: 13px; padding: 2px 4px; border-radius: 6px; cursor: pointer; }
 .tpl-check:hover { background: color-mix(in srgb, var(--ink) 5%, transparent); }
 .tpl-check.on span:first-of-type { font-weight: 600; }
-.tpl-check-at { margin-left: auto; font: 500 11px ui-monospace, Menlo, monospace; color: var(--muted); }
+.tpl-check-letter, .tpl-check-n { margin-left: auto; font: 500 11px ui-monospace, Menlo, monospace; color: var(--muted); }
+/* Sayı: dolu ama işaretsiz alanda kaç faturada bilgi olduğu (harften ayrılsın diye eğik) */
+.tpl-check-n { font-style: italic; opacity: .85; }
+/* Bu dönemde boş, Excel'e yazılmayan alan: işaretsiz ve gri; işaretlenirse boş da olsa yazılır */
+.tpl-check.off { color: var(--muted); } .tpl-check.off input, .tpl-check.off > span:first-of-type { opacity: .6; }
+/* Boş sütunlar atlanıyor ama bilerek eklenen (keep) sütun var: kutu işaretli, gri */
+.skip-empty.partial { color: var(--muted); } .skip-empty.partial input { filter: grayscale(1); opacity: .6; }
 .tpl-simple-right { min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 10px; padding: 10px 14px; overflow: auto; }
 .tpl-simple-right .tpl-preview .table-box { max-height: none; }
 .tpl-preview-head { display: flex; align-items: center; gap: 8px; }

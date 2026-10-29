@@ -42,7 +42,7 @@ check('başta KDV dökümü "Yok"', await a.locator('.tpl-vat label', { hasText:
 await pick('Güncel oranlar');
 const seen = await a.locator('.tpl-vat-seen').innerText();
 check('dönemdeki oranlar söylenir', /%1, %10, %18, %20/.test(seen) && /oranı uyuşmayan 1 fatura/.test(seen), seen);
-check('seçilen açılımın Excel harfleri (aralık)', /^[A-Z]+–[A-Z]+$/.test(await a.locator('.tpl-vat .tpl-radio.on .tpl-check-at').innerText()), await a.locator('.tpl-vat .tpl-radio.on .tpl-check-at').innerText());
+check('seçilen açılımın Excel harfleri (aralık)', /^[A-Z]+–[A-Z]+$/.test(await a.locator('.tpl-vat .tpl-radio.on .tpl-check-letter').innerText()), await a.locator('.tpl-vat .tpl-radio.on .tpl-check-letter').innerText());
 await closeTpl();
 let x = await excel();
 check('Güncel: Matrah %20, Diğer üçlüsü ve Oranı Uyuşmayan KDV yazılır', ['Matrah %20', 'KDV %20', 'Diğer Oran', 'Diğer Matrah', 'Diğer KDV', 'Oranı Uyuşmayan KDV'].every((h) => x.head.includes(h)), x.head.join(' | '));
