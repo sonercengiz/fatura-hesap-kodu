@@ -1,4 +1,5 @@
 import type { CellValue, Invoice } from '../types';
+import { OIV_CODES, OTV_CODES } from '../xml/parseUbl';
 import { EDM_HEADERS } from './edm';
 
 /** Çıktı Excel'ine yazılabilecek alanlar */
@@ -6,11 +7,32 @@ export type OutputFieldId =
   | 'no' | 'date' | 'arrival' | 'type' | 'profile' | 'vkn' | 'name' | 'amount' | 'taxInclusive' | 'currency'
   | 'status' | 'responseStatus' | 'localStatus' | 'envelope' | 'kepObjection' | 'gibCancel' | 'officialObjection' | 'gibObjection' | 'branch' | 'hash' | 'tag'
   | 'code' | 'uuid' | 'taxExclusive' | 'tax' | 'lineCount' | 'source' | 'accountName' | 'firm' | 'batch' | 'blank'
-  | 'vat0Base' | 'vat1Base' | 'vat1Tax' | 'vat8Base' | 'vat8Tax' | 'vat10Base' | 'vat10Tax' | 'vat18Base' | 'vat18Tax' | 'vat20Base' | 'vat20Tax' | 'vatOddTax';
+  | 'vat0Base' | 'vat1Base' | 'vat1Tax' | 'vat8Base' | 'vat8Tax' | 'vat10Base' | 'vat10Tax' | 'vat18Base' | 'vat18Tax' | 'vat20Base' | 'vat20Tax' | 'vatOddTax'
+  | 'vatRestRates' | 'vatRestBase' | 'vatRestTax' | 'vatBaseTotal' | 'vatTotal' | 'vatRateBase' | 'vatRateTax' | 'vat'
+  | 'vatRatesText' | 'oivTax' | 'otvTax' | 'otherTaxTotal' | 'otherTaxesText' | 'withholding' | 'exchangeRate' | 'amountTry';
+
+/** KDV dökümü öğesinin açılımı: Toplam · Güncel oranlar + Diğer · Her oran ayrı (Özel = tek tek alanlar, öğe yok) */
+export type VatMode = 'total' | 'current' | 'each';
 
 export interface OutputColumn {
   id: OutputFieldId;
   header: string;
+  /** Yalnızca KDV dökümü öğesinde ('vat'): açılım (yoksa güncel oranlar) */
+  vatMode?: VatMode;
+  /** Yalnızca KDV dökümü öğesinde: kullanıcının değiştirdiği alt başlıklar (parça → başlık; örn. b20 → "%20 Kdv Matrahı") */
+  vatHeaders?: Record<string, string>;
+}
+
+/** Excel'e yazılan somut sütun: KDV dökümü öğesi oranlara açılmış; `src` şablondaki sütun, `part` öğe içindeki parça */
+export interface ExpandedColumn extends OutputColumn {
+  src: number;
+  part?: string;
+  /** Sabit alanı olmayan oranın matrah/KDV sütunu ('vatRateBase' / 'vatRateTax') */
+  rate?: number;
+}
+
+export interface ExpandedTemplate extends OutputTemplate {
+  columns: ExpandedColumn[];
 }
 
 export type RowOrder = 'date-no' | 'date-supplier' | 'added';
@@ -86,6 +108,18 @@ const vatOdd = (i: Invoice): CellValue => {
   return ps.length ? Math.round(ps.reduce((s, p) => s + p.tax, 0) * 100) / 100 : null;
 };
 
+/** Yürürlükteki KDV oranları: "Güncel oranlar + Diğer" bunları ayrı sütunda, gerisini tek Diğer'de yazar */
+export const CURRENT_VAT_RATES = [0, 1, 10, 20];
+const isCurrent = (r: number) => CURRENT_VAT_RATES.some((c) => sameRate(r, c));
+const round2 = (n: number) => Math.round(n * 100) / 100;
+const sumOr = (xs: number[]): CellValue => (xs.length ? round2(xs.reduce((a, b) => a + b, 0)) : null);
+const pct = (r: number) => `%${String(r).replace('.', ',')}`;
+/** KDV dışı vergilerden kodları verilenlerin toplamı (faturada yoksa boş) */
+const taxSum = (codes: string[] | null) => (i: Invoice): CellValue => sumOr((i.taxExtras?.other ?? []).filter((p) => !codes || codes.includes(p.code)).map((p) => p.amount));
+const fmt2 = (n: number) => n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+/** Güncel oranlar dışındaki (oranı uyuşmayan hariç) KDV satırları */
+const restParts = (i: Invoice) => i.vatBreakdown.filter((p) => p.rate !== null && !isCurrent(p.rate));
+
 export const FIELD_DEFS: Record<OutputFieldId, FieldDef> = {
   no: { label: 'Fatura No', header: 'Fatura No', edm: true, value: edmOr('Fatura No', (i) => i.no) },
   date: { label: 'Fatura Tarihi', header: 'Fatura Tarihi', edm: true, date: true, value: edmOr('Fatura Tarihi', (i) => i.date) },
@@ -129,15 +163,97 @@ export const FIELD_DEFS: Record<OutputFieldId, FieldDef> = {
   vat20Base: { label: 'KDV %20 matrahı', header: 'Matrah %20', edm: false, money: true, value: vatOf(20, 'base') },
   vat20Tax: { label: 'KDV %20 tutarı', header: 'KDV %20', edm: false, money: true, value: vatOf(20, 'tax') },
   vatOddTax: { label: 'Oranı uyuşmayan KDV satırları (bazı operatör faturalarında oran alanına tutar yazılmış; yalnızca vergi)', header: 'Oranı Uyuşmayan KDV', edm: false, money: true, value: vatOdd },
+  vatRestRates: { label: 'Diğer KDV oranları (%0, %1, %10, %20 dışındakiler; örn. "%8, %18")', header: 'Diğer Oran', edm: false, value: (i) => [...new Set(restParts(i).map((p) => p.rate as number))].sort((a, b) => a - b).map(pct).join(', ') },
+  vatRestBase: { label: 'Diğer oranların matrahı (%0, %1, %10, %20 dışındakiler toplamı)', header: 'Diğer Matrah', edm: false, money: true, value: (i) => sumOr(restParts(i).map((p) => p.base)) },
+  vatRestTax: { label: 'Diğer oranların KDV\'si (%0, %1, %10, %20 dışındakiler toplamı)', header: 'Diğer KDV', edm: false, money: true, value: (i) => sumOr(restParts(i).map((p) => p.tax)) },
+  vatBaseTotal: { label: 'KDV matrahı toplamı (oran fark etmeksizin)', header: 'KDV Matrahı', edm: false, money: true, value: (i) => sumOr(i.vatBreakdown.filter((p) => p.rate !== null).map((p) => p.base)) },
+  vatTotal: { label: 'KDV toplamı (oran fark etmeksizin; ÖİV, ÖTV gibi öbür vergiler hariç)', header: 'KDV Toplamı', edm: false, money: true, value: (i) => sumOr(i.vatBreakdown.map((p) => p.tax)) },
+  // Sabit alanı olmayan oranlar ("Her oran ayrı"); oranı sütunda taşır, tek başına eklenmez
+  vatRateBase: { label: 'KDV matrahı (oran sütunda)', header: 'Matrah', edm: false, money: true, value: () => null },
+  vatRateTax: { label: 'KDV tutarı (oran sütunda)', header: 'KDV', edm: false, money: true, value: () => null },
+  vat: { label: 'KDV dökümü (dönemdeki oranlara göre sütunlara açılır)', header: 'KDV dökümü', edm: false, value: () => null },
+  vatRatesText: { label: 'KDV oranları (faturanın yüzde kaça dahil olduğu; örn. "%10, %20")', header: 'KDV Oranları', edm: false, value: (i) => [...new Set(i.vatBreakdown.filter((p) => p.rate !== null).map((p) => p.rate as number))].sort((a, b) => a - b).map(pct).join(', ') },
+  oivTax: { label: 'ÖİV (özel iletişim vergisi; operatör faturaları)', header: 'ÖİV', edm: false, money: true, value: taxSum(OIV_CODES) },
+  otvTax: { label: 'ÖTV (özel tüketim vergisi)', header: 'ÖTV', edm: false, money: true, value: taxSum(OTV_CODES) },
+  otherTaxTotal: { label: 'KDV dışı vergilerin toplamı (ÖİV, ÖTV, tüketim vergisi, telsiz ücreti…)', header: 'KDV Dışı Vergiler', edm: false, money: true, value: taxSum(null) },
+  otherTaxesText: { label: 'KDV dışı vergiler adıyla ve tutarıyla (örn. "ÖİV 36,10; Telsiz ücreti 26,98")', header: 'KDV Dışı Vergi Ayrıntısı', edm: false, value: (i) => (i.taxExtras?.other ?? []).map((p) => `${p.name} ${fmt2(p.amount)}`).join('; ') },
+  withholding: { label: 'KDV tevkifatı (alıcının beyan edeceği KDV)', header: 'Tevkifat', edm: false, money: true, value: (i) => i.taxExtras?.withholding ?? null },
+  exchangeRate: { label: 'Döviz kuru (XML\'de yazılıysa)', header: 'Kur', edm: false, value: (i) => i.taxExtras?.exchangeRate ?? null },
+  amountTry: { label: 'Tutar TL karşılığı (döviz faturasında ödenecek × kur; TL faturada tutar)', header: 'Tutar (TL)', edm: false, money: true, value: (i) => {
+    if (i.amount === null) return null;
+    if (!i.currency || i.currency === 'TRY') return i.amount;
+    const r = i.taxExtras?.exchangeRate;
+    return r ? round2(i.amount * r) : null;
+  } },
   blank: { label: 'Boş sütun', header: '', edm: false, value: () => '' },
 };
+
+/** Sütunun alanı: oran taşıyan sütunlarda o oranın matrahı/KDV'si */
+export function fieldOf(c: OutputColumn & { rate?: number }): FieldDef {
+  if (c.rate !== undefined && (c.id === 'vatRateBase' || c.id === 'vatRateTax')) {
+    const k = c.id === 'vatRateBase' ? 'base' : 'tax';
+    return { ...FIELD_DEFS[c.id], label: `KDV ${pct(c.rate)} ${k === 'base' ? 'matrahı' : 'tutarı'}`, value: vatOf(c.rate, k) };
+  }
+  return FIELD_DEFS[c.id];
+}
+
+/** Sütunun varsayılan başlığı (oran taşıyan sütunda "Matrah %r" / "KDV %r") */
+export const defaultHeaderOf = (c: { id: OutputFieldId; rate?: number }) =>
+  c.rate !== undefined ? `${c.id === 'vatRateBase' ? 'Matrah' : 'KDV'} ${pct(c.rate)}` : FIELD_DEFS[c.id].header;
+
+/** Şablona tek başına eklenemeyen alanlar (açılımın iç parçaları) */
+export const INTERNAL_FIELDS = new Set<OutputFieldId>(['vatRateBase', 'vatRateTax']);
+
+export const VAT_MODE_LABELS: Record<VatMode, { name: string; hint: string }> = {
+  total: { name: 'Toplam', hint: 'Oran fark etmeksizin tek matrah + tek KDV sütunu' },
+  current: { name: 'Güncel oranlar + Diğer', hint: '%0, %1, %10, %20 ayrı sütun; başka oranlar (%8, %18…) tek Diğer sütununda' },
+  each: { name: 'Her oran ayrı', hint: 'Dönemde hangi oran varsa her biri ayrı sütun' },
+};
+
+/**
+ * Şablonu Excel'e yazılacak somut sütunlara açar: KDV dökümü öğesi seçilen açılıma göre oran sütunlarına dönüşür.
+ * "Güncel oranlar" her zaman aynı sütunları üretir (boşları "Boş sütunları atla" düşürür); "Her oran ayrı" dönemde görülen oranları.
+ */
+export function expandTemplate(t: OutputTemplate, invoices: Invoice[]): ExpandedTemplate {
+  const cols: ExpandedColumn[] = [];
+  t.columns.forEach((c, k) => {
+    if (c.id !== 'vat') { cols.push({ ...c, src: k }); return; }
+    const push = (id: OutputFieldId, part: string, rate?: number) => {
+      cols.push({ id, header: c.vatHeaders?.[part] ?? defaultHeaderOf({ id, rate }), src: k, part, ...(rate !== undefined ? { rate } : {}) });
+    };
+    const rate = (r: number) => {
+      const fixed = RATE_FIELDS.find(([x]) => sameRate(r, x))?.[1];
+      if (fixed) fixed.forEach((id) => push(id, `${id.endsWith('Base') ? 'b' : 't'}${r}`));
+      else { push('vatRateBase', `b${r}`, r); if (!sameRate(r, 0)) push('vatRateTax', `t${r}`, r); }
+    };
+    const mode = c.vatMode ?? 'current';
+    if (mode === 'total') { push('vatBaseTotal', 'sb'); push('vatTotal', 'st'); return; }
+    if (mode === 'current') {
+      CURRENT_VAT_RATES.forEach(rate);
+      push('vatRestRates', 'rr'); push('vatRestBase', 'rb'); push('vatRestTax', 'rt');
+      push('vatOddTax', 'odd');
+      return;
+    }
+    const seen = new Set<number>();
+    let odd = false;
+    for (const i of invoices) for (const p of i.vatBreakdown) { if (p.rate === null) odd ||= !!p.tax; else if (![...seen].some((r) => sameRate(r, p.rate as number))) seen.add(p.rate); }
+    [...seen].sort((a, b) => a - b).forEach(rate);
+    if (odd) push('vatOddTax', 'odd');
+  });
+  return { ...t, columns: cols };
+}
+
+/** Şablondaki KDV dökümü öğesinin sırası (yoksa -1) */
+export const vatItemIndex = (t: OutputTemplate) => t.columns.findIndex((c) => c.id === 'vat');
 
 /** "KDV dökümü" düğmesinin eklediği sütunlar: bugünkü oranlar (matrah, KDV) + oranı uyuşmayan satırlar. Eski %8/%18 ayrıca eklenir. */
 export const KDV_FIELD_IDS: OutputFieldId[] = ['vat0Base', 'vat1Base', 'vat1Tax', 'vat10Base', 'vat10Tax', 'vat20Base', 'vat20Tax', 'vatOddTax'];
 
 /** KDV oranı → o oranın sütunları */
 const RATE_FIELDS: [number, OutputFieldId[]][] = [[0, ['vat0Base']], [1, ['vat1Base', 'vat1Tax']], [8, ['vat8Base', 'vat8Tax']], [10, ['vat10Base', 'vat10Tax']], [18, ['vat18Base', 'vat18Tax']], [20, ['vat20Base', 'vat20Tax']]];
-const ALL_VAT_IDS = new Set<OutputFieldId>([...RATE_FIELDS.flatMap(([, ids]) => ids), 'vatOddTax']);
+/** KDV dökümünün bütün tek tek alanları (Özel) */
+export const VAT_FIELD_IDS = new Set<OutputFieldId>([...RATE_FIELDS.flatMap(([, ids]) => ids), 'vatOddTax', 'vatRestRates', 'vatRestBase', 'vatRestTax', 'vatBaseTotal', 'vatTotal']);
+const ALL_VAT_IDS = new Set<OutputFieldId>([...VAT_FIELD_IDS, 'vat']);
 
 /**
  * Şablonda KDV dökümü varken faturanın Excel'e yazılamayan KDV oranları (sütunu eklenmemiş; null = oranı uyuşmayan
@@ -145,11 +261,13 @@ const ALL_VAT_IDS = new Set<OutputFieldId>([...RATE_FIELDS.flatMap(([, ids]) => 
  */
 export function vatUncovered(inv: Invoice, t: OutputTemplate): (number | null)[] {
   const ids = new Set(t.columns.map((c) => c.id));
-  if (!usesVat(t)) return [];
+  // KDV dökümü öğesi her oranı bir sütuna yazar; KDV toplamı da bütün KDV'yi kapsar
+  if (!usesVat(t) || ids.has('vat') || ids.has('vatTotal')) return [];
   const out: (number | null)[] = [];
   for (const p of inv.vatBreakdown) {
     if (p.rate === null) { if (p.tax && !ids.has('vatOddTax')) out.push(null); continue; }
     const f = RATE_FIELDS.find(([r]) => sameRate(p.rate, r));
+    if (!isCurrent(p.rate) && ids.has('vatRestTax')) continue; // Diğer sütunu yazar
     if (!f || !f[1].some((id) => ids.has(id))) out.push(p.rate);
   }
   return out;
@@ -159,9 +277,12 @@ export function vatUncovered(inv: Invoice, t: OutputTemplate): (number | null)[]
  * Sütun başlığının renk grubu: aynı oranın matrahı ve KDV'si aynı grupta (%0 yalnız matrah), oranı uyuşmayan KDV ayrı.
  * Yalnızca başlık boyanır; hücre renklerini hesap kodu verir.
  */
-export function vatGroupOf(id: OutputFieldId): string | null {
-  if (id === 'vatOddTax') return 'odd';
-  return RATE_FIELDS.find(([, ids]) => ids.includes(id))?.[0].toString() ?? null;
+export function vatGroupOf(c: OutputColumn & { rate?: number }): string | null {
+  if (c.id === 'vatOddTax') return 'odd';
+  if (c.id === 'vatRestRates' || c.id === 'vatRestBase' || c.id === 'vatRestTax') return 'other';
+  if (c.id === 'vatBaseTotal' || c.id === 'vatTotal') return 'total';
+  if (c.rate !== undefined) return String(c.rate).replace('.', '-');
+  return RATE_FIELDS.find(([, ids]) => ids.includes(c.id))?.[0].toString() ?? null;
 }
 
 /** Bir KDV oranını Excel'e yazan sütunlar (null = oranı uyuşmayan satırlar) */
@@ -186,14 +307,40 @@ export function edmTemplate(codeColumnIndex = 3, codeHeader = 'Hesap Kodu', rowO
 
 export const DEFAULT_OUTPUT_TEMPLATE: OutputTemplate = edmTemplate();
 
+/** KDV dökümü öğesinin alt parça anahtarı (sabit oran alanları için): vat20Base → b20, vatOddTax → odd */
+const partOf = (id: OutputFieldId): string | null => {
+  if (id === 'vatOddTax') return 'odd';
+  const m = id.match(/^vat(\d+)(Base|Tax)$/);
+  return m ? `${m[2] === 'Base' ? 'b' : 't'}${m[1]}` : null;
+};
+
+/**
+ * Eski "+ KDV dökümü" düğmesinin eklediği 8 sütun (sırasıyla yan yana) tek "KDV dökümü · Güncel oranlar + Diğer" öğesine çevrilir;
+ * kullanıcının değiştirdiği başlıklar öğenin alt başlıkları olarak korunur. Yalnızca bir kez (veritabanı göçü): Özel'de aynı 8 alanı
+ * seçen kullanıcının şablonu kendiliğinden değişmesin.
+ */
+export function foldLegacyKdv(cols: OutputColumn[]): OutputColumn[] {
+  const at = cols.findIndex((_, k) => KDV_FIELD_IDS.every((id, j) => cols[k + j]?.id === id));
+  if (at < 0 || cols.some((c) => c.id === 'vat')) return cols;
+  const vatHeaders: Record<string, string> = {};
+  cols.slice(at, at + KDV_FIELD_IDS.length).forEach((c) => { if (c.header !== FIELD_DEFS[c.id].header) vatHeaders[partOf(c.id) as string] = c.header; });
+  const item: OutputColumn = { id: 'vat', header: FIELD_DEFS.vat.header, vatMode: 'current', ...(Object.keys(vatHeaders).length ? { vatHeaders } : {}) };
+  return [...cols.slice(0, at), item, ...cols.slice(at + KDV_FIELD_IDS.length)];
+}
+
+const VAT_MODES: VatMode[] = ['total', 'current', 'each'];
+
 /** Bozuk/eksik kayıtları toparlar: bilinmeyen alan atılır, kaldırılan alanlar çevrilir, en az bir sütun */
 export function normalizeTemplate(t: Partial<OutputTemplate> | undefined | null): OutputTemplate {
-  const cols = (t?.columns ?? []).filter(Boolean).map((c) => {
+  const cols = (t?.columns ?? []).filter(Boolean).map((c): OutputColumn | null => {
     const old = c.id as string;
     const id = (old in RENAMED_FIELDS ? RENAMED_FIELDS[old] : old) as OutputFieldId | null;
     // Kaldırılan alanın varsayılan başlığı yenisininkiyle değişir; kullanıcının yazdığı başlık korunur
     const header = old !== id && c.header === 'KDV Diğer' && id ? FIELD_DEFS[id].header : String(c.header ?? '');
-    return id && id in FIELD_DEFS ? { id, header } : null;
+    if (!id || !(id in FIELD_DEFS) || INTERNAL_FIELDS.has(id)) return null;
+    if (id !== 'vat') return { id, header };
+    const vatHeaders = c.vatHeaders && typeof c.vatHeaders === 'object' ? Object.fromEntries(Object.entries(c.vatHeaders).filter(([, v]) => typeof v === 'string')) : {};
+    return { id, header, vatMode: VAT_MODES.includes(c.vatMode as VatMode) ? (c.vatMode as VatMode) : 'current', ...(Object.keys(vatHeaders).length ? { vatHeaders } : {}) };
   }).filter((c): c is OutputColumn => c !== null);
   // Hesap Kodu zorunlu değil: uygulama yalnızca veri toplamak için de kullanılabilir
   if (cols.length === 0) return DEFAULT_OUTPUT_TEMPLATE;
@@ -210,19 +357,19 @@ export function isEdmDefault(t: OutputTemplate): boolean {
 /** Başlık + satırlar; verilen satır sırasıyla */
 export function buildTemplateRows(invoices: Invoice[], t: OutputTemplate, ctx: RowContext): CellValue[][] {
   const out: CellValue[][] = [t.columns.map((c) => c.header)];
-  for (const inv of invoices) out.push(t.columns.map((c) => FIELD_DEFS[c.id].value(inv, ctx)));
+  for (const inv of invoices) out.push(t.columns.map((c) => fieldOf(c).value(inv, ctx)));
   return out;
 }
 
 /** Metin tipinde yazılması gereken sütun indeksleri (0 tabanlı) */
 export function textColumns(t: OutputTemplate): number[] {
-  return t.columns.map((c, k) => (FIELD_DEFS[c.id].text ? k : -1)).filter((k) => k >= 0);
+  return t.columns.map((c, k) => (fieldOf(c).text ? k : -1)).filter((k) => k >= 0);
 }
 
 /** Gerçek Excel tarihi olarak yazılacak sütunlar (şablon metin istiyorsa boş) */
 export function dateColumns(t: OutputTemplate): number[] {
   if (t.dateCells !== 'date') return [];
-  return t.columns.map((c, k) => (FIELD_DEFS[c.id].date ? k : -1)).filter((k) => k >= 0);
+  return t.columns.map((c, k) => (fieldOf(c).date ? k : -1)).filter((k) => k >= 0);
 }
 
 /** "GG/AA/YYYY", "GG.AA.YYYY", "YYYY-AA-GG" (isteğe bağlı saatle) → Excel seri günü; tanınmazsa null */
@@ -249,7 +396,7 @@ export function usesVat(t: OutputTemplate): boolean {
 }
 
 export function moneyColumns(t: OutputTemplate): number[] {
-  return t.columns.map((c, k) => (FIELD_DEFS[c.id].money ? k : -1)).filter((k) => k >= 0);
+  return t.columns.map((c, k) => (fieldOf(c).money ? k : -1)).filter((k) => k >= 0);
 }
 
 export function codeColumnIndexOf(t: OutputTemplate): number {
@@ -259,7 +406,7 @@ export function codeColumnIndexOf(t: OutputTemplate): number {
 /* Şablon düzenleme işlemleri (saf): şablon penceresi, önizleme ve liste aynı işlemleri kullanır */
 
 export const withColumns = (t: OutputTemplate, columns: OutputColumn[]): OutputTemplate => ({ ...t, columns });
-export const addColumn = (t: OutputTemplate, id: OutputFieldId, header = FIELD_DEFS[id].header): OutputTemplate => withColumns(t, [...t.columns, { id, header }]);
+export const addColumn = (t: OutputTemplate, id: OutputFieldId, header = FIELD_DEFS[id].header): OutputTemplate => withColumns(t, [...t.columns, id === 'vat' ? { id, header, vatMode: 'current' } : { id, header }]);
 export const removeColumn = (t: OutputTemplate, k: number): OutputTemplate => withColumns(t, t.columns.filter((_, i) => i !== k));
 export const renameColumn = (t: OutputTemplate, k: number, header: string): OutputTemplate => withColumns(t, t.columns.map((c, i) => (i === k ? { ...c, header } : c)));
 export function moveColumn(t: OutputTemplate, from: number, to: number): OutputTemplate {
@@ -277,8 +424,10 @@ export const toggleField = (t: OutputTemplate, id: OutputFieldId, on: boolean): 
 export const FIELD_GROUPS: { title: string; ids: OutputFieldId[] }[] = [
   { title: 'Fatura', ids: ['no', 'date', 'type', 'profile', 'uuid', 'currency', 'lineCount'] },
   { title: 'Satıcı', ids: ['name', 'vkn'] },
-  { title: 'Tutarlar', ids: ['amount', 'taxInclusive', 'taxExclusive', 'tax'] },
-  { title: 'KDV dökümü', ids: ['vat0Base', 'vat1Base', 'vat1Tax', 'vat10Base', 'vat10Tax', 'vat20Base', 'vat20Tax', 'vat8Base', 'vat8Tax', 'vat18Base', 'vat18Tax', 'vatOddTax'] },
+  { title: 'Tutarlar', ids: ['amount', 'taxInclusive', 'taxExclusive', 'tax', 'amountTry', 'exchangeRate'] },
+  // Basit görünümde tek seçim (Yok / Toplam / Güncel oranlar + Diğer / Her oran ayrı / Özel); alanlar yalnızca Özel'de tek tek
+  { title: 'KDV dökümü', ids: ['vat0Base', 'vat1Base', 'vat1Tax', 'vat10Base', 'vat10Tax', 'vat20Base', 'vat20Tax', 'vatRestRates', 'vatRestBase', 'vatRestTax', 'vatOddTax', 'vatBaseTotal', 'vatTotal', 'vat8Base', 'vat8Tax', 'vat18Base', 'vat18Tax'] },
+  { title: 'Öbür vergiler', ids: ['vatRatesText', 'oivTax', 'otvTax', 'otherTaxTotal', 'otherTaxesText', 'withholding'] },
   { title: 'Hesap kodu', ids: ['code', 'accountName', 'source'] },
   { title: 'EDM listesinden (yüklenmediyse boş)', ids: ['arrival', 'status', 'responseStatus', 'localStatus', 'envelope', 'kepObjection', 'gibCancel', 'officialObjection', 'gibObjection', 'branch', 'hash', 'tag'] },
   { title: 'Diğer', ids: ['firm', 'batch'] },
@@ -293,7 +442,7 @@ export function emptyColumns(t: OutputTemplate, invoices: Invoice[], ctx: RowCon
   if (!invoices.length) return out;
   t.columns.forEach((c, k) => {
     if (c.id === 'blank' || c.id === 'code') return;
-    if (invoices.every((i) => { const v = FIELD_DEFS[c.id].value(i, ctx); return v === null || v === undefined || v === ''; })) out.add(k);
+    if (invoices.every((i) => { const v = fieldOf(c).value(i, ctx); return v === null || v === undefined || v === ''; })) out.add(k);
   });
   return out;
 }

@@ -16,7 +16,7 @@ a.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
 await a.goto('http://localhost:5179/'); await a.waitForSelector('.welcome');
 await a.locator('input[accept*=".zip"]').setInputFiles(files); await a.waitForSelector('.inv-frame'); await a.waitForFunction(() => !document.querySelector('.busy')); await a.waitForTimeout(300);
 await a.locator('.toolbar .excel-tpl').click(); await a.waitForSelector('.tpl-modal');
-await a.locator('.tpl-group legend button:has-text("hepsi")').click(); await a.waitForTimeout(200);
+await a.locator('.tpl-vat label', { hasText: 'Güncel oranlar' }).locator('input').check(); await a.waitForTimeout(200);
 await a.keyboard.press('Escape'); await a.waitForTimeout(200);
 
 /** Tablodaki başlık + ilk dolu satır hücresinin biçimi */

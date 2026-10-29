@@ -32,6 +32,9 @@ await a.locator('.toolbar button:has-text("Şablon")').click(); await a.waitForS
 const keep = new Set(['Fatura No', 'Fatura Tarihi', 'Gönderen Unvan/Ad Soyad', 'Tutar']);
 for (let k = (await a.locator('.tpl-header').count()) - 1; k >= 0; k--) if (!keep.has(await a.locator('.tpl-header').nth(k).inputValue())) await a.locator('.tpl-row').nth(k).locator('button[title="Sütunu kaldır"]').click();
 await a.locator('.tpl-add-kdv').click();
+// KDV dökümü öğesini Özel'e çevir: tek tek sütunlar (başlığı burada değiştirilebilir); öğenin kendisi kdv-modes testinde
+await a.locator('.tpl-mode button:has-text("Basit")').click(); await a.locator('.tpl-vat label', { hasText: 'Özel' }).locator('input').check();
+await a.locator('.tpl-mode button:has-text("Gelişmiş")').click(); await a.waitForTimeout(150);
 const addField = async (id, header) => {
   await a.locator('.tpl-add select').selectOption(id); await a.locator('.tpl-add button:has-text("Sütun ekle")').click();
   if (header !== undefined) await a.locator('.tpl-header').last().fill(header);

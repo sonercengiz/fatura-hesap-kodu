@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'preact/hooks';
 import * as S from './state';
-import { FIELD_DEFS, colName } from '../core/excel/template';
+import { fieldOf, colName } from '../core/excel/template';
 import { HeaderCell, AddColumnSelect, SkipEmptyToggle } from './TemplateParts';
 import { fmtCell } from '../core/num';
 
@@ -13,10 +13,11 @@ export function PreviewModal() {
   const byRow = new Map(invs.map((i, k) => [k, i]));
   const at = S.outputCodeAt.value;
   const t = S.outputTemplate.value;
-  const money = S.writtenTemplate.value.columns.map((c) => !!FIELD_DEFS[c.id]?.money);
-  // Excel'e yazılan sütunların şablondaki sırası (boş sütunlar atlanıyorsa onlar yok); başlık düzenlemesi şablona yazar
-  const shownIdx = t.columns.map((_, k) => k).filter((k) => S.excelLetters.value[k] !== null);
-  const skipped = t.columns.length - shownIdx.length;
+  const e = S.expandedTemplate.value;
+  const money = S.writtenTemplate.value.columns.map((c) => !!fieldOf(c).money);
+  // Excel'e yazılan sütunların açılmış şablondaki sırası (boş sütunlar atlanıyorsa onlar yok); başlık düzenlemesi şablona yazar
+  const shownIdx = e.columns.map((_, k) => k).filter((k) => S.excelLetters.value[k] !== null);
+  const skipped = e.columns.length - shownIdx.length;
   const box = useRef<HTMLDivElement>(null);
   const counts = Object.fromEntries(Object.keys(S.ISSUE_LABEL).map((k) => [k, 0])) as Record<S.IssueKind, number>;
   // Şablonda Hesap Kodu sütunu yoksa (yalnızca veri toplama) kodsuzluk çıktı için sorun değildir
@@ -59,7 +60,7 @@ export function PreviewModal() {
                 <th class="num">#</th>
                 <th class="pv-incl" title="İşareti kaldırılan fatura Excel'e yazılmaz (istisnai faturalar). Ctrl+Z geri alır.">Excel</th>
                 {/* Başlıklar burada da düzenlenir (ad, sıra, kaldır); değişiklik Excel şablonuna anında yazılır */}
-                {shownIdx.map((k, c) => <HeaderCell t={t} k={k} letter={S.excelLetters.value[k]} cls={c === at ? 'code-col' : money[c] ? 'r' : ''} />)}
+                {shownIdx.map((k, c) => <HeaderCell t={t} col={e.columns[k]} letter={S.excelLetters.value[k]} cls={c === at ? 'code-col' : money[c] ? 'r' : ''} />)}
               </tr>
             </thead>
             <tbody>

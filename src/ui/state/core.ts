@@ -1,7 +1,7 @@
 import { signal, computed, batch as sbatch } from '@preact/signals';
 import { DEFAULT_SETTINGS, DEFAULT_SHORTCUT_KEYS, typeLabel, profileLabel, toDisplayDate, type Settings, type Invoice, type FilterMode } from '../../core/types';
 import { buildTemplateWorkbook, buildFileName } from '../../core/excel/writeOutput';
-import { buildTemplateRows, normalizeTemplate, codeColumnIndexOf, vatUncovered, usesVat, emptyColumns, skipEmpty, excelLettersOf, type OutputTemplate, type RowContext } from '../../core/excel/template';
+import { buildTemplateRows, normalizeTemplate, codeColumnIndexOf, vatUncovered, usesVat, emptyColumns, skipEmpty, excelLettersOf, expandTemplate, type OutputTemplate, type RowContext } from '../../core/excel/template';
 import { supplierHint, type HistoryEntry } from '../../core/suggest/engine';
 import { sortInvoices } from '../../core/sort';
 import { fmtMoney } from '../../core/num';
@@ -229,6 +229,7 @@ export function toInvoice(r: InvoiceRecord): Invoice {
     lines: r.lines ?? [],
     vatRates: r.vatRates ?? [],
     vatBreakdown: r.vatBreakdown ?? [],
+    ...(r.taxExtras ? { taxExtras: r.taxExtras } : {}),
     excluded: !!r.excluded,
     lineCount: r.lineCount,
     edm: r.edm,
@@ -258,12 +259,14 @@ export const needsCode = (i: Invoice) => !i.excluded && !assignments.value.has(i
 export const dateKeyOf = (i: Invoice) => Number(i.isoDate.replace(/-/g, '')) || 0;
 
 /** Çıktıda Hesap Kodu sütununun 0 tabanlı konumu */
-/** Excel'e girecek faturaların hepsinde boş olan sütunlar (şablon sırası; Boş sütun ve Hesap Kodu sayılmaz) */
-export const emptyCols = computed(() => emptyColumns(outputTemplate.value, outputIncluded.value, outputContext()));
+/** Şablonun somut sütunları: KDV dökümü öğesi Excel'e girecek faturaların oranlarına göre açılmış (liste, önizleme ve Excel bunu kullanır) */
+export const expandedTemplate = computed(() => expandTemplate(outputTemplate.value, outputIncluded.value));
+/** Excel'e girecek faturaların hepsinde boş olan sütunlar (açılmış şablon sırası; Boş sütun ve Hesap Kodu sayılmaz) */
+export const emptyCols = computed(() => emptyColumns(expandedTemplate.value, outputIncluded.value, outputContext()));
 /** Excel'e yazılan şablon: "Boş sütunları atla" açıksa boş sütunlar çıkmış hali */
-export const writtenTemplate = computed(() => skipEmpty(outputTemplate.value, emptyCols.value));
-/** Şablondaki her sütunun Excel'deki gerçek harfi (atlanan sütun null) */
-export const excelLetters = computed(() => excelLettersOf(outputTemplate.value, emptyCols.value));
+export const writtenTemplate = computed(() => skipEmpty(expandedTemplate.value, emptyCols.value));
+/** Açılmış şablondaki her sütunun Excel'deki gerçek harfi (atlanan sütun null) */
+export const excelLetters = computed(() => excelLettersOf(expandedTemplate.value, emptyCols.value));
 export const outputCodeAt = computed(() => codeColumnIndexOf(writtenTemplate.value));
 
 export const current = computed<Invoice | null>(() => invoices.value[currentIndex.value] ?? null);

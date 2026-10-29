@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as XLSX from 'xlsx';
-import { edmTemplate, DEFAULT_OUTPUT_TEMPLATE, normalizeTemplate, buildTemplateRows, isEdmDefault, codeColumnIndexOf, moneyColumns, FIELD_DEFS, KDV_FIELD_IDS, vatUncovered, vatFieldsFor, excelDateSerial, dateColumns, addColumn, removeColumn, renameColumn, moveColumn, toggleField, FIELD_GROUPS, emptyColumns, skipEmpty, excelLettersOf, type OutputTemplate, type OutputFieldId } from '../src/core/excel/template';
+import { edmTemplate, DEFAULT_OUTPUT_TEMPLATE, normalizeTemplate, buildTemplateRows, isEdmDefault, codeColumnIndexOf, moneyColumns, FIELD_DEFS, KDV_FIELD_IDS, vatUncovered, vatFieldsFor, excelDateSerial, dateColumns, addColumn, removeColumn, renameColumn, moveColumn, toggleField, FIELD_GROUPS, INTERNAL_FIELDS, emptyColumns, skipEmpty, excelLettersOf, type OutputTemplate, type OutputFieldId } from '../src/core/excel/template';
 import { buildTemplateWorkbook, EDM_HEADERS } from '../src/core/excel/writeOutput';
 import { unzipSync, strFromU8 } from 'fflate';
 import type { Invoice } from '../src/core/types';
@@ -147,7 +147,8 @@ describe('çıktı şablonu', () => {
     expect(toggleField(t1, 'no', true)).toBe(t1);
     expect(t0.columns.length).toBe(2); // saf: girdi değişmez
     const grouped = FIELD_GROUPS.flatMap((g) => g.ids);
-    const all = (Object.keys(FIELD_DEFS) as OutputFieldId[]).filter((id) => id !== 'blank');
+    // Boş sütun düğmeyle, KDV dökümü öğesi tek seçimle eklenir; oran taşıyan iç parçalar tek başına eklenmez
+    const all = (Object.keys(FIELD_DEFS) as OutputFieldId[]).filter((id) => id !== 'blank' && id !== 'vat' && !INTERNAL_FIELDS.has(id));
     expect([...grouped].sort()).toEqual([...all].sort());
   });
   it('boş sütunları atla (varsayılan): bütün faturalarda boş sütun Excel\'e yazılmaz, harfler kayar; Boş sütun ve Hesap Kodu hep yazılır', async () => {

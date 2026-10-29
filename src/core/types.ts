@@ -1,5 +1,5 @@
 import { DEFAULT_OUTPUT_TEMPLATE, type OutputFieldId, type OutputTemplate } from './excel/template';
-import type { LineInfo, VatPart } from './xml/parseUbl';
+import type { LineInfo, TaxExtras, VatPart } from './xml/parseUbl';
 
 export type CellValue = string | number | boolean | null;
 
@@ -41,6 +41,8 @@ export interface Invoice {
   vatRates: number[];
   /** KDV oranına göre matrah ve vergi; XML'siz kayıtlarda boş */
   vatBreakdown: VatPart[];
+  /** KDV dışı vergiler, tevkifat, döviz kuru; XML'siz kayıtlarda yok */
+  taxExtras?: TaxExtras;
   /** Excel çıktısına girmez (istisnai fatura; kullanıcı çıkardı). Kod beklemez, sayaçlara girmez */
   excluded: boolean;
   /** EDM Excel listesinden gelen ham sütunlar (başlık → değer); XML'de olmayan alanlar çıktıda buradan dolar */

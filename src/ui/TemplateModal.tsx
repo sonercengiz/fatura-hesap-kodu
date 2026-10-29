@@ -2,11 +2,13 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import * as S from './state';
 import { askConfirm } from './dialog';
 import { fmtCell } from '../core/num';
-import { HeaderCell, AddColumnSelect, SkipEmptyToggle, scopeNote, SKIPPED_HINT } from './TemplateParts';
+import { HeaderCell, AddColumnSelect, SkipEmptyToggle, scopeNote, SKIPPED_HINT, expandedOf } from './TemplateParts';
 import {
-  FIELD_DEFS, FIELD_GROUPS, KDV_FIELD_IDS, DATE_CELLS_LABELS, ROW_ORDER_LABELS, DEFAULT_OUTPUT_TEMPLATE, vatFieldsFor, vatUncovered, isEdmDefault, buildTemplateRows,
-  addColumn, removeColumn, renameColumn, moveColumn, toggleField, withColumns, emptyColumns, excelLettersOf, type OutputTemplate, type OutputFieldId, type RowOrder, type DateCells,
+  FIELD_DEFS, FIELD_GROUPS, KDV_FIELD_IDS, VAT_FIELD_IDS, VAT_MODE_LABELS, INTERNAL_FIELDS, DATE_CELLS_LABELS, ROW_ORDER_LABELS, DEFAULT_OUTPUT_TEMPLATE, vatFieldsFor, vatUncovered, isEdmDefault,
+  buildTemplateRows, expandTemplate, fieldOf, addColumn, removeColumn, renameColumn, moveColumn, toggleField, withColumns,
+  type OutputTemplate, type OutputColumn, type OutputFieldId, type RowOrder, type DateCells, type VatMode,
 } from '../core/excel/template';
+import type { Invoice } from '../core/types';
 
 type Mode = 'simple' | 'advanced';
 const SCOPES: S.TemplateScope[] = ['general', 'firm', 'batch'];
@@ -128,7 +130,7 @@ export function TemplateModal() {
           <AdvancedBody t={t} change={change} dragIdx={dragIdx} setDragIdx={setDragIdx} />
         )}
         <div class="tpl-foot muted small">
-          <span>{t ? `${t.columns.length} sütun · ${isEdmDefault(t) ? 'EDM düzeni' : 'özelleştirilmiş'}` : ''}</span>
+          <span>{t ? `${expandedOf(t).e.columns.length} sütun · ${isEdmDefault(t) ? 'EDM düzeni' : 'özelleştirilmiş'}` : ''}</span>
           {t && <SkipEmptyToggle t={t} empty={emptyOf(t).size} onChange={(n) => change(n)} />}
           <span class="spacer" />
           {t && scope !== 'general' && <button class="ghost tiny" onClick={dropSpecific}>Özel şablonu sil</button>}
@@ -140,13 +142,20 @@ export function TemplateModal() {
 
 type Change = (next: OutputTemplate, key?: string) => void;
 
-/** Açık dönemde boş sütunlar ve her sütunun Excel'deki gerçek harfi (atlanan sütun null) */
-const emptyOf = (t: OutputTemplate) => emptyColumns(t, S.outputIncluded.value, S.outputContext());
-const lettersOf = (t: OutputTemplate) => excelLettersOf(t, emptyOf(t));
-/** Bir alanın Excel'deki harfleri (boş olduğu için yazılmıyorsa "boş, yazılmaz") */
-const fieldLetters = (t: OutputTemplate, id: OutputFieldId, L: (string | null)[]) => t.columns.map((c, k) => (c.id === id ? L[k] ?? 'boş, yazılmaz' : '')).filter(Boolean).join(', ');
+/** Açık dönemde boş sütun sayısı (açılmış şablonda) */
+const emptyOf = (t: OutputTemplate) => expandedOf(t).empty;
+/** Şablondaki bir sütunun (KDV dökümünde bütün parçalarının) Excel harfleri: "J–S"; hepsi boşsa "boş, yazılmaz" */
+function lettersAt(x: ReturnType<typeof expandedOf>, k: number): string {
+  const ls = x.e.columns.map((c, j) => (c.src === k ? x.letters[j] : undefined)).filter((l) => l !== undefined);
+  const real = ls.filter((l): l is string => l !== null);
+  if (!ls.length) return '';
+  if (!real.length) return 'boş, yazılmaz';
+  return real.length === 1 ? real[0] : `${real[0]}–${real[real.length - 1]}`;
+}
+/** Bir alanın Excel'deki harfleri (aynı alan birden çok sütunda olabilir) */
+const fieldLetters = (t: OutputTemplate, id: OutputFieldId, x: ReturnType<typeof expandedOf>) => t.columns.map((c, k) => (c.id === id ? lettersAt(x, k) : '')).filter(Boolean).join(', ');
 
-/** Açık dönemde şablonun KDV dökümüne yazılamayan oranlar: söylenir, tek tıkla eklenir */
+/** Açık dönemde şablonun KDV sütunlarına (Özel) yazılamayan oranlar: söylenir, tek tıkla eklenir */
 function VatGap({ t, change }: { t: OutputTemplate; change: Change }) {
   const used = new Set(t.columns.map((c) => c.id));
   const gapCount = new Map<string, number>();
@@ -162,12 +171,13 @@ function VatGap({ t, change }: { t: OutputTemplate; change: Change }) {
   );
 }
 
-/** Önizleme: başlıklar düzenlenir (tıkla: ad, sürükle: sıra, ✕: kaldır); ilk birkaç fatura */
+/** Önizleme: başlıklar düzenlenir (tıkla: ad, sürükle: sıra, ✕: kaldır); ilk birkaç fatura, KDV dökümü açılmış halde */
 function Preview({ t, change, rows = 4 }: { t: OutputTemplate; change: Change; rows?: number }) {
   const sample = S.outputOrder.value.slice(0, rows);
-  const data = buildTemplateRows(sample, t, S.outputContext());
-  const cls = (k: number) => (t.columns[k].id === 'code' ? 'code-col' : FIELD_DEFS[t.columns[k].id]?.money ? 'r' : '');
-  const L = lettersOf(t);
+  const x = expandedOf(t);
+  const data = buildTemplateRows(sample, x.e, S.outputContext());
+  const money = (k: number) => !!fieldOf(x.e.columns[k]).money;
+  const cls = (k: number) => (x.e.columns[k].id === 'code' ? 'code-col' : money(k) ? 'r' : '');
   // Sütun eklenince (sona eklenir) önizleme sona kayar: eklenen sütun görünsün
   const tbox = useRef<HTMLDivElement>(null);
   const prevN = useRef(t.columns.length);
@@ -184,8 +194,8 @@ function Preview({ t, change, rows = 4 }: { t: OutputTemplate; change: Change; r
       </div>
       <div class="table-box" ref={tbox}>
         <table>
-          <thead><tr>{t.columns.map((_, k) => <HeaderCell t={t} k={k} letter={L[k]} cls={cls(k)} onChange={(n) => change(n)} />)}</tr></thead>
-          <tbody>{data.slice(1).map((r) => <tr>{r.map((v, c) => <td class={cls(c)}>{fmtCell(v, !!FIELD_DEFS[t.columns[c].id]?.money)}</td>)}</tr>)}</tbody>
+          <thead><tr>{x.e.columns.map((c, k) => <HeaderCell t={t} col={c} letter={x.letters[k]} cls={cls(k)} onChange={(n) => change(n)} />)}</tr></thead>
+          <tbody>{data.slice(1).map((r) => <tr>{r.map((v, c) => <td class={cls(c)}>{fmtCell(v, money(c))}</td>)}</tr>)}</tbody>
         </table>
       </div>
     </div>
@@ -194,24 +204,101 @@ function Preview({ t, change, rows = 4 }: { t: OutputTemplate; change: Change; r
 
 const shortLabel = (id: OutputFieldId) => FIELD_DEFS[id].label.replace(/ \(EDM listesinden; yoksa boş\)$/, '');
 
+type VatChoice = 'none' | VatMode | 'custom';
+/** Şablonun KDV seçimi: öğe varsa açılımı, tek tek KDV alanı varsa Özel, hiçbiri yoksa Yok */
+const vatChoiceOf = (t: OutputTemplate): VatChoice => {
+  const item = t.columns.find((c) => c.id === 'vat');
+  if (item) return item.vatMode ?? 'current';
+  return t.columns.some((c) => VAT_FIELD_IDS.has(c.id)) ? 'custom' : 'none';
+};
+
+/**
+ * KDV seçimini değiştirir; KDV sütunları ilk KDV sütununun yerinde kalır. Özel'e geçerken o anki açılımın sabit alanları tek tek
+ * sütun olur (değiştirilmiş başlıklarıyla), Özel'den bir açılıma geçerken tek tek KDV alanları tek öğede toplanır.
+ */
+function setVatChoice(t: OutputTemplate, choice: VatChoice, invoices: Invoice[]): OutputTemplate {
+  const isVat = (c: OutputColumn) => c.id === 'vat' || VAT_FIELD_IDS.has(c.id);
+  const first = t.columns.findIndex(isVat);
+  const rest = t.columns.filter((c) => !isVat(c));
+  const at = first < 0 ? rest.length : t.columns.slice(0, first).filter((c) => !isVat(c)).length;
+  const item = t.columns.find((c) => c.id === 'vat');
+  let ins: OutputColumn[] = [];
+  if (choice === 'custom') {
+    const from = item ? expandTemplate({ ...t, columns: [item] }, invoices).columns.filter((c) => c.rate === undefined) : [];
+    ins = from.length ? from.map((c) => ({ id: c.id, header: c.header })) : KDV_FIELD_IDS.map((id) => ({ id, header: FIELD_DEFS[id].header }));
+  } else if (choice !== 'none') {
+    ins = [{ id: 'vat', header: FIELD_DEFS.vat.header, vatMode: choice, ...(item?.vatHeaders ? { vatHeaders: item.vatHeaders } : {}) }];
+  }
+  return withColumns(t, [...rest.slice(0, at), ...ins, ...rest.slice(at)]);
+}
+
+/** Açık dönemdeki KDV oranlarının kısa özeti: "%1, %10, %20 ve oranı uyuşmayan 1 fatura" */
+function vatSeenText(invoices: Invoice[]): string {
+  const rates = new Set<number>();
+  let odd = 0;
+  for (const i of invoices) { let o = false; for (const p of i.vatBreakdown) { if (p.rate === null) o ||= !!p.tax; else rates.add(p.rate); } if (o) odd++; }
+  const list = [...rates].sort((a, b) => a - b).map((r) => `%${String(r).replace('.', ',')}`);
+  if (!list.length && !odd) return 'Bu dönemde KDV yok.';
+  return `Bu dönemde: ${list.join(', ')}${odd ? `${list.length ? ' ve ' : ''}oranı uyuşmayan ${odd} fatura` : ''}. Dönemde olmayan oranın sütunu yazılmaz.`;
+}
+
+/** Basit görünümde KDV dökümü: tek seçim (Yok / Toplam / Güncel oranlar + Diğer / Her oran ayrı / Özel); Özel'de alanlar tek tek */
+function VatPicker({ t, change, x }: { t: OutputTemplate; change: Change; x: ReturnType<typeof expandedOf> }) {
+  const choice = vatChoiceOf(t);
+  const vatAt = t.columns.findIndex((c) => c.id === 'vat');
+  const custom = FIELD_GROUPS.find((g) => g.title === 'KDV dökümü')?.ids ?? [];
+  const opt = (c: VatChoice, name: string, hint?: string) => (
+    <>
+      <label class={`tpl-check tpl-radio ${choice === c ? 'on' : ''}`}>
+        <input type="radio" name="vat-choice" checked={choice === c} onChange={() => change(setVatChoice(t, c, S.outputIncluded.value))} />
+        <span>{name}</span>
+        {choice === c && vatAt >= 0 && <span class="tpl-check-at">{lettersAt(x, vatAt)}</span>}
+      </label>
+      {hint && <div class="tpl-radio-hint muted small">{hint}</div>}
+    </>
+  );
+  return (
+    <fieldset class="tpl-group tpl-vat">
+      <legend>KDV dökümü</legend>
+      {opt('none', 'Yok')}
+      {(['total', 'current', 'each'] as VatMode[]).map((m) => opt(m, VAT_MODE_LABELS[m].name, VAT_MODE_LABELS[m].hint))}
+      {opt('custom', 'Özel', 'Sütunları tek tek seçin (örn. yalnız %10\'lar)')}
+      {choice === 'custom' && (
+        <div class="tpl-vat-custom">
+          {custom.map((id) => {
+            const on = t.columns.some((c) => c.id === id);
+            return (
+              <label class={`tpl-check ${on ? 'on' : ''}`} title={FIELD_DEFS[id].label}>
+                <input type="checkbox" checked={on} onChange={(e) => change(toggleField(t, id, (e.currentTarget as HTMLInputElement).checked))} />
+                {/* Kısa ad = Excel başlığı; ayrıntı ipucunda */}
+                <span>{FIELD_DEFS[id].header}{/^vat(8|18)/.test(id) ? <span class="muted"> (eski oran)</span> : null}</span>
+                {on && <span class="tpl-check-at">{fieldLetters(t, id, x)}</span>}
+              </label>
+            );
+          })}
+        </div>
+      )}
+      <div class="muted small tpl-vat-seen">{vatSeenText(S.outputIncluded.value)}</div>
+    </fieldset>
+  );
+}
+
 /** Basit: alan grupları onay kutusu; işaretlenen sona eklenir, işareti kalkan bütün sütunlarıyla çıkar */
 function SimpleBody({ t, change }: { t: OutputTemplate; change: Change }) {
-  const L = lettersOf(t);
-  const letters = (id: OutputFieldId) => fieldLetters(t, id, L);
-  const missingKdv = KDV_FIELD_IDS.filter((id) => !t.columns.some((c) => c.id === id));
+  const x = expandedOf(t);
   return (
     <div class="tpl-simple">
       <div class="tpl-groups">
-        {FIELD_GROUPS.map((g) => (
+        {FIELD_GROUPS.map((g) => g.title === 'KDV dökümü' ? <VatPicker t={t} change={change} x={x} /> : (
           <fieldset class="tpl-group">
-            <legend>{g.title}{g.title === 'KDV dökümü' && missingKdv.length > 0 && <button class="tiny link" onClick={() => change(withColumns(t, [...t.columns, ...missingKdv.map((id) => ({ id, header: FIELD_DEFS[id].header }))]))}>hepsi</button>}</legend>
+            <legend>{g.title}</legend>
             {g.ids.map((id) => {
               const on = t.columns.some((c) => c.id === id);
               return (
                 <label class={`tpl-check ${on ? 'on' : ''}`} title={FIELD_DEFS[id].label}>
                   <input type="checkbox" checked={on} onChange={(e) => change(toggleField(t, id, (e.currentTarget as HTMLInputElement).checked))} />
                   <span>{shortLabel(id)}</span>
-                  {on && <span class="tpl-check-at">{letters(id)}</span>}
+                  {on && <span class="tpl-check-at">{fieldLetters(t, id, x)}</span>}
                 </label>
               );
             })}
@@ -232,10 +319,9 @@ function SimpleBody({ t, change }: { t: OutputTemplate; change: Change }) {
 function AdvancedBody({ t, change, dragIdx, setDragIdx }: { t: OutputTemplate; change: Change; dragIdx: number | null; setDragIdx: (k: number | null) => void }) {
   const [addId, setAddId] = useState<OutputFieldId>('uuid');
   const used = new Set(t.columns.map((c) => c.id));
-  const L = lettersOf(t);
-  const lettersFor = (id: OutputFieldId) => fieldLetters(t, id, L);
-  const addable = Object.keys(FIELD_DEFS) as OutputFieldId[];
-  const missingKdv = KDV_FIELD_IDS.filter((id) => !used.has(id));
+  const x = expandedOf(t);
+  const lettersFor = (id: OutputFieldId) => fieldLetters(t, id, x);
+  const addable = (Object.keys(FIELD_DEFS) as OutputFieldId[]).filter((id) => !INTERNAL_FIELDS.has(id) && !(id === 'vat' && used.has('vat')));
   const sources = [
     ...(S.templateScope.value !== 'general' ? [{ id: 'general', name: 'Genel şablon', t: S.templateAt('general') }] : []),
     ...S.firms.value.filter((f) => f.id !== S.firm.value.id && f.outputTemplate).map((f) => ({ id: f.id, name: `${f.name} firması`, t: f.outputTemplate ?? null })),
@@ -255,9 +341,15 @@ function AdvancedBody({ t, change, dragIdx, setDragIdx }: { t: OutputTemplate; c
             onDrop={(e) => { e.preventDefault(); const from = Number(e.dataTransfer?.getData('text/plain') || String(dragIdx)); if (!Number.isNaN(from)) change(moveColumn(t, from, k)); setDragIdx(null); }}
             onDragEnd={() => setDragIdx(null)}
           >
-            <span class={`tpl-letter ${L[k] === null ? 'skipped' : ''}`} title={L[k] === null ? SKIPPED_HINT : `Excel'de ${L[k]} sütunu`}>{L[k] ?? '—'}</span>
-            <input class="tpl-header" value={c.header} placeholder={c.id === 'blank' ? '(boş başlık)' : FIELD_DEFS[c.id].header} onInput={(e) => change(renameColumn(t, k, (e.currentTarget as HTMLInputElement).value), `h${k}`)} onKeyDown={stop} />
-            <span class="tpl-field muted small" title={FIELD_DEFS[c.id].label}>{FIELD_DEFS[c.id].label}</span>
+            {(() => { const l = lettersAt(x, k); const off = l === 'boş, yazılmaz' || l === ''; return <span class={`tpl-letter ${off ? 'skipped' : ''} ${l.length > 2 ? 'wide' : ''}`} title={off ? SKIPPED_HINT : `Excel'de ${l} sütun${l.includes('–') ? 'ları' : 'u'}`}>{off ? '—' : l}</span>; })()}
+            {c.id === 'vat' ? (
+              <select class="tpl-vat-mode" value={c.vatMode ?? 'current'} title="KDV dökümü Excel'e yazılırken bu dönemdeki oranlara göre sütunlara açılır" onChange={(e) => change(withColumns(t, t.columns.map((col, i) => (i === k ? { ...col, vatMode: (e.currentTarget as HTMLSelectElement).value as VatMode } : col))))} onKeyDown={stop}>
+                {(Object.keys(VAT_MODE_LABELS) as VatMode[]).map((m) => <option value={m}>KDV dökümü · {VAT_MODE_LABELS[m].name}</option>)}
+              </select>
+            ) : (
+              <input class="tpl-header" value={c.header} placeholder={c.id === 'blank' ? '(boş başlık)' : FIELD_DEFS[c.id].header} onInput={(e) => change(renameColumn(t, k, (e.currentTarget as HTMLInputElement).value), `h${k}`)} onKeyDown={stop} />
+            )}
+            <span class="tpl-field muted small" title={c.id === 'vat' ? VAT_MODE_LABELS[c.vatMode ?? 'current'].hint : FIELD_DEFS[c.id].label}>{c.id === 'vat' ? `${VAT_MODE_LABELS[c.vatMode ?? 'current'].hint}. Alt başlıklar önizlemede değiştirilir.` : FIELD_DEFS[c.id].label}</span>
             <button class="ghost tiny" title="Yukarı" disabled={k === 0} onClick={() => change(moveColumn(t, k, k - 1))}>↑</button>
             <button class="ghost tiny" title="Aşağı" disabled={k === t.columns.length - 1} onClick={() => change(moveColumn(t, k, k + 1))}>↓</button>
             <button class="ghost tiny" title="Sütunu kaldır" onClick={() => change(removeColumn(t, k))}>✕</button>
@@ -268,7 +360,7 @@ function AdvancedBody({ t, change, dragIdx, setDragIdx }: { t: OutputTemplate; c
             {addable.map((id) => <option value={id}>{FIELD_DEFS[id].label}{id !== 'blank' && used.has(id) ? ` · ekli: ${lettersFor(id)}` : ''}</option>)}
           </select>
           <button onClick={add}>+ Sütun ekle</button>
-          <button class="tpl-add-kdv" onClick={() => change(withColumns(t, [...t.columns, ...missingKdv.map((id) => ({ id, header: FIELD_DEFS[id].header }))]))} disabled={!missingKdv.length} title="KDV oranına göre matrah ve KDV tutarı sütunları: %0, %1, %10, %20 ve oranı uyuşmayan KDV. Faturada o oran yoksa hücre boş kalır.">{missingKdv.length ? `+ KDV dökümü (${missingKdv.length} sütun)` : 'KDV dökümü ekli'}</button>
+          <button class="tpl-add-kdv" onClick={() => change(addColumn(t, 'vat'))} disabled={used.has('vat')} title="Tek öğe: Excel'e yazılırken bu dönemdeki KDV oranlarına göre matrah ve KDV sütunlarına açılır (Güncel oranlar + Diğer; açılımı satırdan değiştirin)">{used.has('vat') ? 'KDV dökümü ekli' : '+ KDV dökümü'}</button>
         </div>
         <VatGap t={t} change={change} />
       </div>

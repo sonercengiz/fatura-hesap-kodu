@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks';
 import * as S from './state';
-import { FIELD_DEFS, KDV_FIELD_IDS, colName, vatGroupOf, addColumn, removeColumn, renameColumn, moveColumn, withColumns, type OutputTemplate, type OutputFieldId } from '../core/excel/template';
+import { FIELD_DEFS, INTERNAL_FIELDS, colName, vatGroupOf, fieldOf, defaultHeaderOf, expandTemplate, emptyColumns, excelLettersOf, addColumn, removeColumn, renameColumn, moveColumn, withColumns, type OutputTemplate, type OutputFieldId, type ExpandedColumn } from '../core/excel/template';
 
 /**
  * Şablonu her yerden (önizleme, liste) aynı şekilde değiştirir: geçerli şablonun kapsamına anında yazar, bildirimde "Geri al".
@@ -21,31 +21,45 @@ export function scopeNote(scope: S.TemplateScope): string {
 /** Atlanan sütunun açıklaması (harfin yerinde "boş, yazılmaz") */
 export const SKIPPED_HINT = 'Bu dönemdeki faturaların hiçbirinde bu bilgi yok; sütun Excel\'e yazılmaz, sonraki sütun onun harfini alır. "Boş sütunları atla" kutusunu kaldırırsanız yazılır.';
 
+/** KDV dökümü öğesinin bir alt başlığını değiştirir (varsayılana dönerse kaydı silinir) */
+function renameVatPart(t: OutputTemplate, k: number, part: string, header: string, def: string): OutputTemplate {
+  const item = t.columns[k];
+  const vatHeaders = { ...item.vatHeaders };
+  if (header === def) delete vatHeaders[part]; else vatHeaders[part] = header;
+  const { vatHeaders: _old, ...rest } = item;
+  return withColumns(t, t.columns.map((c, i) => (i === k ? { ...rest, ...(Object.keys(vatHeaders).length ? { vatHeaders } : {}) } : c)));
+}
+
 /**
  * Önizleme ve liste tablosunda düzenlenebilir sütun başlığı: harf + başlık; tıkla → yeniden adlandır, sürükle → sırala, ✕ → kaldır.
- * `k` şablondaki sütun sırasıdır (listede gizli sütunlar atlansa da doğru sütun değişir).
+ * `col` Excel'e yazılan (açılmış) sütundur; `col.src` şablondaki sütun. KDV dökümünün bir parçasında ad yalnızca o başlığı değiştirir,
+ * sürükleme ve ✕ bütün KDV dökümünü taşır/kaldırır.
  */
-export function HeaderCell({ t, k, cls = '', label, letter, onChange = commitTemplate }: { t: OutputTemplate; k: number; cls?: string; label?: string; letter?: string | null; onChange?: (next: OutputTemplate, label: string) => void }) {
+export function HeaderCell({ t, col, cls = '', label, letter, onChange = commitTemplate }: { t: OutputTemplate; col: ExpandedColumn; cls?: string; label?: string; letter?: string | null; onChange?: (next: OutputTemplate, label: string) => void }) {
   const [edit, setEdit] = useState<string | null>(null);
   const [over, setOver] = useState(false);
-  const c = t.columns[k];
-  const shown = label ?? c.header;
-  // Başlık hücresiyle aynı hizada (para sağa); KDV sütunlarında oran grubunun rengi
-  const g = vatGroupOf(c.id);
-  const align = FIELD_DEFS[c.id].money && !/(^| )r( |$)/.test(cls) ? ' r' : '';
+  const k = col.src;
+  const inVat = !!col.part;
+  const shown = label ?? col.header;
   const save = () => {
-    if (edit !== null && edit !== c.header) onChange(renameColumn(t, k, edit), `Başlık "${edit || '(boş)'}" oldu`);
+    if (edit !== null && edit !== col.header) {
+      onChange(inVat ? renameVatPart(t, k, col.part as string, edit, defaultHeaderOf(col)) : renameColumn(t, k, edit), `Başlık "${edit || '(boş)'}" oldu`);
+    }
     setEdit(null);
   };
+  // Başlık hücresiyle aynı hizada (para sağa); KDV sütunlarında oran grubunun rengi
+  const g = vatGroupOf(col);
+  const align = fieldOf(col).money && !/(^| )r( |$)/.test(cls) ? ' r' : '';
+  const what = inVat ? 'KDV dökümü' : `"${col.header || '(boş)'}"`;
   return (
     <th
       class={`${cls}${align}${g ? ` vg vg-${g}` : ''} hdr-edit ${over ? 'drop-over' : ''} ${letter === null ? 'skipped' : ''}`}
       draggable={edit === null}
-      title={`${FIELD_DEFS[c.id].label}\nTıkla: başlığı değiştir · sürükle: sırasını değiştir · ✕: Excel'den kaldır`}
+      title={`${fieldOf(col).label}${inVat ? ' · KDV dökümünün parçası' : ''}\nTıkla: başlığı değiştir · sürükle: ${inVat ? 'KDV dökümünün' : ''} sırasını değiştir · ✕: ${inVat ? 'KDV dökümünü' : ''} Excel'den kaldır`.replace(/  +/g, ' ')}
       onDragStart={(e) => { e.dataTransfer?.setData('text/x-col', String(k)); }}
       onDragOver={(e) => { if (e.dataTransfer?.types.includes('text/x-col')) { e.preventDefault(); setOver(true); } }}
       onDragLeave={() => setOver(false)}
-      onDrop={(e) => { e.preventDefault(); setOver(false); const from = Number(e.dataTransfer?.getData('text/x-col')); if (!Number.isNaN(from) && from !== k) onChange(moveColumn(t, from, k), `"${t.columns[from].header || '(boş)'}" ${colName(k)} sütununa taşındı`); }}
+      onDrop={(e) => { e.preventDefault(); setOver(false); const from = Number(e.dataTransfer?.getData('text/x-col')); if (!Number.isNaN(from) && from !== k) onChange(moveColumn(t, from, k), `"${t.columns[from].id === 'vat' ? 'KDV dökümü' : t.columns[from].header || '(boş)'}" taşındı`); }}
     >
       {letter === null
         ? <span class="col-letter skipped" title={SKIPPED_HINT}>boş, yazılmaz</span>
@@ -61,18 +75,26 @@ export function HeaderCell({ t, k, cls = '', label, letter, onChange = commitTem
           onClick={(e) => e.stopPropagation()}
         />
       ) : (
-        <span class="hdr-text" onClick={(e) => { e.stopPropagation(); setEdit(c.header); }}>{shown || <span class="muted">(boş)</span>}</span>
+        <span class="hdr-text" onClick={(e) => { e.stopPropagation(); setEdit(col.header); }}>{shown || <span class="muted">(boş)</span>}</span>
       )}
-      <button class="hdr-x" title="Bu sütunu Excel'den kaldır" onClick={(e) => { e.stopPropagation(); onChange(removeColumn(t, k), `"${c.header || '(boş)'}" sütunu kaldırıldı`); }}>✕</button>
+      <button class="hdr-x" title={inVat ? 'KDV dökümünü Excel\'den kaldır (bütün KDV sütunları)' : 'Bu sütunu Excel\'den kaldır'} onClick={(e) => { e.stopPropagation(); onChange(removeColumn(t, k), `${what} ${inVat ? 'Excel\'den kaldırıldı' : 'sütunu kaldırıldı'}`); }}>✕</button>
     </th>
   );
 }
 
+/** Şablonun açık dönemdeki açılımı ve Excel harfleri (şablon penceresinin yerel kopyası için) */
+export function expandedOf(t: OutputTemplate) {
+  const e = expandTemplate(t, S.outputIncluded.value);
+  const empty = emptyColumns(e, S.outputIncluded.value, S.outputContext());
+  return { e, empty, letters: excelLettersOf(e, empty) };
+}
+
 /** Sütun ekleme seçicisi (önizleme ve liste): alan seçilince sona eklenir; eklenmiş alan harfiyle söylenir */
 export function AddColumnSelect({ t, onChange = commitTemplate }: { t: OutputTemplate; onChange?: (next: OutputTemplate, label: string) => void }) {
-  const ids = Object.keys(FIELD_DEFS) as OutputFieldId[];
-  const letters = (id: OutputFieldId) => t.columns.map((c, k) => (c.id === id ? colName(k) : '')).filter(Boolean).join(', ');
-  const missingKdv = KDV_FIELD_IDS.filter((id) => !t.columns.some((c) => c.id === id));
+  const ids = (Object.keys(FIELD_DEFS) as OutputFieldId[]).filter((id) => !INTERNAL_FIELDS.has(id) && id !== 'vat');
+  const { e, letters: L } = expandedOf(t);
+  const letters = (id: OutputFieldId) => e.columns.map((c, k) => (c.id === id ? L[k] ?? 'boş' : '')).filter(Boolean).join(', ');
+  const hasVat = t.columns.some((c) => c.id === 'vat');
   return (
     <select
       class="add-col"
@@ -82,12 +104,12 @@ export function AddColumnSelect({ t, onChange = commitTemplate }: { t: OutputTem
       onChange={(e) => {
         const v = (e.currentTarget as HTMLSelectElement).value;
         (e.currentTarget as HTMLSelectElement).value = '';
-        if (v === 'kdv') onChange(withColumns(t, [...t.columns, ...missingKdv.map((id) => ({ id, header: FIELD_DEFS[id].header }))]), `KDV dökümü eklendi (${missingKdv.length} sütun)`);
+        if (v === 'vat') onChange(addColumn(t, 'vat'), 'KDV dökümü eklendi (Güncel oranlar + Diğer)');
         else if (v) onChange(addColumn(t, v as OutputFieldId), `"${FIELD_DEFS[v as OutputFieldId].header || 'Boş sütun'}" eklendi`);
       }}
     >
       <option value="">+ Sütun…</option>
-      {missingKdv.length > 0 && <option value="kdv">KDV dökümü ({missingKdv.length} sütun)</option>}
+      {!hasVat && <option value="vat">KDV dökümü (oranlara göre sütunlar; şablon penceresinde açılımı seçilir)</option>}
       {ids.map((id) => <option value={id}>{FIELD_DEFS[id].label}{id !== 'blank' && letters(id) ? ` · ekli: ${letters(id)}` : ''}</option>)}
     </select>
   );

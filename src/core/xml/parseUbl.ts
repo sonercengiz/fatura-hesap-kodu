@@ -34,6 +34,8 @@ export interface UblInvoice {
   vatRates: number[];
   /** KDV oranına göre matrah ve vergi (çıktı sütunları için) */
   vatBreakdown: VatPart[];
+  /** KDV dışı vergiler, tevkifat, döviz kuru */
+  taxExtras: TaxExtras;
   /** Gömülü görünüm şablonu (metin); yoksa null */
   xslt: string | null;
   xsltFileName: string | null;
@@ -228,6 +230,7 @@ export function parseUbl(xmlText: string): UblInvoice {
     lines: linesOf(root),
     vatRates: vatRatesOf(root),
     vatBreakdown: vatBreakdownOf(root),
+    taxExtras: taxExtrasOf(root),
     xslt,
     xsltFileName,
     xml: new XMLSerializer().serializeToString(doc),
@@ -352,6 +355,48 @@ export function vatBreakdownOf(root: Element | null): VatPart[] {
   return [...m.values()]
     .map((p) => ({ rate: p.rate, base: r2(p.base), tax: r2(p.tax), ...(p.derived ? { derived: true } : {}) }))
     .sort((a, b) => (a.rate ?? 1e9) - (b.rate ?? 1e9));
+}
+
+/** KDV dışında bir vergi (ÖİV, ÖTV, tüketim vergisi, telsiz ücreti…): GİB vergi kodu, adı, faturadaki toplamı */
+export interface TaxPart { code: string; name: string; amount: number }
+
+export interface TaxExtras {
+  /** KDV dışı vergiler (fatura düzeyindeki vergi özetinden, koda göre toplanmış) */
+  other: TaxPart[];
+  /** KDV tevkifatı (WithholdingTaxTotal); yoksa null */
+  withholding: number | null;
+  /** Döviz kuru (PricingExchangeRate / PaymentExchangeRate CalculationRate); yoksa null */
+  exchangeRate: number | null;
+}
+
+/** GİB vergi kodlarının kısa adları (XML'de ad yazılmamışsa) */
+const TAX_NAMES: Record<string, string> = {
+  '4080': 'ÖİV', '4081': 'ÖİV', '0071': 'ÖTV (1. liste)', '0073': 'ÖTV (3. liste)', '0074': 'ÖTV (4. liste)', '0075': 'ÖTV (3A)', '0076': 'ÖTV (3B)', '0077': 'ÖTV (3C)',
+  '4071': 'Elektrik ve havagazı tüketim vergisi', '8006': 'Telsiz ücreti', '0059': 'Konaklama vergisi', '1047': 'Damga vergisi', '0003': 'Gelir vergisi stopajı', '0011': 'Kurumlar vergisi stopajı',
+};
+export const OIV_CODES = ['4080', '4081'];
+export const OTV_CODES = ['0071', '0073', '0074', '0075', '0076', '0077'];
+
+/** KDV dışı vergiler, tevkifat ve kur: fatura düzeyindeki özetlerden */
+export function taxExtrasOf(root: Element | null): TaxExtras {
+  const r2 = (n: number) => Math.round(n * 100) / 100;
+  const m = new Map<string, TaxPart>();
+  for (const tt of children(root, NS.cac, 'TaxTotal')) {
+    for (const st of children(tt, NS.cac, 'TaxSubtotal')) {
+      if (isKdvSubtotal(st)) continue;
+      const scheme = cac(cac(st, 'TaxCategory'), 'TaxScheme');
+      const code = cbc(scheme, 'TaxTypeCode');
+      const amount = toNum(cbc(st, 'TaxAmount')) ?? 0;
+      const key = code || cbc(scheme, 'Name');
+      const p = m.get(key) ?? { code, name: TAX_NAMES[code] ?? (cbc(scheme, 'Name').replace(/\s+/g, ' ').trim() || `Vergi ${code}`), amount: 0 };
+      p.amount = r2(p.amount + amount);
+      m.set(key, p);
+    }
+  }
+  const wh = children(root, NS.cac, 'WithholdingTaxTotal');
+  const withholding = wh.length ? r2(wh.reduce((s, t) => s + (toNum(cbc(t, 'TaxAmount')) ?? 0), 0)) : null;
+  const rate = toNum(cbc(cac(root, 'PricingExchangeRate'), 'CalculationRate')) ?? toNum(cbc(cac(root, 'PaymentExchangeRate'), 'CalculationRate'));
+  return { other: [...m.values()], withholding, exchangeRate: rate };
 }
 
 /** Fatura kalemleri (yedek görünüm için). */

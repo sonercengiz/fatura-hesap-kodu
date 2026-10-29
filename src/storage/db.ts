@@ -4,8 +4,8 @@ import { DEFAULT_SHORTCUT_KEYS } from '../core/types';
 import type { HistoryEntry } from '../core/suggest/engine';
 import { sheetToInvoices, type EdmSheet } from '../core/legacy';
 import type { Rule } from '../core/rules';
-import { edmTemplate, normalizeTemplate, type OutputTemplate } from '../core/excel/template';
-import { itemTextOf, linesOf, taxInclusiveOf, vatBreakdownOf, vatRatesOf, type LineInfo, type VatPart } from '../core/xml/parseUbl';
+import { edmTemplate, foldLegacyKdv, normalizeTemplate, type OutputTemplate } from '../core/excel/template';
+import { itemTextOf, linesOf, taxExtrasOf, taxInclusiveOf, vatBreakdownOf, vatRatesOf, type LineInfo, type TaxExtras, type VatPart } from '../core/xml/parseUbl';
 import { upgradeRule } from '../core/rules';
 
 export interface FirmHistoryEntry extends HistoryEntry {
@@ -63,6 +63,8 @@ export interface InvoiceRecord {
   vatRates?: number[];
   /** KDV oranına göre matrah ve vergi; eski kayıtlarda v12 XML'den tamamlar */
   vatBreakdown?: VatPart[];
+  /** KDV dışı vergiler, tevkifat, kur; eski kayıtlarda v15 XML'den tamamlar */
+  taxExtras?: TaxExtras;
   /** Excel çıktısına girmez (kullanıcı çıkardı) */
   excluded?: boolean;
   xml: string | null;
@@ -300,6 +302,22 @@ class AppDb extends Dexie {
       const best = top.includes(key(general)) ? key(general) : top[0];
       if (best !== key(general)) await tx.table('settings').put({ key: 'settings', value: { ...sv, outputTemplate: JSON.parse(best) } });
       await tx.table('firms').toCollection().modify((f: FirmRecord) => { if (f.outputTemplate && key(f.outputTemplate) === best) delete f.outputTemplate; });
+    });
+    // v15: eski "+ KDV dökümü" düğmesinin 8 sütunu tek "KDV dökümü · Güncel oranlar + Diğer" öğesi olur (genel, firma, dönem şablonları);
+    // XML'i olan faturalara KDV dışı vergiler, tevkifat ve kur eklenir
+    this.version(15).stores({}).upgrade(async (tx) => {
+      if (typeof DOMParser !== 'undefined') {
+        await tx.table('invoices').toCollection().modify((r: InvoiceRecord) => {
+          if (!r.xml) return;
+          try { r.taxExtras = taxExtrasOf(new DOMParser().parseFromString(r.xml, 'application/xml').documentElement); } catch { /* olduğu gibi kalır */ }
+        });
+      }
+      const fold = (t: OutputTemplate) => ({ ...t, columns: foldLegacyKdv(t.columns) });
+      const sRec = await tx.table('settings').get('settings');
+      const sv = sRec?.value as { outputTemplate?: OutputTemplate } | undefined;
+      if (sv?.outputTemplate) await tx.table('settings').put({ key: 'settings', value: { ...sv, outputTemplate: fold(sv.outputTemplate) } });
+      await tx.table('firms').toCollection().modify((f: FirmRecord) => { if (f.outputTemplate) f.outputTemplate = fold(f.outputTemplate); });
+      await tx.table('batches').toCollection().modify((b: BatchRecord) => { if (b.outputTemplate) b.outputTemplate = fold(b.outputTemplate); });
     });
   }
 }

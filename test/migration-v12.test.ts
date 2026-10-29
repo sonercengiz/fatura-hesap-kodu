@@ -19,7 +19,7 @@ describe('veritabanı geçişi v11 → v12: KDV dökümü', () => {
     v11.close();
     const { db } = await import('../src/storage/db');
     await db.open();
-    expect(db.verno).toBe(14);
+    expect(db.verno).toBe(15);
     const [a, b] = await db.invoices.orderBy('no').toArray();
     expect(a.vatBreakdown).toEqual([{ rate: 20, base: 1250, tax: 250 }]);
     expect(b.vatBreakdown).toBeUndefined();

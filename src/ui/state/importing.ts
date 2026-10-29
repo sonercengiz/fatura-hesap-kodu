@@ -118,6 +118,7 @@ export async function importXml(rawList: File[], dropFailed: ImportReport['faile
           lines: u.lines,
           vatRates: u.vatRates,
           vatBreakdown: u.vatBreakdown,
+          taxExtras: u.taxExtras,
           xml: u.xml,
           xsltId,
           fileName: f.name,
