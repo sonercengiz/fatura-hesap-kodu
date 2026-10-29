@@ -575,12 +575,26 @@ tr.iss-chart td.code-col { color: var(--warn); text-decoration: underline wavy v
 th.r .col-letter { text-align: right; }
 
 /* Düzenlenebilir sütun başlığı (önizleme, liste, şablon önizlemesi): tıkla ad, sürükle sıra, ✕ kaldır */
-th.hdr-edit { cursor: grab; position: relative; padding-right: 20px; }
+th.hdr-edit { cursor: grab; position: relative; }
 th.hdr-edit .hdr-text { cursor: text; border-radius: 4px; padding: 0 2px; }
 th.hdr-edit .hdr-text:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); }
-th.hdr-edit .hdr-x { position: absolute; right: 2px; bottom: 3px; border: none; background: none; padding: 0 3px; font-size: 11px; line-height: 1.2; color: var(--muted); cursor: pointer; opacity: 0; }
+/* ✕ harf satırında, harfin karşı köşesinde: başlık metni hücredeki değerle aynı hizada kalır */
+th.hdr-edit .hdr-x { position: absolute; right: 2px; top: 1px; border: none; background: none; padding: 0 3px; font-size: 11px; line-height: 1.2; color: var(--muted); cursor: pointer; opacity: 0; }
 th.hdr-edit:hover .hdr-x, th.hdr-edit .hdr-x:focus-visible { opacity: 1; }
 th.hdr-edit .hdr-x:hover { color: var(--warn); }
+th.hdr-edit.r .hdr-x { right: auto; left: 2px; }
+.lv-table th.r { text-align: right; }
+/* İnce dikey sütun çizgileri (satır çizgisiyle aynı) */
+.table-box th + th, .table-box td + td, .lv-table th + th, .lv-table td + td { border-left: 1px solid var(--line); }
+/* KDV oran grubu: yalnızca başlık boyanır (açık zemin + üstte ince renk şeridi); hücre renklerini hesap kodu verir */
+th.vg { background: color-mix(in srgb, var(--vg) 12%, var(--panel)); box-shadow: inset 0 3px 0 var(--vg); }
+th.vg-0 { --vg: #64748b; } th.vg-1 { --vg: #0284c7; } th.vg-8 { --vg: #65a30d; } th.vg-10 { --vg: #059669; }
+th.vg-18 { --vg: #ea580c; } th.vg-20 { --vg: #4f46e5; } th.vg-other { --vg: #a16207; } th.vg-odd { --vg: #e11d48; } th.vg-total { --vg: #0d9488; }
+:root[data-theme="dark"] th.vg { background: color-mix(in srgb, var(--vg) 20%, var(--panel)); }
+:root[data-theme="dark"] th.vg-0 { --vg: #94a3b8; } :root[data-theme="dark"] th.vg-1 { --vg: #38bdf8; } :root[data-theme="dark"] th.vg-8 { --vg: #a3e635; }
+:root[data-theme="dark"] th.vg-10 { --vg: #34d399; } :root[data-theme="dark"] th.vg-18 { --vg: #fb923c; } :root[data-theme="dark"] th.vg-20 { --vg: #818cf8; }
+:root[data-theme="dark"] th.vg-other { --vg: #fbbf24; } :root[data-theme="dark"] th.vg-odd { --vg: #fb7185; } :root[data-theme="dark"] th.vg-total { --vg: #2dd4bf; }
+th.vg.drop-over { box-shadow: inset 3px 0 0 var(--accent), inset 0 3px 0 var(--vg); }
 th.hdr-edit.drop-over { box-shadow: inset 3px 0 0 var(--accent); }
 .hdr-input { font: inherit; font-weight: 600; width: 12em; padding: 1px 4px; }
 .add-col { max-width: 150px; font-size: 12px; }

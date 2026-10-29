@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import * as S from './state';
 import { askConfirm } from './dialog';
 import { fmtCell } from '../core/num';
-import { HeaderCell, AddColumnSelect, SkipEmptyToggle, scopeNote } from './TemplateParts';
+import { HeaderCell, AddColumnSelect, SkipEmptyToggle, scopeNote, SKIPPED_HINT } from './TemplateParts';
 import {
   FIELD_DEFS, FIELD_GROUPS, KDV_FIELD_IDS, DATE_CELLS_LABELS, ROW_ORDER_LABELS, DEFAULT_OUTPUT_TEMPLATE, vatFieldsFor, vatUncovered, isEdmDefault, buildTemplateRows,
   addColumn, removeColumn, renameColumn, moveColumn, toggleField, withColumns, emptyColumns, excelLettersOf, type OutputTemplate, type OutputFieldId, type RowOrder, type DateCells,
@@ -143,8 +143,8 @@ type Change = (next: OutputTemplate, key?: string) => void;
 /** Açık dönemde boş sütunlar ve her sütunun Excel'deki gerçek harfi (atlanan sütun null) */
 const emptyOf = (t: OutputTemplate) => emptyColumns(t, S.outputIncluded.value, S.outputContext());
 const lettersOf = (t: OutputTemplate) => excelLettersOf(t, emptyOf(t));
-/** Bir alanın Excel'deki harfleri (atlanıyorsa "atlanır") */
-const fieldLetters = (t: OutputTemplate, id: OutputFieldId, L: (string | null)[]) => t.columns.map((c, k) => (c.id === id ? L[k] ?? 'atlanır' : '')).filter(Boolean).join(', ');
+/** Bir alanın Excel'deki harfleri (boş olduğu için yazılmıyorsa "boş, yazılmaz") */
+const fieldLetters = (t: OutputTemplate, id: OutputFieldId, L: (string | null)[]) => t.columns.map((c, k) => (c.id === id ? L[k] ?? 'boş, yazılmaz' : '')).filter(Boolean).join(', ');
 
 /** Açık dönemde şablonun KDV dökümüne yazılamayan oranlar: söylenir, tek tıkla eklenir */
 function VatGap({ t, change }: { t: OutputTemplate; change: Change }) {
@@ -255,7 +255,7 @@ function AdvancedBody({ t, change, dragIdx, setDragIdx }: { t: OutputTemplate; c
             onDrop={(e) => { e.preventDefault(); const from = Number(e.dataTransfer?.getData('text/plain') || String(dragIdx)); if (!Number.isNaN(from)) change(moveColumn(t, from, k)); setDragIdx(null); }}
             onDragEnd={() => setDragIdx(null)}
           >
-            <span class={`tpl-letter ${L[k] === null ? 'skipped' : ''}`} title={L[k] === null ? 'Bu dönemde boş: Excel\'e yazılmıyor (Boş sütunları atla)' : `Excel'de ${L[k]} sütunu`}>{L[k] ?? '—'}</span>
+            <span class={`tpl-letter ${L[k] === null ? 'skipped' : ''}`} title={L[k] === null ? SKIPPED_HINT : `Excel'de ${L[k]} sütunu`}>{L[k] ?? '—'}</span>
             <input class="tpl-header" value={c.header} placeholder={c.id === 'blank' ? '(boş başlık)' : FIELD_DEFS[c.id].header} onInput={(e) => change(renameColumn(t, k, (e.currentTarget as HTMLInputElement).value), `h${k}`)} onKeyDown={stop} />
             <span class="tpl-field muted small" title={FIELD_DEFS[c.id].label}>{FIELD_DEFS[c.id].label}</span>
             <button class="ghost tiny" title="Yukarı" disabled={k === 0} onClick={() => change(moveColumn(t, k, k - 1))}>↑</button>

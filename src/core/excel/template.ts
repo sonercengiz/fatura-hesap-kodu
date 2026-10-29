@@ -155,6 +155,15 @@ export function vatUncovered(inv: Invoice, t: OutputTemplate): (number | null)[]
   return out;
 }
 
+/**
+ * Sütun başlığının renk grubu: aynı oranın matrahı ve KDV'si aynı grupta (%0 yalnız matrah), oranı uyuşmayan KDV ayrı.
+ * Yalnızca başlık boyanır; hücre renklerini hesap kodu verir.
+ */
+export function vatGroupOf(id: OutputFieldId): string | null {
+  if (id === 'vatOddTax') return 'odd';
+  return RATE_FIELDS.find(([, ids]) => ids.includes(id))?.[0].toString() ?? null;
+}
+
 /** Bir KDV oranını Excel'e yazan sütunlar (null = oranı uyuşmayan satırlar) */
 export function vatFieldsFor(rate: number | null): OutputFieldId[] {
   if (rate === null) return ['vatOddTax'];

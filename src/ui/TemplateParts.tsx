@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks';
 import * as S from './state';
-import { FIELD_DEFS, KDV_FIELD_IDS, colName, addColumn, removeColumn, renameColumn, moveColumn, withColumns, type OutputTemplate, type OutputFieldId } from '../core/excel/template';
+import { FIELD_DEFS, KDV_FIELD_IDS, colName, vatGroupOf, addColumn, removeColumn, renameColumn, moveColumn, withColumns, type OutputTemplate, type OutputFieldId } from '../core/excel/template';
 
 /**
  * Şablonu her yerden (önizleme, liste) aynı şekilde değiştirir: geçerli şablonun kapsamına anında yazar, bildirimde "Geri al".
@@ -18,6 +18,9 @@ export function scopeNote(scope: S.TemplateScope): string {
   return scope === 'batch' ? `yalnızca bu dönemin Excel'i (${S.batchRec.value?.name ?? ''})` : scope === 'firm' ? `${S.firm.value.name} firmasının Excel'i` : 'genel şablon (özel şablonu olmayan bütün firmalar)';
 }
 
+/** Atlanan sütunun açıklaması (harfin yerinde "boş, yazılmaz") */
+export const SKIPPED_HINT = 'Bu dönemdeki faturaların hiçbirinde bu bilgi yok; sütun Excel\'e yazılmaz, sonraki sütun onun harfini alır. "Boş sütunları atla" kutusunu kaldırırsanız yazılır.';
+
 /**
  * Önizleme ve liste tablosunda düzenlenebilir sütun başlığı: harf + başlık; tıkla → yeniden adlandır, sürükle → sırala, ✕ → kaldır.
  * `k` şablondaki sütun sırasıdır (listede gizli sütunlar atlansa da doğru sütun değişir).
@@ -27,13 +30,16 @@ export function HeaderCell({ t, k, cls = '', label, letter, onChange = commitTem
   const [over, setOver] = useState(false);
   const c = t.columns[k];
   const shown = label ?? c.header;
+  // Başlık hücresiyle aynı hizada (para sağa); KDV sütunlarında oran grubunun rengi
+  const g = vatGroupOf(c.id);
+  const align = FIELD_DEFS[c.id].money && !/(^| )r( |$)/.test(cls) ? ' r' : '';
   const save = () => {
     if (edit !== null && edit !== c.header) onChange(renameColumn(t, k, edit), `Başlık "${edit || '(boş)'}" oldu`);
     setEdit(null);
   };
   return (
     <th
-      class={`${cls} hdr-edit ${over ? 'drop-over' : ''} ${letter === null ? 'skipped' : ''}`}
+      class={`${cls}${align}${g ? ` vg vg-${g}` : ''} hdr-edit ${over ? 'drop-over' : ''} ${letter === null ? 'skipped' : ''}`}
       draggable={edit === null}
       title={`${FIELD_DEFS[c.id].label}\nTıkla: başlığı değiştir · sürükle: sırasını değiştir · ✕: Excel'den kaldır`}
       onDragStart={(e) => { e.dataTransfer?.setData('text/x-col', String(k)); }}
@@ -42,7 +48,7 @@ export function HeaderCell({ t, k, cls = '', label, letter, onChange = commitTem
       onDrop={(e) => { e.preventDefault(); setOver(false); const from = Number(e.dataTransfer?.getData('text/x-col')); if (!Number.isNaN(from) && from !== k) onChange(moveColumn(t, from, k), `"${t.columns[from].header || '(boş)'}" ${colName(k)} sütununa taşındı`); }}
     >
       {letter === null
-        ? <span class="col-letter skipped" title="Bu dönemde bütün faturalarda boş: Excel'e yazılmıyor (Boş sütunları atla)">— atlanır</span>
+        ? <span class="col-letter skipped" title={SKIPPED_HINT}>boş, yazılmaz</span>
         : <span class="col-letter">{letter ?? colName(k)}</span>}
       {edit !== null ? (
         <input
