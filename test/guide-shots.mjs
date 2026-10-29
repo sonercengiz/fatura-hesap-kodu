@@ -186,7 +186,7 @@ await page.locator('.rule-code').press('Enter'); await wait(300); await esc(); a
 
 // ---------- 6. Önizleme, şablon ----------
 await page.keyboard.press('F5'); await page.waitForSelector('.modal.wide'); await wait(200);
-await annotate([{ sel: '.legend', n: 1 }, { sel: 'th.code-col', n: 2 }, { sel: 'tr.iss-code', n: 3, pad: 0, pos: 'bl' }, { sel: '.modal.wide thead tr', n: 4, pad: 0, pos: 'tr' }]);
+await annotate([{ sel: '.legend', n: 1 }, { sel: 'th.code-col', n: 2 }, { sel: 'tr.lvl-high', n: 3, pad: 0, pos: 'bl' }, { sel: '.modal.wide thead tr', n: 4, pad: 0, pos: 'tr' }]);
 await shot('14-onizleme.png'); await clear();
 await page.locator('button:has-text("Şablon penceresi")').click(); await page.waitForSelector('.tpl-modal'); await wait(200);
 await annotate([{ sel: '.tpl-scopes', n: 1 }, { sel: '.tpl-mode', n: 2 }, { sel: '.tpl-preview thead tr', n: 3, pad: 0 }, { sel: '.tpl-modal button:has-text("Geri al")', n: 4 }, { sel: '.tpl-preview th.code-col', n: 5, pos: 'tr' }]);

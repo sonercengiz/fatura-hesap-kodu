@@ -2,10 +2,9 @@ import { signal, computed, batch as sbatch } from '@preact/signals';
 import { cap } from '../../core/text';
 import { DEFAULT_SETTINGS, DEFAULT_SHORTCUT_KEYS, typeLabel, profileLabel, toDisplayDate, type Settings, type Invoice, type FilterMode } from '../../core/types';
 import { buildTemplateWorkbook, buildFileName } from '../../core/excel/writeOutput';
-import { buildTemplateRows, normalizeTemplate, codeColumnIndexOf, vatUncovered, usesVat, emptyColumns, skipEmpty, excelLettersOf, expandTemplate, type OutputTemplate, type RowContext } from '../../core/excel/template';
+import { buildTemplateRows, normalizeTemplate, codeColumnIndexOf, emptyColumns, skipEmpty, excelLettersOf, expandTemplate, type OutputTemplate, type RowContext } from '../../core/excel/template';
 import { supplierHint, type HistoryEntry } from '../../core/suggest/engine';
 import { sortInvoices } from '../../core/sort';
-import { fmtMoney } from '../../core/num';
 import { db, DEFAULT_FIRM_ID, saveSettings, type BatchRecord, type InvoiceRecord, type AssignmentRecord, type AccountRecord, type AssignmentSource, type FirmRecord } from '../../storage/db';
 import { searchAccounts, type Account } from '../../core/chart';
 import { ensureXslt, transformToHtml, decorateHtml, cachedHtml, rememberHtml } from '../../render/xslt';
@@ -331,56 +330,6 @@ export function overriddenBy(rule: Rule): { count: number; codes: string[] } {
 
 /** Dönemde kurala uyan ama henüz kod almamış faturalar */
 export const rulePending = computed(() => invoices.value.filter((i) => !assignments.value.has(i.no) && ruleFor.value.has(i.no)));
-
-export type IssueKind = 'no-code' | 'not-in-chart' | 'type' | 'vat-gap' | 'vat-derived' | 'payable-diff' | 'no-view';
-
-/** Ödenecek tutar vergiler dahil fatura toplamından farklı (yuvarlama, önceki dönem borcu) */
-export const payableDiffers = (inv: Invoice) => inv.amount !== null && inv.taxInclusive !== null && Math.abs(inv.amount - inv.taxInclusive) >= 0.005;
-
-export function issuesFor(inv: Invoice): IssueKind[] {
-  // Excel'den çıkarılan fatura çıktıyla ilgili uyarı almaz
-  if (inv.excluded) return inv.hasView ? [] : ['no-view'];
-  const out: IssueKind[] = [];
-  const code = assignments.value.get(inv.no);
-  if (!code) out.push('no-code');
-  else if (accounts.value.length > 0 && !accountMap.value.has(code)) out.push('not-in-chart');
-  if (/tevkifat|iade/i.test(inv.invoiceType)) out.push('type');
-  const t = outputTemplate.value;
-  if (vatUncovered(inv, t).length) out.push('vat-gap');
-  if (usesVat(t) && inv.vatBreakdown.some((p) => p.derived)) out.push('vat-derived');
-  // Yalnızca şablonda "Tutar (ödenecek)" varken: Excel'deki tutar matrah + vergilerle uyuşmayacak
-  if (t.columns.some((c) => c.id === 'amount') && payableDiffers(inv)) out.push('payable-diff');
-  if (!inv.hasView) out.push('no-view');
-  return out;
-}
-
-export const ISSUE_LABEL: Record<IssueKind, string> = {
-  'no-code': 'Hesap kodu atanmamış',
-  'not-in-chart': 'Kod hesap kodu listesinde yok',
-  type: 'Tevkifat / İade faturası, kontrol edin',
-  'vat-gap': 'KDV oranının Excel şablonunda sütunu yok',
-  'vat-derived': 'KDV matrahı faturada yazmıyor; vergiden hesaplandı, kontrol edin',
-  'payable-diff': 'Ödenecek tutar fatura toplamından farklı (yuvarlama ya da önceki dönem borcu)',
-  'no-view': 'XML yok (EDM listesinden geldi ya da yer açmak için kaldırıldı); fatura görüntüsü çizilemez',
-};
-
-/** Önizleme lejandında kısa ad (tam açıklama ipucunda); yoksa tam etiket */
-export const ISSUE_SHORT: Partial<Record<IssueKind, string>> = {
-  'vat-derived': 'Matrah vergiden hesaplandı',
-  'payable-diff': 'Ödenecek ≠ fatura toplamı',
-};
-
-/** Uyarının bu faturaya özgü açıklaması (satır ipucu ve panel): etiket + tutarlar */
-export function issueText(inv: Invoice, k: IssueKind): string {
-  if (k === 'payable-diff') return `${ISSUE_LABEL[k]}: ödenecek ${fmtMoney(inv.amount)} · fatura toplamı ${fmtMoney(inv.taxInclusive)}`;
-  if (k === 'vat-derived') return `${ISSUE_LABEL[k]}: ${inv.vatBreakdown.filter((p) => p.derived).map((p) => `%${p.rate} matrahı ${fmtMoney(p.base)}`).join(', ')}`;
-  return ISSUE_LABEL[k];
-}
-
-/** Toolbar ve listede gösterilecek uyarılar: atanmamış kod ve XML eksikliği hariç. */
-export function attentionIssues(inv: Invoice): IssueKind[] {
-  return issuesFor(inv).filter((k) => k !== 'no-code' && k !== 'no-view');
-}
 
 export let toastTimer: number | undefined;
 

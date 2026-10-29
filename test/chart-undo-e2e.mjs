@@ -38,7 +38,7 @@ await page.keyboard.press('ArrowRight'); await page.keyboard.press('/'); await p
 await page.keyboard.press('ArrowLeft');
 console.log('listede olmayan kod uyarısı:', await page.locator('.issue').allInnerTexts());
 await page.keyboard.press('F5'); await page.waitForSelector('.modal.wide');
-console.log('önizleme rozet:', (await page.locator('.legend').innerText()).replace(/\n/g,' | '), '| dalgalı satır:', await page.locator('tr.iss-chart').count());
+console.log('önizleme rozet:', (await page.locator('.legend').innerText()).replace(/\n/g,' | '), '| dalgalı satır:', await page.locator('td.iss-chart').count());
 await page.keyboard.press('Escape');
 // Ctrl+. ile listede olmayanı ekle
 await page.keyboard.press('Control+Period'); await page.keyboard.type('770.05'); await page.waitForTimeout(100);

@@ -84,7 +84,7 @@ if (STRICT) {
   await a.locator('.tpl-modal button:has-text("Kapat")').click(); await a.waitForSelector('.tpl-modal', { state: 'detached' });
   await a.keyboard.press('F5'); await a.waitForSelector('.modal.wide .legend');
   const legend = await a.locator('.modal.wide .legend').innerText();
-  check('önizleme: sütunu olmayan KDV uyarısı', legend.includes('KDV oranının Excel şablonunda sütunu yok: 1'), legend);
+  check('önizleme: sütunu olmayan KDV uyarısı', legend.includes('Tutar bilgisi Excel\'e girmiyor: 1'), legend);
   await a.keyboard.press('Escape');
 }
 

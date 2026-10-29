@@ -4,6 +4,8 @@
   --s0: #dbeafe; --s1: #dcfce7; --s2: #fef3c7; --s3: #fce7f3; --s4: #ede9fe; --s5: #cffafe;
   --s0i: #1e3a8a; --s1i: #14532d; --s2i: #78350f; --s3i: #831843; --s4i: #4c1d95; --s5i: #164e63;
   --neutral: #e5e7eb;
+  /* Uyarı seviyeleri: high (kod) amber · medium (tutar) mor · low (kontrol) mavi-gri; kırmızı yok, hiçbiri engel değil */
+  --iss-h: #b45309; --iss-h-bg: #fff1d6; --iss-m: #6d4bd1; --iss-m-bg: #efe9ff; --iss-l: #3b5b8a; --iss-l-bg: #e8eef7;
 }
 :root[data-theme="dark"] {
   /* Gri tonlu, yumuşak karanlık tema: saf siyah yok, kontrast düşük tutuldu */
@@ -12,6 +14,7 @@
   --s0: #35415a; --s1: #344a3c; --s2: #52473a; --s3: #503a48; --s4: #43405c; --s5: #314a4f;
   --s0i: #b9cdf5; --s1i: #b6e2c2; --s2i: #ecd3a8; --s3i: #ebc3dc; --s4i: #cfc6f4; --s5i: #a9dde6;
   --neutral: #3a3d44;
+  --iss-h: #e3b354; --iss-h-bg: #3e3729; --iss-m: #b9a6f0; --iss-m-bg: #3b3450; --iss-l: #9cb8dc; --iss-l-bg: #2f3a48;
 }
 * { box-sizing: border-box; }
 html, body, #app { height: 100%; margin: 0; }
@@ -134,7 +137,7 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 0;
 .modal-head { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
 .legend { display: flex; gap: 6px; flex-wrap: wrap; font-size: 12px; }
 .lg { padding: 2px 8px; border-radius: 999px; background: var(--neutral); }
-.lg-no-code { background: var(--warn-bg); color: var(--warn); } .lg.ok { color: var(--ok); }
+.lg.ok { color: var(--ok); }
 .table-box { overflow: auto; flex: 1; }
 .table-box td.r { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 /* Excel tipi tablo: başlık her zaman ortalı; hücrede sayı sağa, metin sola */
@@ -144,8 +147,6 @@ th, td { padding: 4px 8px; border-bottom: 1px solid var(--line); text-align: lef
 th { position: sticky; top: 0; background: var(--panel); z-index: 1; }
 th.code-col, td.code-col { background: var(--s0); color: var(--s0i); font-weight: 600; }
 td.num, th.num { color: var(--muted); }
-tr.iss-code td { background: var(--warn-bg); } tr.iss-code td.code-col { background: var(--warn-bg); color: var(--warn); }
-tr.iss-other td:first-child { box-shadow: inset 3px 0 0 var(--warn); }
 .form { padding: 16px; overflow: auto; display: flex; flex-direction: column; gap: 12px; }
 .form label { display: flex; flex-direction: column; gap: 4px; } .form label span { font-size: 12px; color: var(--muted); }
 .form .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -237,9 +238,7 @@ button.hint { width: 100%; text-align: left; margin-top: 8px; padding: 6px 10px;
 .acc-row { display: flex; gap: 8px; align-items: center; padding: 3px 8px; border-bottom: 1px solid var(--line); }
 .acc-row:last-child { border-bottom: none; }
 .acc-name { flex: 1; min-width: 0; padding: 3px 6px; font-size: 13px; }
-.lg-not-in-chart, .lg-vat-gap, .lg-vat-derived, .lg-payable-diff { background: var(--warn-bg); color: var(--warn); }
 .tpl-gap { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; padding: 6px 10px; border-radius: 8px; background: var(--warn-bg); color: var(--warn); }
-tr.iss-chart td.code-col { color: var(--warn); text-decoration: underline wavy var(--warn); }
 .bulk-toggle { flex: none; } .bulk-toggle.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 
 /* ---- Rehber ---- */
@@ -331,7 +330,6 @@ tr.iss-chart td.code-col { color: var(--warn); text-decoration: underline wavy v
 .lv-table tr.row:not(.done) td.lv-code { background: transparent; color: var(--muted); font-weight: 400; }
 .lv-table .lv-check { width: 28px; } .lv-table .lv-check .row-check { opacity: .45; }
 .lv-table tr.row:hover .row-check, .lv-table .row-check:checked { opacity: 1; }
-.lv-table td.lv-issues .warn { font-size: 12px; white-space: nowrap; }
 .lv-table tr.row.bulk td.lv-supplier { opacity: .7; }
 .lv-table td.lv-text { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lv-table th { white-space: nowrap; }
@@ -663,3 +661,21 @@ th.off.vg { box-shadow: none; } th.off .hdr-text { color: var(--muted); }
 .table-box tr td.pv-code.slot-0 { background: var(--s0); color: var(--s0i); } .table-box tr td.pv-code.slot-1 { background: var(--s1); color: var(--s1i); }
 .table-box tr td.pv-code.slot-2 { background: var(--s2); color: var(--s2i); } .table-box tr td.pv-code.slot-3 { background: var(--s3); color: var(--s3i); }
 .table-box tr td.pv-code.slot-4 { background: var(--s4); color: var(--s4i); } .table-box tr td.pv-code.slot-5 { background: var(--s5); color: var(--s5i); }
+
+/* Uyarılar: önizlemede satır zemini beyaz; ilgili hücre seviye tonunda, satırın en yüksek seviyesi sol şeritte */
+:root .table-box td.iss-high { background: var(--iss-h-bg); color: var(--iss-h); }
+:root .table-box td.iss-medium { background: var(--iss-m-bg); color: var(--iss-m); }
+:root .table-box td.iss-low { background: var(--iss-l-bg); color: var(--iss-l); }
+.table-box tr.lvl-high td:first-child { box-shadow: inset 3px 0 0 var(--iss-h); }
+.table-box tr.lvl-medium td:first-child { box-shadow: inset 3px 0 0 var(--iss-m); }
+.table-box tr.lvl-low td:first-child { box-shadow: inset 3px 0 0 var(--iss-l); }
+.table-box td.iss-chart { text-decoration: underline wavy var(--iss-h); }
+/* Lejant çipleri: tıklayınca o uyarının rengi önizlemede kapanır */
+button.lg { border: none; font: inherit; font-size: 12px; padding: 2px 8px; border-radius: 999px; cursor: pointer; }
+.lg.lvl-high { background: var(--iss-h-bg); color: var(--iss-h); } .lg.lvl-medium { background: var(--iss-m-bg); color: var(--iss-m); } .lg.lvl-low { background: var(--iss-l-bg); color: var(--iss-l); }
+.lg.muted, .lg.muted.lvl-high, .lg.muted.lvl-medium, .lg.muted.lvl-low { background: var(--neutral); color: var(--muted); text-decoration: line-through; }
+button.lg:hover:not(:disabled) { box-shadow: inset 0 0 0 1px currentColor; }
+/* Liste Dikkat sütunu, panel ve satır noktası aynı seviye renkleri */
+.iss-txt.lvl-high, .warn-dot.lvl-high { color: var(--iss-h); } .iss-txt.lvl-medium, .warn-dot.lvl-medium { color: var(--iss-m); } .iss-txt.lvl-low, .warn-dot.lvl-low { color: var(--iss-l); }
+.issue.lvl-high { color: var(--iss-h); background: var(--iss-h-bg); } .issue.lvl-medium { color: var(--iss-m); background: var(--iss-m-bg); } .issue.lvl-low { color: var(--iss-l); background: var(--iss-l-bg); }
+.lv-table td.lv-issues .lv-iss { font-size: 12px; white-space: nowrap; }

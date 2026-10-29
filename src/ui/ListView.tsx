@@ -132,7 +132,7 @@ export function ListView() {
                         <span class="row-code">{i.excluded && <span class="excl-tag" title="Excel'e girmez">Hariç</span>}{c ?? <span class="muted">—</span>}</span>
                       </td>
                     );
-                    if (id === 'issues') return <td class="lv-issues">{iss.length > 0 && <span class="warn" title={iss.map((x) => S.issueText(i, x)).join('\n')}>! {iss.map((x) => S.ISSUE_LABEL[x]).join(' · ')}</span>}</td>;
+                    if (id === 'issues') return <td class="lv-issues">{iss.length > 0 && <span class="lv-iss" title={iss.map((x) => S.issueText(i, x)).join('\n')}>{iss.map((x, j) => <span class={`iss-txt lvl-${S.levelOf(x)}`}>{j ? ' · ' : '! '}{S.ISSUE_META[x].label}</span>)}</span>}</td>;
                     if (id === 'source') return <td class="muted">{src}</td>;
                     return cell(e.columns[ck], fieldOf(e.columns[ck]).value(i, ctx));
                   })}

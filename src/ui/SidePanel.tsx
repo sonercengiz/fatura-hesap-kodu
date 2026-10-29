@@ -87,7 +87,7 @@ export function SidePanel() {
           )}
           {inv.lines.length > 0 && <Lines inv={inv} />}
           {S.issuesFor(inv).filter((k) => k !== 'no-code').map((k) => (
-            <div class="issue">{S.issueText(inv, k)}</div>
+            <div class={`issue lvl-${S.levelOf(k)}`}>{S.issueText(inv, k)}</div>
           ))}
         </div>
       )}
@@ -145,7 +145,7 @@ export function SidePanel() {
                 <span class="row-name">{i.supplierName}</span>
                 <span class="row-sub">{i.no} · {i.date}</span>
               </span>
-              <span class="row-code">{i.excluded && <span class="excl-tag" title="Excel'e girmez">Hariç</span>}{bulk && <span class="bulk-tag" title="Toplu atandı (doğal gezintide atlanır, Ctrl+ok ile görülür)">Toplu</span>}{ruled && <span class="bulk-tag" title="Kuralla atandı (doğal gezintide atlanır, Ctrl+ok ile görülür)">Kural</span>}{c ?? ''}{iss.length > 0 && <span class="warn-dot" title={iss.map((x) => S.issueText(i, x)).join('\n')}>!</span>}</span>
+              <span class="row-code">{i.excluded && <span class="excl-tag" title="Excel'e girmez">Hariç</span>}{bulk && <span class="bulk-tag" title="Toplu atandı (doğal gezintide atlanır, Ctrl+ok ile görülür)">Toplu</span>}{ruled && <span class="bulk-tag" title="Kuralla atandı (doğal gezintide atlanır, Ctrl+ok ile görülür)">Kural</span>}{c ?? ''}{iss.length > 0 && <span class={`warn-dot lvl-${S.topLevel(iss)}`} title={iss.map((x) => S.issueText(i, x)).join('\n')}>!</span>}</span>
             </div>
           );
         })}

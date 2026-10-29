@@ -3,6 +3,7 @@ import * as S from './state';
 import { fieldOf, colName } from '../core/excel/template';
 import { HeaderCell, AddColumnSelect, SkipEmptyToggle, skippedCount } from './TemplateParts';
 import { fmtCell } from '../core/num';
+import type { Invoice } from '../core/types';
 
 export function PreviewModal() {
   // Çıkarılanlar da gösterilir (soluk, üstü çizili) ki buradan geri alınabilsin; Excel'e yalnızca işaretliler yazılır
@@ -19,7 +20,9 @@ export function PreviewModal() {
   const shownIdx = e.columns.map((_, k) => k).filter((k) => S.excelLetters.value[k] !== null);
   const skipped = e.columns.length - shownIdx.length;
   const box = useRef<HTMLDivElement>(null);
-  const counts = Object.fromEntries(Object.keys(S.ISSUE_LABEL).map((k) => [k, 0])) as Record<S.IssueKind, number>;
+  const counts = Object.fromEntries(S.ISSUE_KINDS.map((k) => [k, 0])) as Record<S.IssueKind, number>;
+  // Rengi kapatılan uyarı türleri (lejant çipinden; bilgisayara özgü): sayılır ama hücre/şerit çizilmez
+  const muted = S.previewMuted.value;
   // Şablonda Hesap Kodu sütunu yoksa (yalnızca veri toplama) kodsuzluk çıktı için sorun değildir
   const skip = new Set<S.IssueKind>(at < 0 ? ['no-view', 'no-code', 'not-in-chart'] : ['no-view']);
   const rowIssues = rows.slice(1).map((_, i) => {
@@ -45,9 +48,15 @@ export function PreviewModal() {
           <button class="ghost tiny" onClick={() => { S.previewOpen.value = false; S.templateOpen.value = true; }} title="Şablon penceresi: genel / firma / dönem şablonu, satır sırası, sayfa adı, tarih biçimi">Şablon penceresi…</button>
           <div class="spacer" />
           <span class="legend">
-            {(Object.keys(counts) as S.IssueKind[]).filter((k) => counts[k] > 0).map((k) => (
-              <span class={`lg lg-${k}`} title={S.ISSUE_LABEL[k]}>{S.ISSUE_SHORT[k] ?? S.ISSUE_LABEL[k]}: {counts[k]}</span>
-            ))}
+            {S.ISSUE_KINDS.filter((k) => counts[k] > 0).map((k) => {
+              const m = muted.includes(k);
+              const meta = S.ISSUE_META[k];
+              return (
+                <button class={`lg lvl-${meta.level} ${m ? 'muted' : ''}`} title={`${meta.label}\n${m ? 'Bu uyarının rengini önizlemede aç' : 'Bu uyarının rengini önizlemede kapat'} (Excel değişmez)`} onClick={() => S.toggleMuted(k)}>
+                  {meta.short ?? meta.label}: {counts[k]}{m ? ' · kapalı' : ''}
+                </button>
+              );
+            })}
             {firstIssue < 0 && <span class="lg ok">Sorun yok</span>}
           </span>
           <button class="primary" onClick={() => S.exportExcel()}>Excel üret <kbd>F1</kbd></button>
@@ -70,12 +79,26 @@ export function PreviewModal() {
                 const out = !!inv?.excluded;
                 // Kod hücresi listedeki gibi kısayol yuvasının rengini alır (yuvada olmayan kod nötr)
                 const code = inv ? S.assignments.value.get(inv.no) : undefined;
-                const cls = out ? 'excluded' : iss.includes('no-code') ? 'iss-code' : iss.includes('not-in-chart') ? 'iss-other iss-chart' : iss.length ? 'iss-other' : '';
+                // Uyarı satırı boyamaz: ilgili hücrenin tonu + satırın en yüksek seviyesinde sol şerit; kodu olan hücre yuva rengini korur
+                const shown = out || !inv ? [] : iss.filter((k) => !muted.includes(k));
+                const lvl = S.topLevel(shown);
+                const cellLvl = new Map<number, S.IssueLevel>();
+                for (const k of shown) {
+                  const l = S.levelOf(k);
+                  for (const ek of S.ISSUE_META[k].cells(inv as Invoice, e)) {
+                    const c = shownIdx.indexOf(ek);
+                    if (c < 0 || (c === at && code)) continue;
+                    const was = cellLvl.get(c);
+                    if (!was || S.LEVEL_RANK[l] > S.LEVEL_RANK[was]) cellLvl.set(c, l);
+                  }
+                }
+                const chart = shown.includes('not-in-chart');
+                const cls = out ? 'excluded' : lvl ? `lvl-${lvl}` : '';
                 return (
                   <tr data-i={i} class={cls} title={out ? 'Excel\'e girmez' : inv ? iss.map((k) => S.issueText(inv, k)).join('\n') : ''} onDblClick={() => { if (inv) { S.goTo(S.invoices.value.indexOf(inv)); S.previewOpen.value = false; } }}>
                     <td class="num">{out ? '—' : excelRow++}</td>
                     <td class="pv-incl"><input type="checkbox" checked={!out} title={out ? 'Excel\'e geri al' : 'Excel\'den çıkar'} onClick={(e) => e.stopPropagation()} onChange={(e) => inv && S.setExcluded([inv.no], !(e.currentTarget as HTMLInputElement).checked)} /></td>
-                    {r.map((v, c) => <td class={c === at ? `code-col pv-code ${code ? `slot-${S.slotIndexOf(code)}` : 'empty'}` : money[c] ? 'r' : ''}>{fmtCell(v, money[c])}</td>)}
+                    {r.map((v, c) => <td class={`${c === at ? `code-col pv-code ${code ? `slot-${S.slotIndexOf(code)}` : 'empty'}${chart ? ' iss-chart' : ''}` : money[c] ? 'r' : ''}${cellLvl.has(c) ? ` iss-${cellLvl.get(c)}` : ''}`}>{fmtCell(v, money[c])}</td>)}
                   </tr>
                 );
               })}
