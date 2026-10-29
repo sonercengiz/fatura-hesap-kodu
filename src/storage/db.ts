@@ -101,6 +101,23 @@ export interface AccountRecord {
   addedAt: number;
 }
 
+/** Verilen bir Excel çıktısı (dönem başına geçmiş): o anki satır/sütun, uyarı sayıları ve uyarılı faturalar. Yedeğe girmez (G8'de karar). */
+export interface ExportRecord {
+  id: string;
+  batchId: string;
+  firmId: string;
+  at: number;
+  fileName: string;
+  rows: number;
+  /** Excel'e yazılan başlıklar */
+  columns: string[];
+  /** Uyarı türü → fatura sayısı (çıktı anında) */
+  issues: Partial<Record<string, number>>;
+  /** Önizlemede rengi kapatılmış uyarı türleri */
+  muted: string[];
+  flagged: { no: string; kinds: string[] }[];
+}
+
 export interface SettingRecord {
   key: string;
   value: unknown;
@@ -116,6 +133,7 @@ class AppDb extends Dexie {
   firms!: Table<FirmRecord, string>;
   firmHistory!: Table<FirmHistoryEntry, [string, string, string]>;
   firmAccounts!: Table<AccountRecord, [string, string]>;
+  exports!: Table<ExportRecord, string>;
 
   constructor() {
     super('fatura-hesap-kodu');
@@ -319,6 +337,8 @@ class AppDb extends Dexie {
       await tx.table('firms').toCollection().modify((f: FirmRecord) => { if (f.outputTemplate) f.outputTemplate = fold(f.outputTemplate); });
       await tx.table('batches').toCollection().modify((b: BatchRecord) => { if (b.outputTemplate) b.outputTemplate = fold(b.outputTemplate); });
     });
+    // v16: verilen çıktıların geçmişi (dönem başına)
+    this.version(16).stores({ exports: 'id, batchId, at' });
   }
 }
 

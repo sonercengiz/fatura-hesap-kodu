@@ -22,7 +22,7 @@ describe('veritabanı geçişi v12 → v13: fatura toplamı, türetilmiş matrah
     v12.close();
     const { db } = await import('../src/storage/db');
     await db.open();
-    expect(db.verno).toBe(15);
+    expect(db.verno).toBe(16);
     const [a, edm, op] = await db.invoices.orderBy('no').toArray();
     expect(a.taxInclusive).toBe(1500);
     expect(op.taxInclusive).toBe(496.26);

@@ -26,7 +26,7 @@ describe('veritabanı geçişi v13 → v14: şablon kapsamı', () => {
     v13.close();
     const { db } = await import('../src/storage/db');
     await db.open();
-    expect(db.verno).toBe(15);
+    expect(db.verno).toBe(16);
     const s = (await db.settings.get('settings'))!.value as { outputTemplate: OutputTemplate; theme: string };
     expect(s.outputTemplate.columns.map((c) => c.header)).toEqual(['No', 'Tutar']);
     expect(s.theme).toBe('dark');

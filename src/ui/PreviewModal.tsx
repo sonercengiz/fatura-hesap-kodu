@@ -23,11 +23,10 @@ export function PreviewModal() {
   const counts = Object.fromEntries(S.ISSUE_KINDS.map((k) => [k, 0])) as Record<S.IssueKind, number>;
   // Rengi kapatılan uyarı türleri (lejant çipinden; bilgisayara özgü): sayılır ama hücre/şerit çizilmez
   const muted = S.previewMuted.value;
-  // Şablonda Hesap Kodu sütunu yoksa (yalnızca veri toplama) kodsuzluk çıktı için sorun değildir
-  const skip = new Set<S.IssueKind>(at < 0 ? ['no-view', 'no-code', 'not-in-chart'] : ['no-view']);
   const rowIssues = rows.slice(1).map((_, i) => {
     const inv = byRow.get(i);
-    const iss = inv ? S.issuesFor(inv).filter((k) => !skip.has(k)) : [];
+    // Excel üretilirken kaydedilen uyarılarla aynı (Hesap Kodu sütunu yoksa kodsuzluk sayılmaz)
+    const iss = inv ? S.outputIssues(inv) : [];
     for (const k of iss) counts[k]++;
     return iss;
   });

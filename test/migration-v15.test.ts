@@ -25,7 +25,7 @@ describe('veritabanı geçişi v14 → v15: KDV dökümü öğesi', () => {
     v14.close();
     const { db } = await import('../src/storage/db');
     await db.open();
-    expect(db.verno).toBe(15);
+    expect(db.verno).toBe(16);
     const s = (await db.settings.get('settings'))!.value as { outputTemplate: OutputTemplate; theme: string };
     expect(s.outputTemplate.columns).toEqual([{ id: 'no', header: 'No' }, { id: 'vat', header: 'KDV dökümü', vatMode: 'current' }]);
     expect(s.theme).toBe('dark');

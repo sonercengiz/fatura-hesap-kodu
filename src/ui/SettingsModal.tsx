@@ -129,6 +129,10 @@ export function SettingsModal() {
                   const li = S.lastImport.value!;
                   return <div class="muted small last-import">Son yükleme {new Date(li.at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}: {li.report.added} eklendi{li.report.skipped ? ` · ${li.report.skipped} zaten vardı` : ''}{li.report.failed.length ? ` · ${li.report.failed.length} okunamadı` : ''} <button class="ghost tiny" onClick={() => openOther(() => (S.importReport.value = li.report))}>Ayrıntı</button></div>;
                 })()}
+                {S.exportsList.value[0] && (() => {
+                  const r = S.exportsList.value[0];
+                  return <div class="muted small last-export">Son çıktı {S.exportStamp(r.at)} · {r.rows} satır · {r.flagged.length ? `${r.flagged.length} uyarılı` : 'uyarısız'} <button class="ghost tiny" onClick={() => openOther(() => (S.exportsOpen.value = true))}>Aç</button></div>;
+                })()}
                 <div class="settings-links">
                   <button onClick={() => openOther(() => (S.moveOpen.value = true))}>Başka firmaya ya da döneme taşı…</button>
                   <button class="danger" onClick={async () => {

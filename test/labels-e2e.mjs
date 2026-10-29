@@ -10,7 +10,7 @@ const browser = await chromium.launch({ channel: process.env.PW_CHANNEL ?? 'chro
 const errors = [];
 let fails = 0;
 const check = (name, ok, got) => { if (!ok) fails++; console.log(ok ? '✓' : '✗', name, ok ? '' : `→ ${got}`); };
-const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, acceptDownloads: true });
 await ctx.addInitScript(() => { try { localStorage.setItem('guideSeen', '1'); } catch {} });
 const a = await ctx.newPage();
 a.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
@@ -69,6 +69,9 @@ for (const tab of await a.locator('.settings-tabs button').allInnerTexts()) {
 }
 await esc();
 await a.keyboard.press('Control+Shift+P'); await a.waitForTimeout(400); await add('yazdırma'); await esc();
+await Promise.all([a.waitForEvent('download'), a.keyboard.press('F1')]); await a.waitForTimeout(300);
+await a.locator('.toolbar [data-act="exports"]').click(); await a.waitForSelector('.exports-modal'); await add('çıktılar');
+await a.locator('.exports-modal button.primary', { hasText: 'Gez' }).click(); await a.waitForTimeout(200); await add('tur'); await esc();
 
 const list = [...all];
 check('küçük harfle başlayan etiket/ipucu yok', list.length === 0, `${list.length} adet:\n  ${list.join('\n  ')}`);

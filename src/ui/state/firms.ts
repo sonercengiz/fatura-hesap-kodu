@@ -324,8 +324,9 @@ export async function deleteBatch(id: string) {
   const rec = await db.batches.get(id);
   const gone = await db.assignments.where('batchId').equals(id).toArray();
   const vknByNo = new Map((await db.invoices.where('batchId').equals(id).toArray()).map((r) => [r.no, r.supplierVkn]));
-  await db.transaction('rw', db.batches, db.assignments, db.invoices, db.rules, async () => {
+  await db.transaction('rw', [db.batches, db.assignments, db.invoices, db.rules, db.exports], async () => {
     await db.batches.delete(id);
+    await db.exports.where('batchId').equals(id).delete();
     await db.assignments.where('batchId').equals(id).delete();
     await db.invoices.where('batchId').equals(id).delete();
     await db.rules.where('batchId').equals(id).delete();

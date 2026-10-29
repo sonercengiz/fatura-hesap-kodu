@@ -200,11 +200,16 @@ export const sections: Section[] = [
         <Shot src="14-onizleme.png" alt="Önizleme" notes={[
           <>Dikkat sayacı: kod almamış, listede olmayan kod, tevkifat/iade, KDV matrahı faturada yazmayıp vergiden hesaplanan, ödenecek tutarı fatura toplamından farklı (yuvarlama, önceki dönem borcu).</>,
           <>Hesap Kodu sütunu (varsayılan C). Diğer sütunlar EDM listesiyle aynı düzendedir.</>,
-          <>Sarı satır = kod yok. Çift tıklayınca o faturaya gidersiniz.</>,
+          <>Uyarı satırı boyamaz: yalnızca ilgili hücre renklenir ve satırın solunda şerit çıkar. <b>Amber</b> = hesap kodu (yok ya da listede yok), <b>mor</b> = tutar Excel'e eksik ya da farklı girer (ör. ÖİV sütunu yok, ödenecek ≠ fatura toplamı), <b>mavi-gri</b> = kontrol edin (matrah vergiden hesaplandı). Üstteki çipe tıklarsanız o uyarının rengi önizlemede kapanır (sayı kalır; Excel değişmez). Çift tıklayınca o faturaya gidersiniz.</>,
           <>Başlıklar burada da düzenlenir (tıkla: ad, sürükle: sıra, ✕: kaldır); <b>+ Sütun</b> ekler. Genel / firma / dönem şablonu ve satır sırası için <b>Şablon penceresi</b> (ya da üst çubukta <b>Şablon</b>).</>,
         ]} />
-        <Tip><b>İstisnai faturayı Excel'e koymamak:</b> önizlemede satırın başındaki <b>Excel</b> kutusunu kaldırın; ya da listede faturaları seçip <b>Excel'den çıkar</b>'a basın. Çıkarılan fatura soluk görünür, "hariç" etiketi alır, kod beklemez (sayaç ve <K k="Tab" /> onu atlar). Süzgeçten "Excel'den çıkarılanlar" ile hepsini görür, kutuyu yeniden işaretleyerek ya da panelde <b>Geri al</b> ile geri alırsınız; <K k="Ctrl+Z" /> da geri alır.</Tip>
+        <Tip><b>İstisnai faturayı Excel'e koymamak:</b> önizlemede satırın başındaki <b>Excel</b> kutusunu kaldırın; ya da listede faturaları seçip <b>Excel'den çıkar</b>'a basın. Çıkarılan fatura soluk görünür, "Hariç" etiketi alır, kod beklemez (sayaç ve <K k="Tab" /> onu atlar). Süzgeçten "Excel'den çıkarılanlar" ile hepsini görür, kutuyu yeniden işaretleyerek ya da panelde <b>Geri al</b> ile geri alırsınız; <K k="Ctrl+Z" /> da geri alır.</Tip>
         <p><K k="F1" /> dosyayı indirir: <code>AY YIL FİRMA_ADI FATURA.xlsx</code>. Ay, faturaların ayıdır. GMS'te "Excel içe aktar" ile açılır.</p>
+        <Shot src="14b-ciktilar.png" alt="Verilen çıktılar" w="mid" notes={[
+          <>Her <b>Excel üret</b> bir kayıt bırakır: ne zaman, hangi dosya, kaç satır ve sütun, hangi uyarılarla ("Uyarılara rağmen"). Üst çubukta <b>Çıktılar</b>, indirme bildiriminde ve Ayarlar › Dönem'de "Son çıktı" ile açılır.</>,
+          <>Seçilen çıktının uyarılı faturaları: çıktı anındaki uyarılar ve <b>Şimdi</b> sütunu (kod verdiyseniz "Giderildi", hâlâ varsa "Sürüyor").</>,
+          <><b>Gez</b>: bu faturaları sırayla açar; şerit açıkken <K k="Tab" /> / <K k="Shift+Tab" /> yalnızca bunlarda gezer, <b>Bitir</b> ya da <K k="Esc" /> turu kapatır.</>,
+        ]} />
         <Shot src="15-sablon.png" alt="Çıktı şablonu" notes={[
           <>Hangi şablon: <b>Genel</b> (bütün firmalar), <b>Bu firma</b>, <b>Bu dönem</b>. Excel'e en özel tanımlı olan yazılır; "Excel bunu kullanıyor" hangisi olduğunu söyler.</>,
           <><b>Basit</b>: Excel'e girecek bilgileri işaretleyin; harf, sütunun yerini gösterir. <b>Gelişmiş</b>: satır satır sütunlar, satır sırası, sayfa adı, tarih hücreleri.</>,
@@ -284,7 +289,7 @@ export const sections: Section[] = [
 /** Klavye listesi: rehberde ve Ayarlar › Klavye'de aynı tablo */
 export const keys: [string, string][] = [
   ['←  →', 'Önceki / sonraki fatura'],
-  ['Tab  Shift+Tab', 'Sonraki / önceki kod almamış fatura (Shift+ok da olur)'],
+  ['Tab  Shift+Tab', 'Sonraki / önceki kod almamış fatura (Shift+ok da olur); Çıktılar › Gez turu açıkken yalnızca o çıktının uyarılı faturaları'],
   ['Ctrl+←  Ctrl+→', 'Toplu ve kuralla atananlar dahil gez'],
   ['Q W E A S D', 'Yuvadaki kodu ver (seçim varken seçilenlerin hepsine; ayara göre sıradakine geç)'],
   ['Boşluk', 'Kuralın ya da satıcıya önce verilen kodu ver (yalnızca açık faturaya)'],

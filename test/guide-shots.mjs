@@ -188,6 +188,12 @@ await page.locator('.rule-code').press('Enter'); await wait(300); await esc(); a
 await page.keyboard.press('F5'); await page.waitForSelector('.modal.wide'); await wait(200);
 await annotate([{ sel: '.legend', n: 1 }, { sel: 'th.code-col', n: 2 }, { sel: 'tr.lvl-high', n: 3, pad: 0, pos: 'bl' }, { sel: '.modal.wide thead tr', n: 4, pad: 0, pos: 'tr' }]);
 await shot('14-onizleme.png'); await clear();
+// verilen çıktılar: Excel üret → kayıt, pencere
+await esc(); await Promise.all([page.waitForEvent('download').catch(() => {}), page.keyboard.press('F1')]); await wait(400); await noToast();
+await page.locator('.toolbar [data-act="exports"]').click(); await page.waitForSelector('.exports-modal'); await wait(200);
+await annotate([{ sel: '.exp-rec.on', n: 1 }, { sel: '.exp-flagged th:has-text("Şimdi")', n: 2, pos: 'tr' }, { sel: '.exports-modal button:has-text("Gez")', n: 3 }]);
+await shot('14b-ciktilar.png', { clip: await clipOf('.exports-modal', 8) }); await clear(); await esc();
+await page.keyboard.press('F5'); await page.waitForSelector('.modal.wide'); await wait(200);
 await page.locator('button:has-text("Şablon penceresi")').click(); await page.waitForSelector('.tpl-modal'); await wait(200);
 await annotate([{ sel: '.tpl-scopes', n: 1 }, { sel: '.tpl-mode', n: 2 }, { sel: '.tpl-preview thead tr', n: 3, pad: 0 }, { sel: '.tpl-modal button:has-text("Geri al")', n: 4 }, { sel: '.tpl-preview th.code-col', n: 5, pos: 'tr' }]);
 await shot('15-sablon.png'); await clear(); await esc();

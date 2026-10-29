@@ -8,10 +8,10 @@ import { overflowItems } from '../core/layout';
  * sığmayınca en az kullanılandan başlayarak ⋯ menüsüne taşınır (ölçüm ResizeObserver ile; medya sorgusu değil, çünkü
  * arayüz ölçeği (zoom) gerçek pencereyi değiştirmez).
  */
-type ActId = 'layout' | 'undo' | 'preview' | 'print' | 'rules' | 'guide' | 'theme';
+type ActId = 'exports' | 'layout' | 'undo' | 'preview' | 'print' | 'rules' | 'guide' | 'theme';
 
 /** Menüye alınma sırası: önce gidecek önce */
-const DROP_ORDER: ActId[] = ['theme', 'undo', 'guide', 'print', 'preview', 'layout', 'rules'];
+const DROP_ORDER: ActId[] = ['exports', 'theme', 'undo', 'guide', 'print', 'preview', 'layout', 'rules'];
 
 export function Toolbar() {
   const xml = useRef<HTMLInputElement>(null);
@@ -35,6 +35,7 @@ export function Toolbar() {
 
   // Eylemler: etiket, ipucu, tuş, tıklama; sıra = çubuktaki sıra
   const acts: { id: ActId; label: string; title: string; kbd?: string; cls?: string; disabled?: boolean; on: () => void }[] = [
+    { id: 'exports', label: `Çıktılar${S.exportsList.value.length ? ` ${S.exportsList.value.length}` : ''}`, title: 'Verilen çıktılar: bu dönemde üretilen Excel\'ler, hangi uyarılarla verildikleri; uyarılı faturaları gezin', cls: 'ghost', disabled: !b, on: () => (S.exportsOpen.value = true) },
     { id: 'layout', label: isList ? '▣ Görsel' : '☰ Liste', title: isList ? 'Görsel görünüme geç (fatura görüntüsü + panel)' : 'Liste görünümüne geç (yalnızca tablo)', cls: `ghost layout-btn ${isList ? 'on' : ''}`, disabled: !b, on: () => S.setLayout(isList ? 'hybrid' : 'list') },
     { id: 'undo', label: '↶', title: S.undoStack.value.length ? `Geri al: ${S.undoStack.value[S.undoStack.value.length - 1].label} (Ctrl+Z)` : 'Geri alınacak işlem yok', kbd: 'Ctrl+Z', cls: 'ghost', disabled: !S.undoStack.value.length, on: () => S.undo() },
     { id: 'preview', label: 'Önizle', title: 'Çıktıyı önizle (F5)', kbd: 'F5', disabled: !b, on: () => (S.previewOpen.value = true) },

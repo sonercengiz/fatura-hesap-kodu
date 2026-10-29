@@ -32,7 +32,8 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 0;
 
 .app { height: 100%; display: grid; grid-template-rows: auto auto 1fr auto; grid-template-columns: minmax(0, 1fr); } /* sütun ekran genişliğinde: geniş liste tablosu sayfayı değil kendi kutusunu kaydırır */
 .app > .welcome, .app > .work { grid-row: 3; }
-.backup-hint { grid-row: 2; display: flex; gap: 10px; align-items: center; padding: 6px 12px; background: var(--warn-bg); color: var(--warn); font-size: 13px; border-bottom: 1px solid var(--line); }
+.app-strips { grid-row: 2; display: flex; flex-direction: column; min-width: 0; }
+.backup-hint { display: flex; gap: 10px; align-items: center; padding: 6px 12px; background: var(--warn-bg); color: var(--warn); font-size: 13px; border-bottom: 1px solid var(--line); }
 .backup-hint span { flex: 1; }
 .toolbar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--panel); border-bottom: 1px solid var(--line); flex-wrap: nowrap; overflow: hidden; min-width: 0; }
 .toolbar > button, .toolbar > select, .toolbar > .progress, .toolbar > .tb-more-wrap { flex: none; }
@@ -679,3 +680,24 @@ button.lg:hover:not(:disabled) { box-shadow: inset 0 0 0 1px currentColor; }
 .iss-txt.lvl-high, .warn-dot.lvl-high { color: var(--iss-h); } .iss-txt.lvl-medium, .warn-dot.lvl-medium { color: var(--iss-m); } .iss-txt.lvl-low, .warn-dot.lvl-low { color: var(--iss-l); }
 .issue.lvl-high { color: var(--iss-h); background: var(--iss-h-bg); } .issue.lvl-medium { color: var(--iss-m); background: var(--iss-m-bg); } .issue.lvl-low { color: var(--iss-l); background: var(--iss-l-bg); }
 .lv-table td.lv-issues .lv-iss { font-size: 12px; white-space: nowrap; }
+
+/* Verilen çıktılar penceresi: solda kayıtlar, sağda seçilen çıktının uyarılı faturaları */
+.modal.exports-modal { width: min(1180px, 96vw); height: 80vh; }
+.exp-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 360px minmax(0, 1fr); }
+.exp-list { overflow: auto; border-right: 1px solid var(--line); padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+.exp-rec { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; text-align: left; padding: 8px 10px; border-radius: 8px; }
+.exp-rec.on { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+.exp-when { font-weight: 600; } .exp-file { font-size: 12px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.exp-chips { display: flex; flex-wrap: wrap; gap: 4px; font-size: 12px; margin-top: 2px; }
+.exp-chips .lg, .exp-kinds .lg { font-size: 11px; }
+.exp-despite { font-size: 11px; font-weight: 600; color: var(--iss-h); border: 1px solid currentColor; border-radius: 999px; padding: 1px 7px; }
+.exp-detail { min-height: 0; display: flex; flex-direction: column; padding: 8px 12px; }
+.exp-flagged table { width: 100%; font-size: 13px; }
+.exp-flagged td.mono { font-family: ui-monospace, Menlo, monospace; font-size: 12px; white-space: nowrap; }
+.exp-supplier { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.exp-kinds { display: flex; flex-wrap: wrap; gap: 4px; }
+.exp-now { font-weight: 600; white-space: nowrap; } .exp-now.ok { color: var(--ok); }
+.exp-empty { padding: 24px; }
+/* Uyarılı faturalar turu şeridi */
+.tour-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 5px 12px; font-size: 13px; background: color-mix(in srgb, var(--accent) 10%, var(--panel)); border-bottom: 1px solid var(--line); }
+.app.stacked .exp-body { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); } .app.stacked .exp-list { border-right: none; border-bottom: 1px solid var(--line); max-height: 30vh; }

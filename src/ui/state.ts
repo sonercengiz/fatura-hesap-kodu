@@ -8,3 +8,4 @@ export * from './state/move';
 export * from './state/print';
 export * from './state/screen';
 export * from './state/issues';
+export * from './state/exports';

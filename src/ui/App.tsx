@@ -17,6 +17,7 @@ import { PrintRoot } from './PrintRoot';
 import { ImportReportModal } from './ImportReportModal';
 import { MoveModal } from './MoveModal';
 import { TemplateModal } from './TemplateModal';
+import { ExportsModal, TourBar } from './ExportsModal';
 import { filesFromDataTransfer } from './dnd';
 import { DialogModal } from './DialogModal';
 import { AccountsModal } from './AccountsModal';
@@ -61,7 +62,7 @@ export function App() {
 
       // Açık pencere varken genel kısayollar (F1/F5/Ctrl+P/Ctrl+F/Ctrl+./Ctrl+Z) çalışmaz: arkada pencere açılmasın, odak çalınmasın, görünmeyen geri alma olmasın.
       // İstisnalar: önizlemede F1 (başlıkta yazıyor) ve F5 (önizlemeyi kapatır); hesap listesinde Ctrl+. (kapatır); Kurallar'da Ctrl+Z/Y.
-      const modalOpen = S.settingsOpen.value || S.guideOpen.value || S.rulesOpen.value || S.printOpen.value || !!S.quickRule.value || S.moveOpen.value || S.templateOpen.value || S.accountsOpen.value || !!S.importReport.value || !!dialog.value;
+      const modalOpen = S.settingsOpen.value || S.guideOpen.value || S.rulesOpen.value || S.printOpen.value || !!S.quickRule.value || S.moveOpen.value || S.templateOpen.value || S.accountsOpen.value || S.exportsOpen.value || !!S.importReport.value || !!dialog.value;
       const onlyPreview = S.previewOpen.value && !modalOpen && !S.chartOpen.value;
       if (e.key === 'F1' || e.key === 'F5') {
         e.preventDefault();
@@ -125,8 +126,8 @@ export function App() {
         return;
       }
       if (S.quickRule.value) { if (e.key === 'Escape') S.quickRule.value = null; return; }
-      if (S.moveOpen.value || S.templateOpen.value || S.accountsOpen.value) {
-        if (e.key === 'Escape') { S.moveOpen.value = false; S.accountsOpen.value = false; if (S.templateOpen.value) (S.modalClosers.template ?? (() => (S.templateOpen.value = false)))(); }
+      if (S.moveOpen.value || S.templateOpen.value || S.accountsOpen.value || S.exportsOpen.value) {
+        if (e.key === 'Escape') { S.moveOpen.value = false; S.accountsOpen.value = false; S.exportsOpen.value = false; if (S.templateOpen.value) (S.modalClosers.template ?? (() => (S.templateOpen.value = false)))(); }
         return;
       }
       if (S.previewOpen.value || S.settingsOpen.value || S.guideOpen.value || S.rulesOpen.value) {
@@ -159,6 +160,9 @@ export function App() {
         return;
       }
       if (inInput) return;
+      // Uyarılı faturalar turu açıkken Tab / Shift+Tab yalnızca turda gezer, Esc turu bitirir
+      if (S.tour.value && e.key === 'Tab' && !e.ctrlKey && !e.altKey && !e.metaKey) { e.preventDefault(); S.tourStep(e.shiftKey ? -1 : 1); return; }
+      if (S.tour.value && e.key === 'Escape') { S.endTour(); return; }
       // Tab / Shift+Tab ve Shift+ok: sonraki / önceki atanmamış fatura
       if (e.key === 'Tab' && !e.ctrlKey && !e.altKey && !e.metaKey) {
         e.preventDefault();
@@ -260,16 +264,20 @@ export function App() {
       onDrop={onDrop}
     >
       <Toolbar />
-      {S.backupDue.value && S.batchRec.value && (
-        <div class="backup-hint">
-          <span>
-            {S.lastExportAt.value === null ? 'Henüz hiç yedek alınmadı.' : `Son yedek ${Math.floor((Date.now() - S.lastExportAt.value) / 86_400_000)} gün önce; o günden beri değişiklik var.`}{' '}
-            Veriler yalnızca bu tarayıcıda; tek dosyayla yedekleyin.
-          </span>
-          <button class="tiny primary" onClick={() => S.exportWorkspace()}>Şimdi dışa aktar</button>
-          <button class="tiny ghost" title="Sıklık: Ayarlar › Yedek" onClick={() => S.dismissBackup()}>{S.backupRemind.value === 'month' ? '1 ay sonra hatırlat' : '1 hafta sonra hatırlat'}</button>
-        </div>
-      )}
+      {/* Üst çubuğun altındaki şeritler (yedek hatırlatma, uyarılı faturalar turu) */}
+      <div class="app-strips">
+        {S.backupDue.value && S.batchRec.value && (
+          <div class="backup-hint">
+            <span>
+              {S.lastExportAt.value === null ? 'Henüz hiç yedek alınmadı.' : `Son yedek ${Math.floor((Date.now() - S.lastExportAt.value) / 86_400_000)} gün önce; o günden beri değişiklik var.`}{' '}
+              Veriler yalnızca bu tarayıcıda; tek dosyayla yedekleyin.
+            </span>
+            <button class="tiny primary" onClick={() => S.exportWorkspace()}>Şimdi dışa aktar</button>
+            <button class="tiny ghost" title="Sıklık: Ayarlar › Yedek" onClick={() => S.dismissBackup()}>{S.backupRemind.value === 'month' ? '1 ay sonra hatırlat' : '1 hafta sonra hatırlat'}</button>
+          </div>
+        )}
+        <TourBar />
+      </div>
       {!S.ready.value ? (
         <main class="welcome loading"><p class="muted">Açılıyor…</p></main>
       ) : !S.batchRec.value ? (
@@ -314,6 +322,7 @@ export function App() {
       {S.moveOpen.value && <MoveModal />}
       {S.templateOpen.value && <TemplateModal />}
       {S.accountsOpen.value && <AccountsModal />}
+      {S.exportsOpen.value && <ExportsModal />}
       {dialog.value && <DialogModal />}
       <PrintRoot />
       {S.busy.value && <div class="busy">{S.busy.value}</div>}

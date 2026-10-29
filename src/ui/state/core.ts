@@ -1,7 +1,6 @@
 import { signal, computed, batch as sbatch } from '@preact/signals';
 import { cap } from '../../core/text';
 import { DEFAULT_SETTINGS, DEFAULT_SHORTCUT_KEYS, typeLabel, profileLabel, toDisplayDate, type Settings, type Invoice, type FilterMode } from '../../core/types';
-import { buildTemplateWorkbook, buildFileName } from '../../core/excel/writeOutput';
 import { buildTemplateRows, normalizeTemplate, codeColumnIndexOf, emptyColumns, skipEmpty, excelLettersOf, expandTemplate, type OutputTemplate, type RowContext } from '../../core/excel/template';
 import { supplierHint, type HistoryEntry } from '../../core/suggest/engine';
 import { sortInvoices } from '../../core/sort';
@@ -693,24 +692,6 @@ async function updateBatchTemplate(t: OutputTemplate | undefined) {
   batchRec.value = { ...b, outputTemplate: t };
   batchList.value = batchList.value.map((x) => (x.id === b.id ? { ...x, outputTemplate: t } : x));
   notifyOtherTabs();
-}
-
-export async function exportExcel() {
-  const b = batchRec.value;
-  if (!b) return;
-  if (outputIncluded.value.length === 0) { showToast('Excel\'e girecek fatura yok: hepsi çıkarılmış.', 4000); return; }
-  const bytes = await buildTemplateWorkbook(outputIncluded.value, writtenTemplate.value, outputContext());
-  const name = buildFileName(firm.value.name, outputIncluded.value);
-  const blob = new Blob([bytes as unknown as ArrayBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = name;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 10_000);
-  showToast(`İndirildi: ${name}`, 4000);
 }
 
 /** Görsel ↔ liste görünümü; isteğe bağlı olarak belirli bir faturaya gider */
