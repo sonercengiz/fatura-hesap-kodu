@@ -273,6 +273,35 @@ export function vatUncovered(inv: Invoice, t: OutputTemplate): (number | null)[]
   return out;
 }
 
+/** Faturanın Excel'e girmeyen bir tutar bileşeni (uyarı metninde: "%18 KDV 180,00", "ÖİV 36,10") */
+export interface AmountGap { kind: 'vat' | 'tax' | 'withholding' | 'currency'; text: string }
+
+/** Tutar gösteren alanlar: şablonda bunlardan biri yoksa uygulama yalnızca veri toplamak için kullanılıyordur, tutar uyarısı verilmez */
+const AMOUNT_IDS = new Set<OutputFieldId>(['amount', 'taxInclusive', 'taxExclusive', 'tax', 'amountTry', ...ALL_VAT_IDS]);
+
+/**
+ * Şablonda tutar sütunu varken faturanın Excel'e girmeyen tutar bileşenleri: sütunu olmayan KDV oranları (şablonda KDV varken),
+ * KDV dışı vergiler (ÖİV → ÖİV / KDV dışı vergiler sütunları; ÖTV → ÖTV / …; öbürleri → KDV dışı vergiler), tevkifat, dövizde TL karşılığı/kur.
+ */
+export function amountGaps(inv: Invoice, t: OutputTemplate): AmountGap[] {
+  const ids = new Set(t.columns.map((c) => c.id));
+  if (![...ids].some((id) => AMOUNT_IDS.has(id))) return [];
+  const out: AmountGap[] = [];
+  for (const r of vatUncovered(inv, t)) {
+    const tax = inv.vatBreakdown.filter((p) => (r === null ? p.rate === null : sameRate(p.rate, r))).reduce((a, p) => a + p.tax, 0);
+    out.push({ kind: 'vat', text: `${r === null ? 'Oranı uyuşmayan KDV' : `${pct(r)} KDV`} ${fmt2(tax)}` });
+  }
+  const anyOther = ids.has('otherTaxTotal') || ids.has('otherTaxesText');
+  for (const p of inv.taxExtras?.other ?? []) {
+    const own = OIV_CODES.includes(p.code) ? ids.has('oivTax') : OTV_CODES.includes(p.code) ? ids.has('otvTax') : false;
+    if (!own && !anyOther) out.push({ kind: 'tax', text: `${p.name} ${fmt2(p.amount)}` });
+  }
+  const w = inv.taxExtras?.withholding;
+  if (w && !ids.has('withholding')) out.push({ kind: 'withholding', text: `Tevkifat ${fmt2(w)}` });
+  if (inv.currency && inv.currency !== 'TRY' && !ids.has('amountTry') && !ids.has('exchangeRate')) out.push({ kind: 'currency', text: `Döviz (${inv.currency}): TL karşılığı ve kur` });
+  return out;
+}
+
 /**
  * Sütun başlığının renk grubu: aynı oranın matrahı ve KDV'si aynı grupta (%0 yalnız matrah), oranı uyuşmayan KDV ayrı.
  * Yalnızca başlık boyanır; hücre renklerini hesap kodu verir.
