@@ -76,7 +76,7 @@ export function ListView() {
           <SkipEmptyToggle t={t} empty={emptyCount} />
           {emptyCount > 0 && (
             <button class="tiny ghost lv-empty" onClick={() => setShowEmpty(!showEmpty)} title={`Bu dönemde bütün satırlarda boş olan sütunlar (çoğunlukla EDM listesi yüklenmediği için). Göz atmak için açabilirsiniz. ${t.keepEmpty ? 'Excel\'e yine yazılırlar ("Boş sütunları atla" kapalı).' : 'Excel\'e yazılmazlar ("Boş sütunları atla" açık).'}`}>
-              {showEmpty ? `Boş sütunları gizle (${emptyCount})` : `+${emptyCount} boş sütun gizli · göster`}
+              Boş sütunlar ({emptyCount}) · {showEmpty ? 'Gizle' : 'Göster'}
             </button>
           )}
           <button class="tiny ghost" onClick={() => (S.templateOpen.value = true)}>Şablon…</button>
@@ -111,7 +111,7 @@ export function ListView() {
               const bulk = S.bulkNos.value.has(i.no);
               const ruled = S.ruleNos.value.has(i.no);
               const si = S.slotIndexOf(c);
-              const src = bulk ? 'toplu' : ruled ? 'kural' : c ? 'elle' : '';
+              const src = bulk ? 'Toplu' : ruled ? 'Kural' : c ? 'Elle' : '';
               return (
                 <tr
                   class={`row ${k === idx ? 'current' : ''} ${c ? `done slot-row-${si}` : ''} ${sel ? 'selected' : ''} ${bulk || ruled ? 'bulk' : ''} ${i.excluded ? 'excluded' : ''}`}
@@ -128,7 +128,7 @@ export function ListView() {
                   {cols.map(({ id, k: ck }) => {
                     if (id === 'code') return (
                       <td class={`lv-code code-col slot-${si}`} title="Tıkla: kodu elle yaz" onClick={(e) => { e.stopPropagation(); S.goTo(k); S.enterManual(c ?? ''); }}>
-                        <span class="row-code">{i.excluded && <span class="excl-tag" title="Excel'e girmez">hariç</span>}{c ?? <span class="muted">—</span>}</span>
+                        <span class="row-code">{i.excluded && <span class="excl-tag" title="Excel'e girmez">Hariç</span>}{c ?? <span class="muted">—</span>}</span>
                       </td>
                     );
                     if (id === 'issues') return <td class="lv-issues">{iss.length > 0 && <span class="warn" title={iss.map((x) => S.issueText(i, x)).join('\n')}>! {iss.map((x) => S.ISSUE_LABEL[x]).join(' · ')}</span>}</td>;

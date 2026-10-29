@@ -1,4 +1,5 @@
 import { signal, computed, batch as sbatch } from '@preact/signals';
+import { cap } from '../../core/text';
 import { DEFAULT_SETTINGS, DEFAULT_SHORTCUT_KEYS, typeLabel, profileLabel, toDisplayDate, type Settings, type Invoice, type FilterMode } from '../../core/types';
 import { buildTemplateWorkbook, buildFileName } from '../../core/excel/writeOutput';
 import { buildTemplateRows, normalizeTemplate, codeColumnIndexOf, vatUncovered, usesVat, emptyColumns, skipEmpty, excelLettersOf, expandTemplate, type OutputTemplate, type RowContext } from '../../core/excel/template';
@@ -387,8 +388,8 @@ export let toastTimer: number | undefined;
 export const toastAction = signal<{ label: string; run: () => void } | null>(null);
 
 export function showToast(msg: string, ms = 2200, action?: { label: string; run: () => void }) {
-  toast.value = msg;
-  toastAction.value = action ?? null;
+  toast.value = cap(msg);
+  toastAction.value = action ? { ...action, label: cap(action.label) } : null;
   window.clearTimeout(toastTimer);
   toastTimer = window.setTimeout(() => (toast.value = null), ms);
 }

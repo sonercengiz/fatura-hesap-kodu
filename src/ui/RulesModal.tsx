@@ -154,7 +154,7 @@ export function RulesModal() {
         </div>
         <div class="form">
           <div class="muted small">
-            Bir kural, koşulların <b>hepsi</b> tutunca faturaya kodu verir; uyan fatura <b>yüklenir yüklenmez</b> kodu alır ("kural" etiketi, Ctrl+Z ile geri alınır).
+            Bir kural, koşulların <b>hepsi</b> tutunca faturaya kodu verir; uyan fatura <b>yüklenir yüklenmez</b> kodu alır ("Kural" etiketi, Ctrl+Z ile geri alınır).
             Tek koşul da yeter (örn. yalnızca VKN); miktar ya da tutar aralığı gibi koşullarla aynı satıcıyı farklı kodlara ayırabilirsiniz.
             <span title={PRIORITY_TEXT}> Öncelik: döneme özel › daha çok koşullu › VKN › unvan › kalem › tip › KDV › miktar › birim fiyat › kalem tutarı › tutar › tarih.</span>{' '}
             <b>Kalıcı</b> kural firmanın her döneminde, <b>döneme özel</b> kural yalnızca o ayda geçerlidir. Kurallar yalnızca bu tarayıcıda saklanır; yedeğe girer, kalıcılar dosya olarak paylaşılabilir.
@@ -198,7 +198,7 @@ export function RulesModal() {
               <div class={`acc-row rule-row ${r.enabled ? '' : 'off'} ${r.batchId ? 'scoped' : ''} ${editing === r.id ? 'editing' : ''}`}>
                 <input type="checkbox" checked={r.enabled} title={r.enabled ? 'Kuralı kapat (bu dönemde verdiği kodlar kalkar, açınca geri gelir)' : 'Kuralı aç (bu dönemde uyan, kodu olmayan faturalara kodunu verir)'} onChange={(e) => S.updateRule(r.id, { enabled: (e.currentTarget as HTMLInputElement).checked })} />
                 <span class="rule-conds" title={ruleLabel(r)}>
-                  {r.batchId ? <span class="bulk-tag scope-tag" title={`Yalnızca ${batch?.name ?? 'bu dönem'} döneminde geçerli`}>bu dönem</span> : null}
+                  {r.batchId ? <span class="bulk-tag scope-tag" title={`Yalnızca ${batch?.name ?? 'bu dönem'} döneminde geçerli`}>Bu dönem</span> : null}
                   {r.conds.map((c) => <span class={`cond-chip k-${c.kind}`}>{condLabel(c)}</span>)}
                   {ov && ov.count > 0 && <span class="override-note" title={`Bu dönemde ${ov.count} faturada kalıcı kuralın (${ov.codes.join(', ')}) yerine geçiyor`}> · kalıcı {ov.codes.join(', ')} yerine</span>}
                 </span>

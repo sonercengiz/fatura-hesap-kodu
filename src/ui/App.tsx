@@ -251,6 +251,8 @@ export function App() {
       class={appCls}
       style={`--panel-w:${S.panelW.value}px`}
       onDragOver={(e) => {
+        // Yalnızca dosya sürüklenirken (sütun başlığı/şablon satırı sürüklemesi yükleme değildir)
+        if (!e.dataTransfer?.types.includes('Files')) return;
         e.preventDefault();
         setDrag(true);
       }}

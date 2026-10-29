@@ -24,7 +24,7 @@ await a.locator(up).setInputFiles(files); await a.waitForSelector('.inv-frame');
 // 1) Şablon: anında kaydeder (Kaydet yok); Geri al pencere içinde; Esc sormadan kapatır
 await a.locator('.toolbar button:has-text("Şablon")').click(); await a.waitForSelector('.tpl-modal');
 const n0 = await tplCols();
-check('şablonda Kaydet yok, "anında kaydedilir" yazar', (await a.locator('.tpl-modal button:has-text("Kaydet")').count()) === 0 && (await a.locator('.tpl-modal .modal-head').innerText()).includes('anında kaydedilir'), await a.locator('.tpl-modal .modal-head').innerText());
+check('şablonda Kaydet yok, "anında kaydedilir" yazar', (await a.locator('.tpl-modal button:has-text("Kaydet")').count()) === 0 && (await a.locator('.tpl-modal .modal-head').innerText()).includes('Anında kaydedilir'), await a.locator('.tpl-modal .modal-head').innerText());
 await a.locator('.tpl-modal .tpl-row').nth(5).locator('button[title="Sütunu kaldır"]').click(); await a.waitForTimeout(150);
 await a.locator('.tpl-modal .tpl-row').nth(5).locator('button[title="Sütunu kaldır"]').click(); await a.waitForTimeout(150);
 check('Geri al sayısı söyler', (await a.locator('.tpl-modal button:has-text("Geri al")').innerText()).includes('(2)'), await a.locator('.tpl-modal button:has-text("Geri al")').innerText());

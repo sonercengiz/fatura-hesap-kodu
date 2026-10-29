@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks';
 import * as S from './state';
-import { FIELD_DEFS, INTERNAL_FIELDS, colName, vatGroupOf, fieldOf, defaultHeaderOf, expandTemplate, emptyColumns, excelLettersOf, addColumn, removeColumn, renameColumn, moveColumn, withColumns, type OutputTemplate, type OutputFieldId, type ExpandedColumn } from '../core/excel/template';
+import { FIELD_DEFS, INTERNAL_FIELDS, colName, vatGroupOf, fieldOf, defaultHeaderOf, expandTemplate, emptyColumns, excelLettersOf, addColumn, removeColumn, renameColumn, moveColumn, withColumns, dropIndex, type OutputTemplate, type OutputFieldId, type ExpandedColumn } from '../core/excel/template';
 
 /**
  * Şablonu her yerden (önizleme, liste) aynı şekilde değiştirir: geçerli şablonun kapsamına anında yazar, bildirimde "Geri al".
@@ -18,8 +18,8 @@ export function scopeNote(scope: S.TemplateScope): string {
   return scope === 'batch' ? `yalnızca bu dönemin Excel'i (${S.batchRec.value?.name ?? ''})` : scope === 'firm' ? `${S.firm.value.name} firmasının Excel'i` : 'genel şablon (özel şablonu olmayan bütün firmalar)';
 }
 
-/** Atlanan sütunun açıklaması (harfin yerinde "boş, yazılmaz") */
-export const SKIPPED_HINT = 'Bu dönemdeki faturaların hiçbirinde bu bilgi yok; sütun Excel\'e yazılmaz, sonraki sütun onun harfini alır. "Boş sütunları atla" kutusunu kaldırırsanız yazılır.';
+/** Excel'e yazılmayan (bu dönemde boş, atlanan) sütunun ipucu; görünür metin yok, başlık gri */
+export const SKIPPED_HINT = 'Bu dönemde boş; Excel\'e yazılmıyor (Boş sütunları atla)';
 
 /** KDV dökümü öğesinin bir alt başlığını değiştirir (varsayılana dönerse kaydı silinir) */
 function renameVatPart(t: OutputTemplate, k: number, part: string, header: string, def: string): OutputTemplate {
@@ -30,40 +30,83 @@ function renameVatPart(t: OutputTemplate, k: number, part: string, header: strin
   return withColumns(t, t.columns.map((c, i) => (i === k ? { ...rest, ...(Object.keys(vatHeaders).length ? { vatHeaders } : {}) } : c)));
 }
 
+type DropSide = 'before' | 'after';
+const DRAG_TYPE = 'text/x-col';
+
 /**
- * Önizleme ve liste tablosunda düzenlenebilir sütun başlığı: harf + başlık; tıkla → yeniden adlandır, sürükle → sırala, ✕ → kaldır.
+ * Sütun sürükle-bırak (liste, önizleme, şablon önizlemesi ve Gelişmiş satırlar aynı): işaretçi hedefin ön yarısındaysa önüne,
+ * arka yarısındaysa arkasına bırakılır; bırakılacak yerde ekleme çizgisi görünür (`drop-before` / `drop-after`).
+ * `axis` 'x' başlık hücresi (sol/sağ yarı), 'y' Gelişmiş satır (üst/alt yarı).
+ */
+export function useColumnDrag(k: number, onMove: (from: number, to: number) => void, axis: 'x' | 'y' = 'x') {
+  const [side, setSide] = useState<DropSide | null>(null);
+  const sideOf = (e: DragEvent): DropSide => {
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    return axis === 'x' ? (e.clientX < r.left + r.width / 2 ? 'before' : 'after') : (e.clientY < r.top + r.height / 2 ? 'before' : 'after');
+  };
+  return {
+    dropCls: side ? `drop-${side}` : '',
+    dragProps: {
+      onDragStart: (e: DragEvent) => { e.dataTransfer?.setData(DRAG_TYPE, String(k)); if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move'; },
+      onDragOver: (e: DragEvent) => {
+        if (!e.dataTransfer?.types.includes(DRAG_TYPE)) return;
+        e.preventDefault();
+        const s = sideOf(e);
+        if (s !== side) setSide(s);
+      },
+      onDragLeave: () => setSide(null),
+      onDrop: (e: DragEvent) => {
+        e.preventDefault();
+        const s = side ?? sideOf(e);
+        setSide(null);
+        const from = Number(e.dataTransfer?.getData(DRAG_TYPE));
+        if (Number.isNaN(from) || e.dataTransfer?.getData(DRAG_TYPE) === '') return;
+        const to = dropIndex(from, k, s);
+        if (to !== from) onMove(from, to);
+      },
+    },
+  };
+}
+
+/** Taşınan sütunun bildirimi: '"Tutar" C sütununa taşındı' (harf yeni yerindeki Excel harfi; KDV dökümünde ilk parçasınınki) */
+export function moveLabel(t: OutputTemplate, from: number, to: number): string {
+  const next = moveColumn(t, from, to);
+  const x = expandedOf(next);
+  const j = x.e.columns.findIndex((c) => c.src === to);
+  const letter = j >= 0 ? x.letters[j] : null;
+  const what = t.columns[from].id === 'vat' ? 'KDV dökümü' : `"${t.columns[from].header || '(boş)'}"`;
+  return letter ? `${what} ${letter} sütununa taşındı` : `${what} taşındı`;
+}
+
+/**
+ * Önizleme ve liste tablosunda düzenlenebilir sütun başlığı: harf + başlık; tıkla → yeniden adlandır, sürükle → araya taşı, ✕ → kaldır.
  * `col` Excel'e yazılan (açılmış) sütundur; `col.src` şablondaki sütun. KDV dökümünün bir parçasında ad yalnızca o başlığı değiştirir,
- * sürükleme ve ✕ bütün KDV dökümünü taşır/kaldırır.
+ * sürükleme ve ✕ bütün KDV dökümünü taşır/kaldırır. `letter === null`: bu dönemde boş, Excel'e yazılmıyor (gri başlık, harf yok).
  */
 export function HeaderCell({ t, col, cls = '', label, letter, onChange = commitTemplate }: { t: OutputTemplate; col: ExpandedColumn; cls?: string; label?: string; letter?: string | null; onChange?: (next: OutputTemplate, label: string) => void }) {
   const [edit, setEdit] = useState<string | null>(null);
-  const [over, setOver] = useState(false);
   const k = col.src;
   const inVat = !!col.part;
   const shown = label ?? col.header;
+  const { dropCls, dragProps } = useColumnDrag(k, (from, to) => onChange(moveColumn(t, from, to), moveLabel(t, from, to)));
   const save = () => {
     if (edit !== null && edit !== col.header) {
       onChange(inVat ? renameVatPart(t, k, col.part as string, edit, defaultHeaderOf(col)) : renameColumn(t, k, edit), `Başlık "${edit || '(boş)'}" oldu`);
     }
     setEdit(null);
   };
-  // Başlık hücresiyle aynı hizada (para sağa); KDV sütunlarında oran grubunun rengi
-  const g = vatGroupOf(col);
-  const align = fieldOf(col).money && !/(^| )r( |$)/.test(cls) ? ' r' : '';
+  // KDV sütunlarında oran grubunun rengi (yazılmayan sütunda renk yok)
+  const off = letter === null;
+  const g = off ? null : vatGroupOf(col);
   const what = inVat ? 'KDV dökümü' : `"${col.header || '(boş)'}"`;
   return (
     <th
-      class={`${cls}${align}${g ? ` vg vg-${g}` : ''} hdr-edit ${over ? 'drop-over' : ''} ${letter === null ? 'skipped' : ''}`}
+      class={`${cls}${g ? ` vg vg-${g}` : ''} hdr-edit ${dropCls} ${off ? 'off' : ''}`}
       draggable={edit === null}
-      title={`${fieldOf(col).label}${inVat ? ' · KDV dökümünün parçası' : ''}\nTıkla: başlığı değiştir · sürükle: ${inVat ? 'KDV dökümünün' : ''} sırasını değiştir · ✕: ${inVat ? 'KDV dökümünü' : ''} Excel'den kaldır`.replace(/  +/g, ' ')}
-      onDragStart={(e) => { e.dataTransfer?.setData('text/x-col', String(k)); }}
-      onDragOver={(e) => { if (e.dataTransfer?.types.includes('text/x-col')) { e.preventDefault(); setOver(true); } }}
-      onDragLeave={() => setOver(false)}
-      onDrop={(e) => { e.preventDefault(); setOver(false); const from = Number(e.dataTransfer?.getData('text/x-col')); if (!Number.isNaN(from) && from !== k) onChange(moveColumn(t, from, k), `"${t.columns[from].id === 'vat' ? 'KDV dökümü' : t.columns[from].header || '(boş)'}" taşındı`); }}
+      title={`${fieldOf(col).label}${inVat ? ' · KDV dökümünün parçası' : ''}${off ? `\n${SKIPPED_HINT}` : ''}\nTıkla: başlığı değiştir · Sürükle: ${inVat ? 'KDV dökümünün' : ''} yerini değiştir · ✕: ${inVat ? 'KDV dökümünü' : ''} Excel'den kaldır`.replace(/  +/g, ' ')}
+      {...dragProps}
     >
-      {letter === null
-        ? <span class="col-letter skipped" title={SKIPPED_HINT}>boş, yazılmaz</span>
-        : <span class="col-letter">{letter ?? colName(k)}</span>}
+      <span class="col-letter">{off ? '\u00a0' : letter ?? colName(k)}</span>
       {edit !== null ? (
         <input
           class="hdr-input"
@@ -93,7 +136,7 @@ export function expandedOf(t: OutputTemplate) {
 export function AddColumnSelect({ t, onChange = commitTemplate }: { t: OutputTemplate; onChange?: (next: OutputTemplate, label: string) => void }) {
   const ids = (Object.keys(FIELD_DEFS) as OutputFieldId[]).filter((id) => !INTERNAL_FIELDS.has(id) && id !== 'vat');
   const { e, letters: L } = expandedOf(t);
-  const letters = (id: OutputFieldId) => e.columns.map((c, k) => (c.id === id ? L[k] ?? 'boş' : '')).filter(Boolean).join(', ');
+  const letters = (id: OutputFieldId) => { const ls = e.columns.map((c, k) => (c.id === id ? L[k] ?? '' : null)).filter((l): l is string => l !== null); return !ls.length ? '' : ls.some(Boolean) ? `ekli: ${ls.filter(Boolean).join(', ')}` : 'ekli, bu dönemde boş'; };
   const hasVat = t.columns.some((c) => c.id === 'vat');
   return (
     <select
@@ -110,7 +153,7 @@ export function AddColumnSelect({ t, onChange = commitTemplate }: { t: OutputTem
     >
       <option value="">+ Sütun…</option>
       {!hasVat && <option value="vat">KDV dökümü (oranlara göre sütunlar; şablon penceresinde açılımı seçilir)</option>}
-      {ids.map((id) => <option value={id}>{FIELD_DEFS[id].label}{id !== 'blank' && letters(id) ? ` · ekli: ${letters(id)}` : ''}</option>)}
+      {ids.map((id) => <option value={id}>{FIELD_DEFS[id].label}{id !== 'blank' && letters(id) ? ` · ${letters(id)}` : ''}</option>)}
     </select>
   );
 }

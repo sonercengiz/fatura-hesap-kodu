@@ -416,6 +416,14 @@ export function moveColumn(t: OutputTemplate, from: number, to: number): OutputT
   cols.splice(to, 0, c);
   return withColumns(t, cols);
 }
+/**
+ * Sürükle-bırak hedefi: `k` sütununun önüne ('before') ya da arkasına ('after') bırakılan `from` sütununun yeni sırası
+ * (moveColumn için; kendi önüne/arkasına bırakmak yerini değiştirmez)
+ */
+export function dropIndex(from: number, k: number, side: 'before' | 'after'): number {
+  const to = side === 'before' ? k : k + 1;
+  return from < to ? to - 1 : to;
+}
 /** Alanı şablona ekler (sona) ya da bütün sütunlarını çıkarır */
 export const toggleField = (t: OutputTemplate, id: OutputFieldId, on: boolean): OutputTemplate =>
   on ? (t.columns.some((c) => c.id === id) ? t : addColumn(t, id)) : withColumns(t, t.columns.filter((c) => c.id !== id));

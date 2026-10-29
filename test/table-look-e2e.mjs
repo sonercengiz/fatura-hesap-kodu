@@ -1,4 +1,4 @@
-// Tablo görünümü (liste, önizleme, şablon önizlemesi): para başlığı sayıyla aynı hizada (sağ), ince dikey sütun çizgileri,
+// Tablo görünümü (liste, önizleme, şablon önizlemesi): başlık ortalı (tur 4 H1; sayı hücrede sağda), ince dikey sütun çizgileri,
 // KDV başlıkları oran grubuna göre renkli (matrah + KDV aynı renk). Yalnızca başlık boyanır; hücre renkleri değişmez.
 import { chromium } from 'playwright';
 import { readdirSync } from 'node:fs';
@@ -34,7 +34,7 @@ const look = (scope, header) => a.evaluate(([scope, header]) => {
 for (const [where, scope, open] of [['liste', '.lv-table table', async () => { await a.locator('.toolbar button:has-text("Liste")').click(); await a.waitForSelector('.listview'); }], ['önizleme', '.modal.wide table', async () => { await a.keyboard.press('F5'); await a.waitForSelector('.modal.wide .legend'); }]]) {
   await open(); await a.waitForTimeout(300);
   const tutar = await look(scope, 'Tutar');
-  check(`${where}: Tutar başlığı sayıyla aynı hizada (sağ)`, tutar?.thAlign === 'right' && tutar?.tdAlign === 'right', JSON.stringify(tutar));
+  check(`${where}: Tutar başlığı ortalı, hücre sağda`, tutar?.thAlign === 'center' && tutar?.tdAlign === 'right', JSON.stringify(tutar));
   const m20 = await look(scope, 'Matrah %20'), k20 = await look(scope, 'KDV %20'), m10 = await look(scope, 'Matrah %10');
   check(`${where}: Matrah %20 ve KDV %20 aynı grup rengi`, /vg-20/.test(m20?.cls) && /vg-20/.test(k20?.cls) && m20.thBg === k20.thBg, `${m20?.cls} ${m20?.thBg} / ${k20?.thBg}`);
   check(`${where}: %10 grubu %20'den farklı renk`, /vg-10/.test(m10?.cls) && m10.thBg !== m20.thBg, `${m10?.thBg} / ${m20?.thBg}`);
@@ -43,7 +43,7 @@ for (const [where, scope, open] of [['liste', '.lv-table table', async () => { a
   if (where === 'önizleme') { await a.keyboard.press('Escape'); await a.waitForTimeout(200); }
 }
 await a.locator('.toolbar .excel-tpl').click(); await a.waitForSelector('.tpl-modal');
-check('şablon önizlemesinde atlanan sütun "boş, yazılmaz" der', (await a.locator('.tpl-modal thead .col-letter.skipped').first().innerText()).includes('boş, yazılmaz'), await a.locator('.tpl-modal thead .col-letter.skipped').first().innerText());
+check('şablon önizlemesinde atlanan sütun gri başlık (th.off), harfsiz', (await a.locator('.tpl-modal thead th.off .col-letter').first().innerText()).trim() === '', await a.locator('.tpl-modal thead th.off').count());
 const m1 = await look('.tpl-modal table', 'Matrah %1');
 check('şablon önizlemesinde KDV başlığı renkli', /vg-1\b/.test(m1?.cls ?? ''), m1?.cls);
 

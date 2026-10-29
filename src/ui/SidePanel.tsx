@@ -73,7 +73,7 @@ export function SidePanel() {
             <div class="detail-row full"><span>Matrah · vergi</span><b title="Matrah · hesaplanan vergi">{inv.taxExclusive != null ? `${fmtAmount(inv.taxExclusive, inv.currency)}${inv.taxAmount != null ? ` · ${fmtAmount(inv.taxAmount, inv.currency)}` : ''}` : '—'}</b></div>
           </div>
           <div class={`detail-code slot-${S.slotIndexOf(code)}`}>
-            <span>Atanan{S.ruleNos.value.has(inv.no) && <span class="bulk-tag" title="Kuralla atandı">kural</span>}</span>
+            <span>Atanan{S.ruleNos.value.has(inv.no) && <span class="bulk-tag" title="Kuralla atandı">Kural</span>}</span>
             <b>{code ?? '—'}</b>
           </div>
           <RuleActions inv={inv} code={code} />
@@ -145,7 +145,7 @@ export function SidePanel() {
                 <span class="row-name">{i.supplierName}</span>
                 <span class="row-sub">{i.no} · {i.date}</span>
               </span>
-              <span class="row-code">{i.excluded && <span class="excl-tag" title="Excel'e girmez">hariç</span>}{bulk && <span class="bulk-tag" title="Toplu atandı (doğal gezintide atlanır, Ctrl+ok ile görülür)">toplu</span>}{ruled && <span class="bulk-tag" title="Kuralla atandı (doğal gezintide atlanır, Ctrl+ok ile görülür)">kural</span>}{c ?? ''}{iss.length > 0 && <span class="warn-dot" title={iss.map((x) => S.issueText(i, x)).join('\n')}>!</span>}</span>
+              <span class="row-code">{i.excluded && <span class="excl-tag" title="Excel'e girmez">Hariç</span>}{bulk && <span class="bulk-tag" title="Toplu atandı (doğal gezintide atlanır, Ctrl+ok ile görülür)">Toplu</span>}{ruled && <span class="bulk-tag" title="Kuralla atandı (doğal gezintide atlanır, Ctrl+ok ile görülür)">Kural</span>}{c ?? ''}{iss.length > 0 && <span class="warn-dot" title={iss.map((x) => S.issueText(i, x)).join('\n')}>!</span>}</span>
             </div>
           );
         })}
@@ -251,11 +251,11 @@ export function RemoveButton() {
   const n = S.selected.value.size;
   if (n > 1) return <button class="ghost tiny" title="Seçili faturaları dönemden sil" onClick={async () => { if (await askConfirm({ title: 'Seçilileri dönemden sil', message: `${n} fatura bu dönemden silinecek; atamaları da silinir. Geri almak için XML'lerini yeniden yüklemeniz gerekir.`, okLabel: 'Sil', danger: true })) S.removeInvoices(Array.from(S.selected.value)); }}>{n} seçiliyi dönemden sil</button>;
   if (!inv) return null;
-  return <button class="ghost tiny" title="Bu faturayı dönemden sil (yanlış yüklendiyse). Excel'e girmesin ama dönemde kalsın istiyorsanız listede seçip “Excel'den çıkar”ı kullanın." onClick={async () => { if (await askConfirm({ title: 'Faturayı dönemden sil', message: `${inv.no} (${inv.supplierName}) bu dönemden silinecek; ataması da silinir. Geri almak için XML'ini yeniden yüklemeniz gerekir.`, okLabel: 'Sil', danger: true })) S.removeInvoices([inv.no]); }}>dönemden sil</button>;
+  return <button class="ghost tiny" title="Bu faturayı dönemden sil (yanlış yüklendiyse). Excel'e girmesin ama dönemde kalsın istiyorsanız listede seçip “Excel'den çıkar”ı kullanın." onClick={async () => { if (await askConfirm({ title: 'Faturayı dönemden sil', message: `${inv.no} (${inv.supplierName}) bu dönemden silinecek; ataması da silinir. Geri almak için XML'ini yeniden yüklemeniz gerekir.`, okLabel: 'Sil', danger: true })) S.removeInvoices([inv.no]); }}>Dönemden sil</button>;
 }
 
 /** "taşı": tek firmada da (aynı firmanın başka dönemine) */
 export function MoveButton() {
   if (!S.batchRec.value) return null;
-  return <button class="ghost tiny" title="Bu dönemi ya da seçili faturaları başka firmaya ya da başka döneme taşı" onClick={() => (S.moveOpen.value = true)}>taşı</button>;
+  return <button class="ghost tiny" title="Bu dönemi ya da seçili faturaları başka firmaya ya da başka döneme taşı" onClick={() => (S.moveOpen.value = true)}>Taşı</button>;
 }

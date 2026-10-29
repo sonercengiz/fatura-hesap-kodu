@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as XLSX from 'xlsx';
-import { edmTemplate, DEFAULT_OUTPUT_TEMPLATE, normalizeTemplate, buildTemplateRows, isEdmDefault, codeColumnIndexOf, moneyColumns, FIELD_DEFS, KDV_FIELD_IDS, vatUncovered, vatFieldsFor, excelDateSerial, dateColumns, addColumn, removeColumn, renameColumn, moveColumn, toggleField, FIELD_GROUPS, INTERNAL_FIELDS, emptyColumns, skipEmpty, excelLettersOf, type OutputTemplate, type OutputFieldId } from '../src/core/excel/template';
+import { edmTemplate, DEFAULT_OUTPUT_TEMPLATE, normalizeTemplate, buildTemplateRows, isEdmDefault, codeColumnIndexOf, moneyColumns, FIELD_DEFS, KDV_FIELD_IDS, vatUncovered, vatFieldsFor, excelDateSerial, dateColumns, addColumn, removeColumn, renameColumn, moveColumn, toggleField, FIELD_GROUPS, INTERNAL_FIELDS, emptyColumns, skipEmpty, excelLettersOf, dropIndex, type OutputTemplate, type OutputFieldId } from '../src/core/excel/template';
 import { buildTemplateWorkbook, EDM_HEADERS } from '../src/core/excel/writeOutput';
 import { unzipSync, strFromU8 } from 'fflate';
 import type { Invoice } from '../src/core/types';
@@ -169,5 +169,23 @@ describe('çıktı şablonu', () => {
     expect(normalizeTemplate(t).keepEmpty).toBeUndefined();
     expect(skipEmpty(keep, empty)).toBe(keep);
     expect(excelLettersOf(keep, empty)).toEqual(['A', 'B', 'C', 'D', 'E', 'F']);
+  });
+});
+
+describe('sürükle-bırak hedefi (araya ekleme)', () => {
+  const cols = (t: OutputTemplate) => t.columns.map((c) => c.id).join(',');
+  const t = { ...DEFAULT_OUTPUT_TEMPLATE, columns: DEFAULT_OUTPUT_TEMPLATE.columns.slice(0, 5) }; // no, date, code, arrival, type
+  it('önüne / arkasına bırakılan sütunun yeni sırası', () => {
+    expect(cols(moveColumn(t, 4, dropIndex(4, 1, 'before')))).toBe('no,type,date,code,arrival');
+    expect(cols(moveColumn(t, 4, dropIndex(4, 1, 'after')))).toBe('no,date,type,code,arrival');
+    expect(cols(moveColumn(t, 0, dropIndex(0, 3, 'before')))).toBe('date,code,no,arrival,type');
+    expect(cols(moveColumn(t, 0, dropIndex(0, 3, 'after')))).toBe('date,code,arrival,no,type');
+    expect(cols(moveColumn(t, 0, dropIndex(0, 4, 'after')))).toBe('date,code,arrival,type,no');
+  });
+  it('kendi önüne/arkasına ya da komşusunun bitişiğine bırakmak yerini değiştirmez', () => {
+    expect(dropIndex(2, 2, 'before')).toBe(2);
+    expect(dropIndex(2, 2, 'after')).toBe(2);
+    expect(dropIndex(2, 1, 'after')).toBe(2);
+    expect(dropIndex(2, 3, 'before')).toBe(2);
   });
 });

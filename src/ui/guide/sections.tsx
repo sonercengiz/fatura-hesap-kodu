@@ -60,7 +60,7 @@ export const sections: Section[] = [
           <>Fatura olmayan dosyalar (irsaliye, yanıt, zarf) ve bozuk dosyalar burada nedenleriyle listelenir. Bu normaldir; faturalar yüklenmiştir.</>,
         ]} />
         <Tip>EDM listesini (Gelen Faturalar Excel'i) de yüklerseniz çıktı dosyanız EDM'nin verdiğiyle birebir aynı olur; listede olup XML'i olmayan faturalar da XML'siz (görüntüsüz) olarak eklenir.</Tip>
-        <Warn>Yanlış firmaya yüklediyseniz silmeyin: sağ alttaki <b>taşı</b> düğmesi dönemi ya da seçili faturaları atamalarıyla birlikte doğru firmaya götürür (bkz. Yedek ve taşıma).</Warn>
+        <Warn>Yanlış firmaya yüklediyseniz silmeyin: sağ alttaki <b>Taşı</b> düğmesi dönemi ya da seçili faturaları atamalarıyla birlikte doğru firmaya götürür (bkz. Yedek ve taşıma).</Warn>
       </>
     ),
   },
@@ -88,7 +88,7 @@ export const sections: Section[] = [
           <>Sıra ve süzgeç (tümü / atanmamış / elle / toplu / kural) ve <b>☑ Seç</b> (<T t="toplu atama" />).</>,
           <>Arama: numara, satıcı, tutar (<K k="Ctrl+F" />).</>,
           <>Liste: kod alan satır yuvanın rengini alır. Tıklayınca o fatura açılır.</>,
-          <>Fatura sayısı; yanlış yüklenen faturayı <b>dönemden sil</b>, başka firmaya ya da döneme <b>taşı</b>.</>,
+          <>Fatura sayısı; yanlış yüklenen faturayı <b>Dönemden sil</b>, başka firmaya ya da döneme <b>Taşı</b>.</>,
           <>Kalemler: ad, miktar × birim fiyat = tutar, KDV oranı. Yanındaki ⚡ "Bu faturadan kural" penceresini o kalem işaretli açar (bkz. Kurallar).</>,
         ]} />
       </>
@@ -123,7 +123,7 @@ export const sections: Section[] = [
         <p>Ayın faturalarını zaten tanıyorsanız görüntüye gerek yok. Üst çubuktaki <b>☰ Liste</b> tam genişlikte tabloya geçer; bütün tuşlar aynı çalışır.</p>
         <Shot src="10-liste.png" alt="Liste görünümü" notes={[
           <>Arama, sıra, süzgeç, seçim; <b>+ Sütun</b> Excel'e sütun ekler.</>,
-          <>Liste Excel şablonunun aynısıdır: başlığa tıklayıp adını değiştirin, sürükleyip sırasını değiştirin, ✕ ile kaldırın; Excel de öyle çıkar. Dönemde bütün satırları boş olan sütunlar (çoğunlukla EDM listesi yüklenmediği için) listede gizlenir; "+n boş sütun gizli · göster" ile göz atarsınız. <b>Boş sütunları atla</b> işaretliyken (varsayılan) bu sütunlar Excel'e de yazılmaz ve harfler Excel'deki gerçek harfi gösterir; kutuyu kaldırırsanız ekranda gördüğünüz gibi hepsi yazılır.</>,
+          <>Liste Excel şablonunun aynısıdır: başlığa tıklayıp adını değiştirin, sürükleyip iki sütunun arasına bırakın (mavi çizgi bırakılacak yeri gösterir), ✕ ile kaldırın; Excel de öyle çıkar. Dönemde bütün satırları boş olan sütunlar (çoğunlukla EDM listesi yüklenmediği için) listede gizlenir; "Boş sütunlar (n) · Göster" ile göz atarsınız (Excel'e yazılmayan sütunun başlığı gri, harfi yok). <b>Boş sütunları atla</b> işaretliyken (varsayılan) bu sütunlar Excel'e de yazılmaz ve harfler Excel'deki gerçek harfi gösterir; kutuyu kaldırırsanız ekranda gördüğünüz gibi hepsi yazılır.</>,
           <>Seçili satır. Çift tıklayınca o fatura görsel görünümde açılır.</>,
           <>Hesap Kodu hücresine tıklamak elle girişi açar.</>,
         ]} />
@@ -140,7 +140,7 @@ export const sections: Section[] = [
           <>Seçili satırlar. <K k="Shift" />+tık aralık, <K k="Ctrl" />+tık tekil seçer; <K k="Esc" /> bırakır.</>,
         ]} />
         <p>Seçim varken <b>Excel'den çıkar</b> seçili faturaları çıktı dosyasının dışında bırakır (istisnai faturalar için; bkz. Önizleme).</p>
-        <Tip>Toplu verilen kodlar "toplu" etiketi alır ve ok tuşlarıyla gezerken atlanır; kontrol etmek isterseniz süzgeçten "Toplu atanmış"ı seçin ya da <K k="Ctrl+→" /> ile gezin.</Tip>
+        <Tip>Toplu verilen kodlar "Toplu" etiketi alır ve ok tuşlarıyla gezerken atlanır; kontrol etmek isterseniz süzgeçten "Toplu atanmış"ı seçin ya da <K k="Ctrl+→" /> ile gezin.</Tip>
       </>
     ),
   },
@@ -189,7 +189,7 @@ export const sections: Section[] = [
         <p>Böylece "VKN + kalem" ya da "unvan + KDV %10" gibi birleşik kurallar, kural penceresine hiç girmeden iki rozet işaretleyerek kurulur. Birim fiyat rozeti demirbaş sınırı için işe yarar: sınırın üstündeki alışlar 255'e, altındakiler gidere.</p>
         <p>Örnek: Lezzet Gıda'dan alınan <b>30'lu yumurta</b> ikramdır (770.09), <b>3000 yumurta</b> ise satış için alınmıştır (153). İki kural: kalem "yumurta" + miktar ≤ 999 → 770.09; kalem "yumurta" + miktar ≥ 1000 → 153. Miktar, aynı kuraldaki kalem adıyla aynı kalemde aranır. Benzer biçimde "unvan ABC Kırtasiye + kalem klasör → 543" ya da "KDV %10 → 153" yazılabilir.</p>
         <p><b>Birden çok kural uyarsa</b> hangisi kazanır? Önce döneme özel olan, sonra daha çok koşullu (daha belirgin) olan, sonra VKN › unvan › kalem › tip › KDV › miktar › birim fiyat › kalem tutarı › tutar › tarih sırası, sonra en son güncellenen. Yani "VKN 123… → 770" ile "VKN 123… + kalem klasör → 543" birlikte varsa klasörlü faturalar 543, diğerleri 770 alır.</p>
-        <Tip>Kuralla verilen kodlar "kural" etiketi alır ve gezerken atlanır. Bir faturada kural başka bir şey diyorsa panelde "Kural: …" ipucu çıkar; <K k="Boşluk" /> kuralın kodunu verir. Kuralla verilen kodlar kuralı izler: kuralın kodunu ya da koşullarını değiştirirseniz bu dönemde o kuralla verilmiş kodlar da düzelir; kuralı kapatır ya da silerseniz kalkar (kapatılan kural yeniden açılınca geri gelir). Elle verdiğiniz kodlara ve geçmiş dönemlere dokunulmaz. <K k="Ctrl+Z" /> kuralı da kodları da geri getirir; Kurallar penceresi açıkken de çalışır.</Tip>
+        <Tip>Kuralla verilen kodlar "Kural" etiketi alır ve gezerken atlanır. Bir faturada kural başka bir şey diyorsa panelde "Kural: …" ipucu çıkar; <K k="Boşluk" /> kuralın kodunu verir. Kuralla verilen kodlar kuralı izler: kuralın kodunu ya da koşullarını değiştirirseniz bu dönemde o kuralla verilmiş kodlar da düzelir; kuralı kapatır ya da silerseniz kalkar (kapatılan kural yeniden açılınca geri gelir). Elle verdiğiniz kodlara ve geçmiş dönemlere dokunulmaz. <K k="Ctrl+Z" /> kuralı da kodları da geri getirir; Kurallar penceresi açıkken de çalışır.</Tip>
       </>
     ),
   },
@@ -212,7 +212,7 @@ export const sections: Section[] = [
           <>Değişiklik anında kaydedilir; <b>Geri al</b> (<K k="Ctrl+Z" />) bu pencerede yapılanı geri alır.</>,
           <>Hesap Kodu sütunu zorunlu değil: uygulamayı yalnızca fatura verisi toplamak için de kullanabilirsiniz.</>,
         ]} />
-        <Tip><b>Boş sütunları atla</b> (liste, önizleme ve şablon penceresinde aynı kutu; varsayılan işaretli): dönemde Excel'e girecek faturaların hepsinde boş olan sütunlar Excel'e yazılmaz, sonraki sütunların harfi kayar (harf yerine "boş, yazılmaz" yazar). Bilerek eklediğiniz Boş sütun ve Hesap Kodu her zaman yazılır. İçe aktarma tanımınız sütunları harfle eşliyorsa ve her ay aynı harfleri istiyorsanız kutuyu kaldırın. Seçim şablonla birlikte saklanır.</Tip>
+        <Tip><b>Boş sütunları atla</b> (liste, önizleme ve şablon penceresinde aynı kutu; varsayılan işaretli): dönemde Excel'e girecek faturaların hepsinde boş olan sütunlar Excel'e yazılmaz, sonraki sütunların harfi kayar (yazılmayan sütunun başlığı gri görünür, harfi olmaz). Bilerek eklediğiniz Boş sütun ve Hesap Kodu her zaman yazılır. İçe aktarma tanımınız sütunları harfle eşliyorsa ve her ay aynı harfleri istiyorsanız kutuyu kaldırın. Seçim şablonla birlikte saklanır.</Tip>
         <Tip>Genel şablon, özel şablonu olmayan bütün firmalara ve dönemlere geçer. Bir firma farklı düzenle çalışıyorsa <b>Bu firma</b> › <b>Bu firmaya özel şablon oluştur</b>; tek bir dönem farklıysa <b>Bu dönem</b>. <b>Özel şablonu sil</b> genele döndürür. Liste görünümünde ve önizlemede yaptığınız değişiklik de Excel'in kullandığı şablona yazılır.</Tip>
         <Tip><b>KDV dökümü</b> şablonda tek seçimdir; Excel'e yazılırken dönemdeki oranlara göre sütunlara açılır. <b>Toplam</b>: oran fark etmeksizin KDV Matrahı + KDV Toplamı. <b>Güncel oranlar + Diğer</b>: %0 (matrah), %1, %10, %20 ayrı Matrah ve KDV sütunu; başka oranlar (%8, %18…) tek <b>Diğer</b>de: Diğer Oran ("%8, %18"), Diğer Matrah, Diğer KDV. <b>Her oran ayrı</b>: dönemde hangi oran varsa her biri kendi sütununda. <b>Özel</b>: sütunları tek tek seçersiniz; sütunu olmayan bir oran varsa pencere söyler ve tek tıkla ekler. Dönemde olmayan oranın sütunu yazılmaz (Boş sütunları atla). Başlıklar önizlemede renklidir: aynı oranın matrahı ve KDV'si aynı renk. KDV başlığının adını önizlemede değiştirebilirsiniz; ✕ bütün KDV dökümünü kaldırır.</Tip>
         <Tip><b>Oranı Uyuşmayan KDV</b>: bazı operatör faturalarında (ör. GSM) KDV satırının oran alanına tutar yazılmış; bu satırların vergisi ayrı sütunda toplanır, matrahları başka satırın tekrarı olduğu için sayılmaz. ÖİV, ÖTV, tüketim vergisi, telsiz ücreti gibi KDV dışı vergiler <b>Öbür vergiler</b> grubundadır (ÖİV, ÖTV, KDV Dışı Vergiler toplamı ve adıyla ayrıntısı); matrah + KDV + KDV dışı vergiler çoğu faturada Fatura Toplamı'nı verir. Tevkifat, döviz kuru ve TL karşılığı da bu alanlar arasındadır.</Tip>
@@ -311,7 +311,7 @@ export const troubles: [string, string][] = [
   ['Fatura görüntüsü yerine kart görünüyor', 'O faturanın XML\'i yok (EDM listesinden geldi ya da yer açmak için kaldırıldı). XML\'ini yükleyin, görüntü gelir; atama korunur.'],
   ['Q tuşu "yuva boş" diyor', 'Alt çubukta o yuvaya tıklayıp bir kod yazın. Yuvalar kendiliğinden dolmaz.'],
   ['Kod verdim ama listede göremiyorum', 'Süzgeç "Atanmamış" olabilir; "Tümü" yapın. Toplu/kural atananlar gezerken atlanır; Ctrl+ok ile görülür.'],
-  ['Yanlış firmaya yükledim', 'Sağ alttaki "taşı" ile dönemi ya da seçili faturaları doğru firmaya taşıyın; atamalar da birlikte taşınır.'],
+  ['Yanlış firmaya yükledim', 'Sağ alttaki "Taşı" ile dönemi ya da seçili faturaları doğru firmaya taşıyın; atamalar da birlikte taşınır.'],
   ['GMS dosyayı almadı', 'Üst çubuktaki Şablon (ya da Ayarlar › Çıktı) ile sütun ve başlıkları GMS\'in beklediği gibi yapın. Emin olmak için EDM listesini de yükleyin; çıktı EDM dosyasıyla birebir olur.'],
   ['"Depolama alanı doldu" uyarısı', 'Ayarlar › Yedek › Depolama\'dan eski dönemlerin XML\'lerini kaldırın ya da gereksiz dönemi silin.'],
   ['Başka bilgisayarda devam etmek istiyorum', 'Ayarlar › Yedek › Dışa aktar; diğer bilgisayarda İçe aktar. XML\'leri orada yeniden yüklerseniz fatura görüntüleri de gelir.'],

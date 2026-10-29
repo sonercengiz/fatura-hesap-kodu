@@ -136,7 +136,9 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 0;
 .lg { padding: 2px 8px; border-radius: 999px; background: var(--neutral); }
 .lg-no-code { background: var(--warn-bg); color: var(--warn); } .lg.ok { color: var(--ok); }
 .table-box { overflow: auto; flex: 1; }
-.table-box td.r, .table-box th.r { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.table-box td.r { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* Excel tipi tablo: başlık her zaman ortalı; hücrede sayı sağa, metin sola */
+.table-box th { text-align: center; }
 table { border-collapse: collapse; font-size: 12px; white-space: nowrap; }
 th, td { padding: 4px 8px; border-bottom: 1px solid var(--line); text-align: left; }
 th { position: sticky; top: 0; background: var(--panel); z-index: 1; }
@@ -572,7 +574,6 @@ tr.iss-chart td.code-col { color: var(--warn); text-decoration: underline wavy v
 .pv-incl { width: 44px; text-align: center; }
 /* Önizleme başlığında sütun harfi (GMS şablon tanımıyla karşılaştırmak için) */
 .col-letter { display: block; font: 500 10px ui-monospace, Menlo, monospace; color: var(--muted); letter-spacing: .02em; }
-th.r .col-letter { text-align: right; }
 
 /* Düzenlenebilir sütun başlığı (önizleme, liste, şablon önizlemesi): tıkla ad, sürükle sıra, ✕ kaldır */
 th.hdr-edit { cursor: grab; position: relative; }
@@ -582,8 +583,6 @@ th.hdr-edit .hdr-text:hover { background: color-mix(in srgb, var(--accent) 12%, 
 th.hdr-edit .hdr-x { position: absolute; right: 2px; top: 1px; border: none; background: none; padding: 0 3px; font-size: 11px; line-height: 1.2; color: var(--muted); cursor: pointer; opacity: 0; }
 th.hdr-edit:hover .hdr-x, th.hdr-edit .hdr-x:focus-visible { opacity: 1; }
 th.hdr-edit .hdr-x:hover { color: var(--warn); }
-th.hdr-edit.r .hdr-x { right: auto; left: 2px; }
-.lv-table th.r { text-align: right; }
 /* İnce dikey sütun çizgileri (satır çizgisiyle aynı) */
 .table-box th + th, .table-box td + td, .lv-table th + th, .lv-table td + td { border-left: 1px solid var(--line); }
 /* KDV oran grubu: yalnızca başlık boyanır (açık zemin + üstte ince renk şeridi); hücre renklerini hesap kodu verir */
@@ -594,8 +593,10 @@ th.vg-18 { --vg: #ea580c; } th.vg-20 { --vg: #4f46e5; } th.vg-other { --vg: #a16
 :root[data-theme="dark"] th.vg-0 { --vg: #94a3b8; } :root[data-theme="dark"] th.vg-1 { --vg: #38bdf8; } :root[data-theme="dark"] th.vg-8 { --vg: #a3e635; }
 :root[data-theme="dark"] th.vg-10 { --vg: #34d399; } :root[data-theme="dark"] th.vg-18 { --vg: #fb923c; } :root[data-theme="dark"] th.vg-20 { --vg: #818cf8; }
 :root[data-theme="dark"] th.vg-other { --vg: #fbbf24; } :root[data-theme="dark"] th.vg-odd { --vg: #fb7185; } :root[data-theme="dark"] th.vg-total { --vg: #2dd4bf; }
-th.vg.drop-over { box-shadow: inset 3px 0 0 var(--accent), inset 0 3px 0 var(--vg); }
-th.hdr-edit.drop-over { box-shadow: inset 3px 0 0 var(--accent); }
+/* Sürüklerken araya ekleme çizgisi: bırakılacak yer hedefin önü ya da arkası */
+th.hdr-edit.drop-before { box-shadow: inset 2px 0 0 var(--accent); } th.hdr-edit.drop-after { box-shadow: inset -2px 0 0 var(--accent); }
+th.vg.drop-before { box-shadow: inset 2px 0 0 var(--accent), inset 0 3px 0 var(--vg); } th.vg.drop-after { box-shadow: inset -2px 0 0 var(--accent), inset 0 3px 0 var(--vg); }
+.tpl-row.drop-before { box-shadow: 0 -2px 0 var(--accent); } .tpl-row.drop-after { box-shadow: 0 2px 0 var(--accent); }
 .hdr-input { font: inherit; font-weight: 600; width: 12em; padding: 1px 4px; }
 .add-col { max-width: 150px; font-size: 12px; }
 
@@ -645,5 +646,14 @@ button.link { border: none; background: none; color: var(--accent); padding: 0 2
 .tpl-vat-seen { margin-top: 6px; line-height: 1.35; }
 .tpl-letter.wide { width: auto; min-width: 26px; padding: 0 2px; white-space: nowrap; }
 .tpl-vat-mode { flex: 1; min-width: 0; font-weight: 600; }
-.col-letter.skipped, .tpl-letter.skipped { color: var(--warn); font-style: italic; }
-th.hdr-edit.skipped .hdr-text { color: var(--muted); }
+/* Bu dönemde boş, Excel'e yazılmayan sütun: gri başlık, harf yok, zemin yok */
+th.off, th.off.vg { color: var(--muted); background: var(--panel); font-weight: 500; }
+th.off.vg { box-shadow: none; } th.off .hdr-text { color: var(--muted); }
+.tpl-row.off { opacity: .6; } .tpl-letter.skipped { color: var(--muted); }
+/* Şablon önizlemesi: yalnızca sütun çizgileri (başlık altı çizgisi kalır) */
+.tpl-preview td { border-bottom: none; }
+/* Önizlemede kod hücresi listedeki gibi kısayol yuvasının rengini alır; yuvada olmayan kod nötr */
+.table-box tr td.pv-code:not(.empty) { background: var(--assigned); color: var(--ink); }
+.table-box tr td.pv-code.slot-0 { background: var(--s0); color: var(--s0i); } .table-box tr td.pv-code.slot-1 { background: var(--s1); color: var(--s1i); }
+.table-box tr td.pv-code.slot-2 { background: var(--s2); color: var(--s2i); } .table-box tr td.pv-code.slot-3 { background: var(--s3); color: var(--s3i); }
+.table-box tr td.pv-code.slot-4 { background: var(--s4); color: var(--s4i); } .table-box tr td.pv-code.slot-5 { background: var(--s5); color: var(--s5i); }

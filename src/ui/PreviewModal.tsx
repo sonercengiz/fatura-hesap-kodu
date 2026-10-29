@@ -60,7 +60,7 @@ export function PreviewModal() {
                 <th class="num">#</th>
                 <th class="pv-incl" title="İşareti kaldırılan fatura Excel'e yazılmaz (istisnai faturalar). Ctrl+Z geri alır.">Excel</th>
                 {/* Başlıklar burada da düzenlenir (ad, sıra, kaldır); değişiklik Excel şablonuna anında yazılır */}
-                {shownIdx.map((k, c) => <HeaderCell t={t} col={e.columns[k]} letter={S.excelLetters.value[k]} cls={c === at ? 'code-col' : money[c] ? 'r' : ''} />)}
+                {shownIdx.map((k, c) => <HeaderCell t={t} col={e.columns[k]} letter={S.excelLetters.value[k]} cls={c === at ? 'code-col' : ''} />)}
               </tr>
             </thead>
             <tbody>
@@ -68,12 +68,14 @@ export function PreviewModal() {
                 const iss = rowIssues[i];
                 const inv = byRow.get(i);
                 const out = !!inv?.excluded;
+                // Kod hücresi listedeki gibi kısayol yuvasının rengini alır (yuvada olmayan kod nötr)
+                const code = inv ? S.assignments.value.get(inv.no) : undefined;
                 const cls = out ? 'excluded' : iss.includes('no-code') ? 'iss-code' : iss.includes('not-in-chart') ? 'iss-other iss-chart' : iss.length ? 'iss-other' : '';
                 return (
                   <tr data-i={i} class={cls} title={out ? 'Excel\'e girmez' : inv ? iss.map((k) => S.issueText(inv, k)).join('\n') : ''} onDblClick={() => { if (inv) { S.goTo(S.invoices.value.indexOf(inv)); S.previewOpen.value = false; } }}>
                     <td class="num">{out ? '—' : excelRow++}</td>
                     <td class="pv-incl"><input type="checkbox" checked={!out} title={out ? 'Excel\'e geri al' : 'Excel\'den çıkar'} onClick={(e) => e.stopPropagation()} onChange={(e) => inv && S.setExcluded([inv.no], !(e.currentTarget as HTMLInputElement).checked)} /></td>
-                    {r.map((v, c) => <td class={c === at ? 'code-col' : money[c] ? 'r' : ''}>{fmtCell(v, money[c])}</td>)}
+                    {r.map((v, c) => <td class={c === at ? `code-col pv-code ${code ? `slot-${S.slotIndexOf(code)}` : 'empty'}` : money[c] ? 'r' : ''}>{fmtCell(v, money[c])}</td>)}
                   </tr>
                 );
               })}

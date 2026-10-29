@@ -175,7 +175,7 @@ export function PrintModal() {
           <div class="print-preview" onMouseEnter={() => undefined}>
             <div class="print-preview-head muted small">{previewInv ? `${items.indexOf(previewInv) + 1}. ${previewInv.no}` : 'Önizleme'}</div>
             <div class="print-preview-page">
-              {preview && preview.no === previewNo && <iframe class="print-preview-frame" sandbox="allow-same-origin" srcdoc={preview.html} title="önizleme" />}
+              {preview && preview.no === previewNo && <iframe class="print-preview-frame" sandbox="allow-same-origin" srcdoc={preview.html} title="Önizleme" />}
             </div>
             <div class="muted small">Basılacak görünüm: faturanın kendi şablonu (EDM PDF'i ile aynı).</div>
           </div>

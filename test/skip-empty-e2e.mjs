@@ -1,6 +1,6 @@
 // "Boş sütunları atla" (varsayılan açık, şablonun parçası): dönemde bütün faturalarda boş sütunlar Excel'e yazılmaz, harfler Excel'deki
 // gerçek harfi gösterir; Hesap Kodu ve bilerek eklenen Boş sütun hep yazılır. Kutu kaldırılınca ekrandaki gibi hepsi yazılır.
-// Listede gizlenen boş sütunlara göz atılabilir ("boş, yazılmaz"). Kutu liste, önizleme ve şablon penceresinde aynı seçimi gösterir.
+// Listede gizlenen boş sütunlara göz atılabilir (gri başlık, harfsiz). Kutu liste, önizleme ve şablon penceresinde aynı seçimi gösterir.
 import { chromium } from 'playwright';
 import { readdirSync, readFileSync } from 'node:fs';
 import * as XLSX from 'xlsx';
@@ -37,7 +37,7 @@ check('Hesap Kodu kod atanmamışken de yazıldı', head.includes('Hesap Kodu'),
 check('listede gerçek harf: Fatura Tipi D (şablonda E)', (await letterOf('.lv-table', 'Fatura Tipi')) === 'D', await letterOf('.lv-table', 'Fatura Tipi'));
 check('Excel\'de Fatura Tipi D sütununda', head[3] === 'Fatura Tipi', head[3]);
 await a.locator('.lv-empty').click(); await a.waitForTimeout(150);
-check('göz atınca gizli sütun "boş, yazılmaz" ile görünür', (await letterOf('.lv-table', 'Geliş Zamanı')).includes('boş, yazılmaz'), await letterOf('.lv-table', 'Geliş Zamanı'));
+check('göz atınca gizli sütun gri başlıkla, harfsiz görünür', (await letterOf('.lv-table', 'Geliş Zamanı')) === '' && /\boff\b/.test(await a.locator('.lv-table thead th.hdr-edit', { hasText: 'Geliş Zamanı' }).getAttribute('class')), await letterOf('.lv-table', 'Geliş Zamanı'));
 await a.locator('.lv-empty').click(); await a.waitForTimeout(150);
 
 // Kutu kaldırılınca: ekrandaki gibi hepsi yazılır; harfler şablondaki harfe döner
@@ -57,7 +57,7 @@ check('önizlemede gerçek harf: Tutar H (şablonda I)', (await letterOf('.modal
 await a.keyboard.press('Escape'); await a.waitForTimeout(200);
 await a.locator('.toolbar .excel-tpl').click(); await a.waitForSelector('.tpl-modal');
 check('şablon penceresinde kutu işaretli', await a.locator('.tpl-modal .skip-empty input').isChecked(), 'işaretsiz');
-check('Basit görünümde atlanan alan "boş, yazılmaz" der', (await a.locator('.tpl-check', { hasText: 'Geliş Zamanı' }).locator('.tpl-check-at').innerText()).includes('boş, yazılmaz'), await a.locator('.tpl-check', { hasText: 'Geliş Zamanı' }).innerText());
+check('Basit görünümde atlanan alanın harfi yok', !/[A-Z]/.test(await a.locator('.tpl-check', { hasText: 'Geliş Zamanı' }).innerText().then((x) => x.replace('Geliş Zamanı', ''))), await a.locator('.tpl-check', { hasText: 'Geliş Zamanı' }).innerText());
 // Bilerek eklenen Boş sütun atlanmaz
 await a.locator('.tpl-group button:has-text("+ Boş sütun")').click(); await a.waitForTimeout(200);
 await a.keyboard.press('Escape'); await a.waitForTimeout(200);

@@ -28,7 +28,7 @@ await give('AYT2026000000002', '760.10');
 await a.locator('.toolbar button:has-text("Kurallar")').click(); await a.waitForSelector('.modal.rules');
 await a.locator('.modal.rules .rule-code').fill('760.10'); await a.locator('.modal.rules .rule-submit').click(); await a.waitForTimeout(500);
 let c = await codes();
-check('kural: 003 ve 004 kuralla 760.10, elle verilenler aynen', c === '770.99 | 760.10 | kural760.10 | kural760.10', c);
+check('kural: 003 ve 004 kuralla 760.10, elle verilenler aynen', c === '770.99 | 760.10 | Kural760.10 | Kural760.10', c);
 
 // Kapat → kuralın kodları kalkar; aç → geri gelir
 await ruleRow().locator('input[type=checkbox]').uncheck(); await a.waitForTimeout(400);
@@ -37,7 +37,7 @@ check('kapatınca kuralın kodları kalkar, elle kalır', c === '770.99 | 760.10
 check('kapatma bildirimi sayıyı söyler', tOff.includes('Kural kapatıldı') && tOff.includes('2 faturanın kuralla verilmiş kodu kaldırıldı'), tOff);
 await ruleRow().locator('input[type=checkbox]').check(); await a.waitForTimeout(400);
 c = await codes();
-check('açınca geri gelir', c === '770.99 | 760.10 | kural760.10 | kural760.10', c);
+check('açınca geri gelir', c === '770.99 | 760.10 | Kural760.10 | Kural760.10', c);
 
 // Sil → onay (etkilenen sayısı) → kodlar kalkar
 await ruleRow().locator('button[title^="Kuralı sil"]').click(); await a.waitForSelector('.modal.dialog');
@@ -52,7 +52,7 @@ check('kural listesi boş', (await a.locator('.modal.rules .rule-row').count()) 
 await a.locator('.modal.rules').click({ position: { x: 5, y: 5 } }); await a.keyboard.press('Control+z'); await a.waitForTimeout(500);
 c = await codes();
 check('Ctrl+Z (pencerede): kural geri', (await a.locator('.modal.rules .rule-row').count()) === 1, await a.locator('.modal.rules .rule-row').count());
-check('Ctrl+Z (pencerede): kodlar geri, kural etiketiyle', c === '770.99 | 760.10 | kural760.10 | kural760.10', c);
+check('Ctrl+Z (pencerede): kodlar geri, kural etiketiyle', c === '770.99 | 760.10 | Kural760.10 | Kural760.10', c);
 await a.keyboard.press('Control+y'); await a.waitForTimeout(500);
 check('Ctrl+Y: yeniden silindi', (await a.locator('.modal.rules .rule-row').count()) === 0 && (await codes()) === '770.99 | 760.10 | — | —', await codes());
 await a.keyboard.press('Control+z'); await a.waitForTimeout(500);
@@ -60,17 +60,17 @@ await a.keyboard.press('Control+z'); await a.waitForTimeout(500);
 // Kod düzenleme + geri al → kural da eski koduna döner
 await ruleRow().locator('.rule-code-edit').fill('760.20'); await ruleRow().locator('.rule-code-edit').press('Tab'); await a.waitForTimeout(500);
 c = await codes();
-check('kod düzenleme: kodlar izler', c === '770.99 | 760.10 | kural760.20 | kural760.20', c);
+check('kod düzenleme: kodlar izler', c === '770.99 | 760.10 | Kural760.20 | Kural760.20', c);
 await a.locator('.modal.rules').click({ position: { x: 5, y: 5 } }); await a.keyboard.press('Control+z'); await a.waitForTimeout(500);
 const rc = await ruleRow().locator('.rule-code-edit').inputValue();
 check('geri al: kural kodu 760.10', rc === '760.10', rc);
-check('geri al: fatura kodları 760.10', (await codes()) === '770.99 | 760.10 | kural760.10 | kural760.10', await codes());
+check('geri al: fatura kodları 760.10', (await codes()) === '770.99 | 760.10 | Kural760.10 | Kural760.10', await codes());
 
 // Pencere kapalıyken de: silinen kuralı Ctrl+Z getirir
 await ruleRow().locator('button[title^="Kuralı sil"]').click(); await a.waitForSelector('.modal.dialog'); await a.locator('.modal.dialog button.danger').click(); await a.waitForTimeout(400);
 await a.keyboard.press('Escape'); await a.waitForSelector('.modal.rules', { state: 'detached' });
 await a.keyboard.press('Control+z'); await a.waitForTimeout(500);
-check('pencere kapalı Ctrl+Z: kodlar geri', (await codes()) === '770.99 | 760.10 | kural760.10 | kural760.10', await codes());
+check('pencere kapalı Ctrl+Z: kodlar geri', (await codes()) === '770.99 | 760.10 | Kural760.10 | Kural760.10', await codes());
 check('Kurallar düğmesi kural sayısını gösterir', /Kurallar\s*1/.test(await a.locator('.toolbar button:has-text("Kurallar")').innerText()), await a.locator('.toolbar button:has-text("Kurallar")').innerText());
 
 console.log('HATALAR:', errors.length ? errors : 'yok');

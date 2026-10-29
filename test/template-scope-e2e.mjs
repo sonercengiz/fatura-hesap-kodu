@@ -34,7 +34,7 @@ const firm1 = await a.locator('.firm-select option:checked').getAttribute('value
 // 1) Liste = Excel şablonu: listede eklenen/adı değişen/kaldırılan sütun Excel'e yansır
 await a.locator('.toolbar button:has-text("Liste")').click(); await a.waitForSelector('.listview'); await a.waitForTimeout(200);
 const emptyBtn = a.locator('.lv-empty');
-check('boş sütunlar listede gizli, sayısı söylenir', /\+\d+ boş sütun gizli/.test(await emptyBtn.innerText()), await emptyBtn.innerText().catch(() => 'yok'));
+check('boş sütunlar listede gizli, sayısı söylenir', /^Boş sütunlar \(\d+\) · Göster$/.test((await emptyBtn.innerText()).trim()), await emptyBtn.innerText().catch(() => 'yok'));
 check('gizli boş sütun (Geliş Zamanı) listede yok', !(await listHeads()).includes('Geliş Zamanı'), (await listHeads()).join(' | '));
 await emptyBtn.click(); await a.waitForTimeout(150);
 check('"göster" ile boş sütunlar görünür', (await listHeads()).includes('Geliş Zamanı'), (await listHeads()).join(' | '));

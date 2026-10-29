@@ -10,7 +10,7 @@ export const TERMS: Record<string, string> = {
   'durum kartı': 'Durum kartı: alt çubukta, seçili faturanın kod alıp almadığını gösteren kart. Boşken kesikli çerçeve, kod alınca yuvanın rengi.',
   'ilerleme kartı': 'İlerleme kartı: kaç fatura kaldığını gösterir. Hepsi bitince yeşile döner ve "Tamamlandı" yazar.',
   'kaynak': 'Kaynak: kodun nasıl verildiği. Elle (siz verdiniz), Toplu (seçili faturalara tek seferde), Kural (kural kendiliğinden verdi).',
-  'toplu atama': 'Toplu atama: listeden birden çok fatura seçip hepsine aynı kodu tek seferde vermek. Toplu atananlar "toplu" etiketi alır ve ok tuşlarıyla gezerken atlanır.',
+  'toplu atama': 'Toplu atama: listeden birden çok fatura seçip hepsine aynı kodu tek seferde vermek. Toplu atananlar "Toplu" etiketi alır ve ok tuşlarıyla gezerken atlanır.',
   'rozet': 'Rozet: "Bu faturadan kural" penceresinde faturanın bir bilgisi (VKN, unvan, tarih, KDV oranı, tutar, kalem adı, miktar, birim fiyat, kalem tutarı). İşaretlenen rozetler kuralın koşulları olur; sayılı rozetlerde eşik ve yön (en az / en çok) düzeltilebilir.',
   'koşul': 'Koşul: kuralın bir parçası; satıcı VKN/TCKN, unvanda geçen metin, kalem adında geçen metin, KDV oranı, kalem miktarı / birim fiyat / kalem tutarı aralığı, fatura tutarı aralığı, fatura tipi ya da fatura tarihi aralığı. Bir kuralda istediğiniz kadar koşul olur, hepsi birlikte tutmalıdır.',
   'kural': 'Kural: "şu koşullar tutarsa fatura şu kodu alsın" tanımı. Koşul VKN/TCKN, unvanda ya da kalem adında geçen bir kelime, KDV oranı, miktar ya da tutar aralığı, fatura tipi olabilir; koşul sayısı sınırsızdır, hepsi birlikte tutmalıdır. Uyan faturalar yüklenir yüklenmez kodu alır.',
